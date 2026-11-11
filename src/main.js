@@ -227,7 +227,7 @@ function clearShot(a, b) {
   }
   return true;
 }
-const aiApi = { fire: (s, side) => fire(s, side), clearShot: (a, b) => clearShot(a, b), shotSpeed: (s) => AMMO[s.ammo].speed, reach: (a, b) => reach(a, b) };
+const aiApi = { fire: (s, side) => fire(s, side), clearShot: (a, b) => clearShot(a, b), shotSpeed: (s) => AMMO[s.ammo].speed, reach: (a, b) => reach(a, b), strength: (s) => strength(s) };
 function fire(ship, side) {
   if (G.state !== 'battle' || ship.reload[side] > 0 || ship.sinking > 0 || ship.struck) return false;
   let ammo = ship.ammo;

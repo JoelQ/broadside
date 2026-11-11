@@ -21,8 +21,8 @@
       let want = 'round';
       const sk = me.stock, a = plan.ammo;
       if ((a === 'chain' || a === 'combo') && sk.chain > 0 && foe.sailR > 0.45 && d < me.range('chain') * 1.1) want = 'chain';
-      else if ((a === 'fire' || a === 'combo') && sk.fire > 0 && foe.fire < 1 && d < me.range('fire') * 1.1) want = 'fire';
-      else if ((a === 'grape' || a === 'combo') && sk.grape > 0 && foe.exposed > 2 && d < me.range('grape')) want = 'grape';
+      else if ((a === 'fire' || a === 'combo') && sk.fire > 0 && d < me.range('fire') * 1.1) want = 'fire'; // stay on heated shot while it lasts
+      else if ((a === 'grape' || a === 'combo') && sk.grape > 0 && foe.exposed > 2 && d < me.range('grape') * 1.05) want = 'grape';
       if (st.boardMode) {
         // grapples only hold a slowed ship: chain until she is slow, then arrive with grape in the guns
         if (foe.speed > 6.5 && sk.chain > 0 && d < me.range('chain') * 1.1) want = 'chain';
@@ -31,7 +31,8 @@
       st.swap -= dt;
       if (want !== me.ammo && st.swap <= 0) { me.setAmmo(want); st.swap = 2.5; }
       // helm
-      const move = st.boardMode ? 'close' : plan.move;
+      // a boarder stands off and chains until her prey is slow, then closes
+      const move = st.boardMode ? (foe.speed > 6.5 && sk.chain > 0 ? 'duel' : 'close') : plan.move;
       if (move === 'hug') {
         const dx = me.pos.x - foe.pos.x, dz = me.pos.z - foe.pos.z, cd = Math.hypot(dx, dz);
         const off = wrap(Math.atan2(dx, dz) - (foe.heading + Math.PI)), blind = Math.PI / 2 - foe.arc - 0.12;
@@ -48,7 +49,7 @@
         for (const s of ['port', 'stbd']) if (G.api.inArc(me, s, foe, 1)) G.api.fire(me, s);
       } else {
         const r = me.range('round');
-        me.spec.ai = { range: move === 'kite' ? r * 0.85 : move === 'close' ? 20 : r * 0.5, plan: 'none', boarder: move === 'close', battleSail: true };
+        me.spec.ai = { range: move === 'kite' ? r * 0.85 : move === 'close' ? 20 : r * 0.5, plan: 'none', manualAmmo: true, boarder: move === 'close', battleSail: true };
         G.api.updateAI(ai, me, foe, G.world, dt, G.api.aiApi);
         if (move === 'close') ai.wantBoard = true;
         if (want !== me.ammo && st.swap <= 0) { me.setAmmo(want); st.swap = 2.5; }
