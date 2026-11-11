@@ -12,7 +12,7 @@ export function updateAI(ai, me, foe, world, dt, api) {
   ai.think -= dt;
   if (ai.think <= 0) {
     ai.think = 1.2 + Math.random();
-    const adv = me.crew / Math.max(1, foe.crew);
+    const adv = api.strength(me) / Math.max(1, api.strength(foe)); // fighting strength, not headcount
     ai.wantBoard = ((P.boarder && adv > 1.05) || (adv > 2.2 && foe.crewR < 0.5 && dist < 150)) && me.crew > 12;
     // ammo doctrine
     let a = 'round';
@@ -29,6 +29,7 @@ export function updateAI(ai, me, foe, world, dt, api) {
       else if (st.grape > 0 && dist < me.range('grape') * 0.85 && foe.exposed > 10) a = 'grape';
       else if (st.chain > 0 && foe.sailR > 0.7 && foe.speed > me.speed + 1) a = 'chain';
     }
+    if (P.manualAmmo) a = me.ammo; // a scripted captain is choosing the shot
     if (a !== me.ammo && me.reload.port > 0.5 && me.reload.stbd > 0.5) me.setAmmo(a);
     else if (a !== me.ammo && Math.random() < 0.35) me.setAmmo(a);
     // side preference: present the loaded battery, with hysteresis
@@ -39,8 +40,11 @@ export function updateAI(ai, me, foe, world, dt, api) {
   }
 
   let desired, sail = 3;
-  const range = P.range;
-  if (ai.wantBoard) {
+  // A boarder cannot grapple a ship at speed. Until her prey is slow she stands off on the beam
+  // and cuts up its rigging with chain; only then does she run alongside.
+  const closing = ai.wantBoard && (foe.speed < 7.5 || me.stock.chain <= 0);
+  const range = ai.wantBoard && !closing ? Math.min(P.range, me.range('chain') * 0.7) : P.range;
+  if (closing) {
     const lead = clamp(dist / Math.max(me.speed, 6), 0, 4) * 0.8;
     let tx = foe.pos.x + foe.fwdX * foe.speed * lead, tz = foe.pos.z + foe.fwdZ * foe.speed * lead;
     if (dist < 70) {
