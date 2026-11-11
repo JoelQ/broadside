@@ -35,7 +35,7 @@ export function updateAI(ai, me, foe, world, dt, api) {
     if (pick !== ai.side && Math.abs(offP - offS) > 0.35) ai.side = pick;
   }
 
-  let desired, sail = 2;
+  let desired, sail = 3;
   const range = P.range;
   if (ai.wantBoard) {
     const lead = clamp(dist / Math.max(me.speed, 6), 0, 4) * 0.8;
@@ -49,8 +49,8 @@ export function updateAI(ai, me, foe, world, dt, api) {
     if (dist < 34) {
       const same = Math.abs(wrap(foe.heading - me.heading)) < Math.PI / 2 ? foe.heading : foe.heading + Math.PI;
       desired = me.heading + wrap(same - me.heading) * 0.7 + wrap(desired - me.heading) * 0.3;
-      sail = me.speed > foe.speed + 1.5 ? 0 : 1;
-    } else if (dist < 80) sail = me.speed > foe.speed + 6 ? 1 : 2;
+      sail = me.speed > foe.speed + 1.5 ? 0 : 2;
+    } else if (dist < 80) sail = me.speed > foe.speed + 6 ? 2 : 3;
   } else if (dist > range * 1.7) {
     const lead = clamp(dist / 14, 0, 12) * 0.5;
     desired = Math.atan2(dx + foe.fwdX * foe.speed * lead, dz + foe.fwdZ * foe.speed * lead);
@@ -59,7 +59,7 @@ export function updateAI(ai, me, foe, world, dt, api) {
     let off = Math.PI / 2;
     if (dist > range * 1.1) off -= 0.55; else if (dist < range * 0.65) off += 0.5;
     desired = bearing - ai.side * off;
-    if (P.battleSail && dist < range * 1.25) sail = 1;
+    if (P.battleSail && dist < range * 1.25) sail = 2;
     if (dist < 34) desired = bearing + Math.PI + ai.side * 0.6; // too close: sheer off
   }
 

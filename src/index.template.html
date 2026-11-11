@@ -8,129 +8,153 @@
 <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Pirata+One&display=swap" rel="stylesheet">
 <style>
 :root{
-  --ink:#1b140c; --parch:#ead9b0; --parch2:#d9c494; --brass:#c9a24a; --brass2:#8a6a2a;
-  --navy:rgba(10,20,32,.72); --red:#b8372b; --green:#5fae5a; --blue:#4f8fd0; --cream:#f3ead2;
+  --brass:#d7b25a; --navy:rgba(9,18,30,.74); --line:rgba(215,178,90,.5); --red:#c5402f; --green:#7fce7a; --cream:#f3ead2; --bad:#ff9a8a;
   --head:'Pirata One','IM Fell English',Georgia,serif; --body:'IM Fell English',Georgia,'Times New Roman',serif;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;overflow:hidden;background:#0a1826;color:var(--cream);font-family:var(--body);user-select:none;-webkit-user-select:none;touch-action:none}
 canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block}
 .hidden{display:none!important}
-kbd{font-family:ui-monospace,Menlo,monospace;font-size:.72em;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:4px;padding:0 5px;margin:0 2px;color:#fff}
+button{font:inherit;color:inherit}
+kbd{font-family:ui-monospace,Menlo,monospace;font-size:.74em;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.34);border-radius:4px;padding:0 5px;margin:0 1px;color:#fff}
+.good{color:var(--green)} .bad{color:var(--bad)}
+.btn{font:400 20px var(--head);letter-spacing:1px;background:rgba(9,18,30,.8);color:var(--cream);border:1px solid var(--line);border-radius:5px;padding:7px 18px;cursor:pointer}
+.btn:hover{background:rgba(215,178,90,.25)} .btn:active{transform:translateY(1px)} .btn:disabled{opacity:.38;cursor:default}
+.btn.big{font-size:28px;padding:10px 38px;background:var(--red);border-color:#6d1a12;box-shadow:0 3px 0 #6d1a12}
+.btn.big:hover{background:#d9503d}
+.btn.sm{font:400 14px var(--body);letter-spacing:0;padding:4px 11px}
 
 /* ---------- HUD ---------- */
 #hud{position:fixed;inset:0;pointer-events:none}
-.panel{position:absolute;background:var(--navy);border:1px solid rgba(201,162,74,.55);border-radius:8px;padding:8px 12px;backdrop-filter:blur(3px)}
-.ship-panel{top:10px;width:min(270px,42vw)}
+.panel{position:absolute;background:var(--navy);border:1px solid var(--line);border-radius:8px;padding:8px 12px;backdrop-filter:blur(3px)}
+.ship-panel{top:10px;width:min(250px,42vw)}
 #pPanel{left:10px} #ePanel{right:10px}
 .ship-panel h3{margin:0;font:400 20px/1.1 var(--head);letter-spacing:.5px;color:var(--brass);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ship-panel .sub{font-size:12px;opacity:.75;margin-bottom:5px;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bar{display:grid;grid-template-columns:44px 1fr 34px;align-items:center;gap:6px;font-size:12px;margin:3px 0}
+.bar{display:grid;grid-template-columns:40px 1fr 30px;align-items:center;gap:6px;font-size:12px;margin:3px 0}
 .bar .t{height:9px;background:rgba(0,0,0,.45);border-radius:5px;overflow:hidden;border:1px solid rgba(255,255,255,.12)}
 .bar .t i{display:block;height:100%;width:100%;border-radius:5px;transition:width .25s}
 .bar.hull i{background:linear-gradient(#d0864a,#9c5a2a)} .bar.sail i{background:linear-gradient(#f1e8cf,#c2b48a)} .bar.crew i{background:linear-gradient(#6fb1e6,#3b74b4)}
 .bar b{font-weight:400;text-align:right;font-variant-numeric:tabular-nums}
-.status{font-size:12px;min-height:15px;color:#ffb36b}
-#toasts{position:absolute;top:84px;left:50%;transform:translateX(-50%);width:min(560px,90vw);display:flex;flex-direction:column;align-items:center;gap:5px}
-.toast{background:rgba(8,14,22,.78);border:1px solid rgba(201,162,74,.5);padding:5px 14px;border-radius:16px;font-size:15px;animation:tin .25s ease-out;transition:opacity .6s;text-align:center}
-.toast.good{border-color:#7fce7a;color:#c9f5c4} .toast.bad{border-color:#e0685c;color:#ffc9c2} .toast.big{font:400 24px var(--head);letter-spacing:1px;color:#ffe29a}
+.status{font-size:12px;color:#ffb36b} .gauge{font-size:12.5px} .status:empty,.gauge:empty{display:none}
+#toasts{position:absolute;top:92px;left:50%;transform:translateX(-50%);width:min(560px,90vw);display:flex;flex-direction:column;align-items:center;gap:5px}
+.toast{background:rgba(8,14,22,.78);border:1px solid var(--line);padding:4px 14px;border-radius:16px;font-size:15px;animation:tin .25s ease-out;transition:opacity .6s;text-align:center}
+.toast.good{border-color:var(--green);color:#c9f5c4} .toast.bad{border-color:#e0685c;color:#ffc9c2} .toast.big{font:400 24px var(--head);letter-spacing:1px;color:#ffe29a}
 @keyframes tin{from{transform:translateY(-8px);opacity:0}}
 
-#dial{left:10px;bottom:10px;padding:6px;display:flex;gap:8px;align-items:center}
+#dial{left:10px;bottom:10px;padding:6px 10px 6px 6px;display:flex;gap:10px;align-items:center}
 #radar{width:150px;height:150px;display:block}
-#sailInfo{font-size:13px;line-height:1.5;min-width:104px}
+#sailInfo{font-size:13px;line-height:1.45;min-width:128px}
 #sailInfo .big{font:400 26px/1 var(--head);color:var(--brass)}
-.pips{display:flex;gap:3px;margin:3px 0}
-.pips i{width:22px;height:7px;border-radius:2px;background:rgba(255,255,255,.18)} .pips i.on{background:var(--cream)}
+#sailName{font:400 17px var(--head);letter-spacing:.5px}
+.meter{display:grid;grid-template-columns:42px 1fr;align-items:center;font-size:12px;opacity:.95}
+.meter span{display:flex;gap:2px} .meter i{width:13px;height:6px;border-radius:2px;background:rgba(255,255,255,.16)} .meter i.on{background:var(--cream)}
+#pos{font-size:12px;font-style:italic;margin-top:2px}
 #guns{left:50%;bottom:10px;transform:translateX(-50%);display:flex;gap:10px;align-items:stretch;padding:8px 10px;pointer-events:auto}
-.battery{width:92px;text-align:center;font-size:11px;letter-spacing:1px;display:flex;flex-direction:column;justify-content:center;gap:4px;border-radius:6px;padding:3px;cursor:pointer}
+.battery{width:86px;text-align:center;font-size:11px;letter-spacing:1px;display:flex;flex-direction:column;justify-content:center;gap:4px;border-radius:6px;padding:3px;cursor:pointer}
 .battery .g{height:12px;border-radius:6px;background:rgba(0,0,0,.5);overflow:hidden;border:1px solid rgba(255,255,255,.15)}
-.battery .g i{display:block;height:100%;width:0;background:#b8372b}
-.battery.ready .g i{background:var(--green)} .battery.bear{background:rgba(255,216,110,.2);box-shadow:0 0 0 1px #ffd86e inset}
-.battery .s{font-size:11px;opacity:.8}
+.battery .g i{display:block;height:100%;width:0;background:var(--red)}
+.battery.ready .g i{background:#5fae5a} .battery.bear{background:rgba(255,216,110,.2);box-shadow:0 0 0 1px #ffd86e inset}
+.battery .s{font-size:11px;opacity:.85}
 #ammo{display:flex;gap:6px}
-.slot{width:66px;border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:4px 2px;text-align:center;cursor:pointer;background:rgba(0,0,0,.25);position:relative}
+.slot{width:62px;border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:4px 2px;text-align:center;cursor:pointer;background:rgba(0,0,0,.25);position:relative}
 .slot.sel{border-color:var(--brass);background:rgba(201,162,74,.22);box-shadow:0 0 10px rgba(201,162,74,.35)}
 .slot.out{opacity:.38}
-.slot svg{width:26px;height:26px;display:block;margin:0 auto}
+.slot svg,.item svg{width:26px;height:26px;display:block;margin:0 auto;flex:none}
 .slot .n{font-size:12px} .slot .c{font-size:11px;opacity:.8;font-variant-numeric:tabular-nums}
 .slot kbd{position:absolute;top:2px;left:2px;font-size:9px;padding:0 3px}
-#ammoTip{position:absolute;left:50%;bottom:100%;transform:translate(-50%,-6px);white-space:nowrap;font-size:13px;font-style:italic;text-shadow:0 1px 3px #000}
-#boardBox{right:10px;bottom:10px;width:210px;text-align:center;pointer-events:auto;cursor:pointer}
-#boardBox .h{font:400 19px var(--head);color:#ffe29a} #boardBox .g{height:8px;background:rgba(0,0,0,.5);border-radius:4px;overflow:hidden;margin-top:5px}
-#boardBox .g i{display:block;height:100%;width:0;background:#ffd86e}
-#boardBox.warn{border-color:#e0685c} #boardBox.warn .h{color:#ff9a8a} #boardBox.warn .g i{background:#e0685c}
-#help{right:10px;bottom:10px;font-size:12px;line-height:1.7;opacity:.85}
-#hud.melee #help,#hud.melee #guns,#hud.melee #dial,#hud.melee #touch{display:none!important}
+#ammoTip{position:absolute;left:50%;bottom:100%;transform:translate(-50%,-6px);white-space:nowrap;font-size:14px;font-style:italic;text-shadow:0 1px 4px #000,0 0 2px #000}
+#coach{position:absolute;left:50%;bottom:118px;transform:translateX(-50%);width:min(620px,92vw);background:rgba(8,14,22,.86);border:1px solid var(--brass);border-radius:8px;padding:9px 14px;font-size:17px;display:flex;gap:10px;align-items:center;pointer-events:auto;box-shadow:0 0 22px rgba(215,178,90,.25)}
+#coach span{flex:1} #coach i{font-size:12px;opacity:.6;font-style:normal} #coach button{background:none;border:0;font-size:12px;opacity:.6;cursor:pointer;text-decoration:underline}
+#boardBox{right:10px;bottom:10px;width:232px;pointer-events:auto;cursor:pointer;font-size:13.5px;line-height:1.5}
+#boardBox h4{margin:0 0 2px;font:400 19px var(--head);letter-spacing:.5px;color:var(--brass)}
+#boardBox li{list-style:none;padding-left:20px;position:relative;opacity:.9}
+#boardBox ul{margin:0;padding:0}
+#boardBox li:before{content:'';position:absolute;left:2px;top:5px;width:10px;height:10px;border:1px solid var(--cream);border-radius:2px}
+#boardBox li.ok{color:var(--green)} #boardBox li.ok:before{background:var(--green);border-color:var(--green)}
+#boardBox.go{border-color:var(--green);box-shadow:0 0 18px rgba(127,206,122,.5);animation:pulse .7s infinite alternate} #boardBox.go h4{color:#c9f5c4}
+#boardBox.warn{border-color:#e0685c} #boardBox.warn h4{color:var(--bad)}
+#boardBox .g{height:6px;background:rgba(0,0,0,.5);border-radius:3px;overflow:hidden;margin-top:4px;display:none} #boardBox.warn .g{display:block}
+#boardBox .g i{display:block;height:100%;width:0;background:#e0685c}
+@keyframes pulse{to{transform:scale(1.03)}}
+#help{right:10px;top:150px;font-size:12px;line-height:1.8;padding:4px 10px;opacity:.8;pointer-events:auto;cursor:pointer}
+#help .all{display:none} #help.open .all{display:block} #help.open .tip{display:none}
+#hud.m-melee #dial,#hud.m-melee #guns,#hud.m-melee #help,#hud.m-melee #touch,#hud.m-port #dial,#hud.m-port #guns,#hud.m-port #help,#hud.m-port #touch,#hud.m-port #ePanel{display:none!important}
+
+#tag{position:fixed;left:0;top:0;pointer-events:none;text-align:center;font-size:12px;text-shadow:0 1px 3px #000;white-space:nowrap}
+#tag .h{width:64px;height:5px;background:rgba(0,0,0,.55);border-radius:3px;overflow:hidden;margin:2px auto 0;border:1px solid rgba(255,255,255,.25)} #tag .h i{display:block;height:100%;background:#ff5b4a}
+#tag .arrow{display:none;width:0;height:0;border:9px solid transparent;border-left:15px solid #ff5b4a;margin:0 auto 2px;transform-origin:50% 50%}
+#tag.off .arrow{display:block} #tag.off .h{display:none}
+#floaters{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+.fl{position:absolute;left:0;top:0;font:400 19px var(--head);letter-spacing:.5px;white-space:nowrap;text-shadow:0 2px 4px #000,0 0 3px #000}
+.fl.good{color:#ffe29a} .fl.bad{color:#ff8a78} .fl.rake{font-size:26px;color:#fff3c0}
+
 #touch{position:absolute;inset:0;display:none}
 body.touch #touch{display:block} body.touch #help{display:none} body.touch kbd{display:none}
-.tb{position:absolute;pointer-events:auto;width:58px;height:58px;border-radius:50%;background:rgba(10,20,32,.6);border:1px solid rgba(201,162,74,.6);color:var(--cream);font:400 15px var(--body);display:flex;align-items:center;justify-content:center;text-align:center;line-height:1}
+.tb{position:absolute;pointer-events:auto;width:58px;height:58px;border-radius:50%;background:rgba(10,20,32,.6);border:1px solid var(--line);color:var(--cream);font:400 15px var(--body);display:flex;align-items:center;justify-content:center;text-align:center;line-height:1}
 .tb:active,.tb.on{background:rgba(201,162,74,.45)}
 body.touch #dial{bottom:auto;top:150px;transform:scale(.72);transform-origin:top left}
 body.touch #guns{bottom:6px;transform:translateX(-50%) scale(.82);transform-origin:bottom center}
-body.touch #boardBox{bottom:150px;right:8px;width:150px}
-
-/* ---------- overlays ---------- */
-#screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:14px;background:radial-gradient(ellipse at center,rgba(5,10,18,.35),rgba(5,10,18,.78));overflow:auto;touch-action:pan-y}
-#screen.clear{background:linear-gradient(rgba(5,10,18,.05),rgba(5,10,18,.55))}
-.card{width:min(640px,100%);max-height:100%;overflow:auto;background:linear-gradient(160deg,var(--parch),var(--parch2));color:var(--ink);border-radius:6px;padding:22px 26px;box-shadow:0 12px 50px rgba(0,0,0,.6),0 0 0 1px #6b5226,0 0 0 5px rgba(234,217,176,.25);position:relative}
-.card.wide{width:min(820px,100%)}
-.card h1{font:400 44px/1 var(--head);margin:0 0 4px;letter-spacing:1px}
-.card h2{font:400 30px/1.05 var(--head);margin:0 0 6px}
-.card .eyebrow{font-size:13px;letter-spacing:3px;text-transform:uppercase;color:#7a5a22}
-.card p{margin:8px 0;font-size:16.5px;line-height:1.4}
-.card .tip{border-left:3px solid var(--red);padding:2px 0 2px 10px;font-style:italic}
-.card hr{border:0;border-top:1px solid rgba(60,40,10,.35);margin:12px 0}
-.btn{font:400 21px var(--head);letter-spacing:1px;background:#3a2412;color:var(--parch);border:1px solid #1d1006;border-radius:5px;padding:9px 22px;cursor:pointer;box-shadow:0 2px 0 #1d1006}
-.btn:hover{background:#56351a} .btn:active{transform:translateY(1px);box-shadow:none}
-.btn.sm{font-size:15px;padding:5px 12px;font-family:var(--body);letter-spacing:0}
-.btn:disabled{opacity:.4;cursor:default}
-.btn.red{background:var(--red);border-color:#6d1a12;box-shadow:0 2px 0 #6d1a12}
-.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap} .row.end{justify-content:flex-end;margin-top:14px} .grow{flex:1}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px;margin:10px 0}
-.stat{background:rgba(60,40,10,.1);border:1px solid rgba(60,40,10,.25);border-radius:4px;padding:5px 8px;font-size:13px}
-.stat b{display:block;font:400 21px var(--head)}
-.keys{display:grid;grid-template-columns:1fr 1fr;gap:3px 18px;font-size:14.5px}
-.keys kbd{background:#3a2412;color:var(--parch);border-color:#1d1006}
-.gold{color:#8a5a00;font-weight:700}
-.shop{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.item{display:flex;gap:8px;align-items:center;background:rgba(60,40,10,.1);border:1px solid rgba(60,40,10,.25);border-radius:4px;padding:6px 8px;font-size:14px}
-.item .d{flex:1;line-height:1.2} .item .d small{display:block;opacity:.75}
-.lv i{display:inline-block;width:9px;height:9px;border-radius:50%;border:1px solid #3a2412;margin-right:2px} .lv i.on{background:#3a2412}
-h4{font:400 20px var(--head);margin:12px 0 5px}
-#titleWrap{text-align:center;color:var(--cream);text-shadow:0 3px 18px rgba(0,0,0,.8);width:min(700px,100%)}
-#titleWrap h1{font:400 clamp(60px,13vw,128px)/.9 var(--head);margin:0;letter-spacing:3px;color:#f6e3b0}
-#titleWrap .tag{font-size:clamp(16px,2.6vw,22px);font-style:italic;margin:8px 0 22px}
-#titleWrap .btn{font-size:26px;padding:12px 34px;background:#7c1f17;border-color:#3d0d08;box-shadow:0 3px 0 #3d0d08}
-#titleWrap .hint{margin-top:16px;font-size:14px;opacity:.85}
+body.touch #boardBox{bottom:160px;right:8px}
+body.touch #coach{bottom:auto;top:130px;font-size:14px}
 
 /* ---------- boarding ---------- */
-#boarding{position:fixed;left:0;right:0;bottom:0;padding:12px;display:flex;justify-content:center;pointer-events:none}
-#boarding .card{pointer-events:auto;width:min(720px,100%);padding:14px 18px}
-.vs{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center}
-.vs .side b{font:400 34px/1 var(--head)} .vs .side.r{text-align:right}
-.vs .mid{font:400 22px var(--head);color:var(--red)}
-.cbar{height:10px;background:rgba(60,40,10,.25);border-radius:5px;overflow:hidden;margin-top:3px}
-.cbar i{display:block;height:100%;background:#2f6bb0;transition:width .5s} .side.r .cbar i{background:var(--red);margin-left:auto}
-#bHint{font-style:italic;font-size:17px;margin:8px 0 2px;min-height:24px}
-#bLog{font-size:15px;min-height:22px;color:#5a2a12}
-.orders{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
-.orders .btn{font-size:19px;padding:8px 6px} .orders .btn small{display:block;font:italic 12.5px var(--body);letter-spacing:0;opacity:.85}
+#melee{position:fixed;inset:0;pointer-events:none}
+#mStrip{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);width:min(640px,94vw);pointer-events:auto;padding:10px 14px;text-align:center}
+#mStrip .vs{display:flex;justify-content:space-between;align-items:baseline;font-size:15px}
+#mStrip .vs b{font:400 30px/1 var(--head);margin:0 6px} #mStrip .vs .l b{color:#8cc4f5} #mStrip .vs .r b{color:#ff7d6c}
+#mStrip .how{font-size:17px;margin:6px 0 8px} #mStrip small{font-size:12px;opacity:.7;font-style:italic}
+.tug{height:14px;background:#b8372b;border-radius:7px;overflow:hidden;margin-top:6px;border:1px solid rgba(255,255,255,.25)} .tug i{display:block;height:100%;width:50%;background:#3f86cc;transition:width .2s linear} #mStrip .acts{display:flex;gap:8px;justify-content:center}
+
+/* ---------- port ---------- */
+#port{position:fixed;inset:0;pointer-events:none}
+#portTop{position:absolute;left:50%;top:10px;transform:translateX(-50%);text-align:center;text-shadow:0 2px 10px rgba(0,0,0,.7)}
+#portTop .nm{font:400 34px/1 var(--head);letter-spacing:1px;color:#f6e3b0} #purse{font:400 26px var(--head);color:#ffd86e}
+.spot{position:absolute;left:0;top:0;pointer-events:auto;cursor:pointer;font:400 18px var(--head);letter-spacing:.5px;background:var(--navy);border:1px solid var(--line);border-radius:18px;padding:3px 14px;white-space:nowrap}
+.spot:after{content:'';position:absolute;left:50%;top:100%;width:1px;height:16px;background:var(--line)}
+.spot:hover,.spot.sel{background:rgba(215,178,90,.4);border-color:#ffe29a}
+.spot i{display:none;position:absolute;right:-5px;top:-5px;width:13px;height:13px;border-radius:50%;background:var(--red);border:1px solid #fff}
+.spot.need i{display:block}
+#shop{left:10px;top:150px;width:300px;pointer-events:auto}
+#shop h3{margin:0 0 6px;font:400 24px var(--head);color:var(--brass);display:flex;justify-content:space-between}
+#shop .x{background:none;border:0;cursor:pointer;font-size:16px;opacity:.7}
+.item{display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px solid rgba(255,255,255,.12);font-size:15px}
+.item .d{flex:1;line-height:1.2} .item .d small{display:block;opacity:.7;font-size:12.5px}
+.lv i{display:inline-block;width:8px;height:8px;border-radius:50%;border:1px solid var(--cream);margin-right:2px} .lv i.on{background:var(--cream)}
+#portGo{position:absolute;right:14px;bottom:14px;text-align:right;pointer-events:auto;text-shadow:0 2px 8px rgba(0,0,0,.8)}
+#nextLine{font-size:15px;margin-bottom:8px;line-height:1.25}
+
+/* ---------- screens ---------- */
+#bars:before,#bars:after{content:'';position:fixed;left:0;right:0;height:0;background:#05090f;transition:height .5s;pointer-events:none}
+#bars:before{top:0} #bars:after{bottom:0} #bars.on:before,#bars.on:after{height:9vh}
+#screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:14px;background:rgba(5,10,18,.72);text-align:center}
+#screen.clear{background:radial-gradient(ellipse at center,rgba(5,10,18,.42),rgba(5,10,18,0) 70%)}
+#screen.low{align-items:flex-end;justify-content:flex-start;text-align:left;padding:0 6vw 13vh;background:linear-gradient(transparent 45%,rgba(5,10,18,.75))}
+#screen h1{font:400 clamp(44px,8vw,84px)/.95 var(--head);margin:4px 0;letter-spacing:2px;color:#f6e3b0;text-shadow:0 3px 18px rgba(0,0,0,.8)}
+.eyebrow{font-size:14px;letter-spacing:4px;text-transform:uppercase;color:var(--brass);text-shadow:0 1px 4px #000}
+#titleWrap h1{font-size:clamp(64px,14vw,136px)}
+#titleWrap .tag{font-size:clamp(16px,2.6vw,22px);font-style:italic;margin:8px 0 26px;text-shadow:0 2px 8px #000}
+.lower .line{font-size:18px;text-shadow:0 1px 4px #000} .lower .hook{font:italic 22px var(--body);margin:6px 0 16px;color:#ffe29a;text-shadow:0 1px 4px #000}
+.banner .gold{font:400 46px var(--head);color:#ffd86e;text-shadow:0 2px 10px #000}
+.banner .loot{font-size:16px;font-style:italic;opacity:.9;text-shadow:0 1px 4px #000}
+.banner.bad h1{color:#ff9a8a}
+.rowc{display:flex;gap:14px;justify-content:center;align-items:center;margin-top:20px;flex-wrap:wrap}
+.stats{display:flex;gap:22px;justify-content:center;margin-top:10px;font-size:14px;flex-wrap:wrap} .stats b{display:block;font:400 30px var(--head);color:#ffd86e}
+.keys{display:grid;grid-template-columns:1fr 1fr;gap:5px 26px;font-size:16px;text-align:left;margin:14px auto 0;width:min(560px,92vw)}
+
 @media (max-width:700px){
   body.touch .tb{margin-bottom:92px}
   body.touch #guns{transform:translateX(-50%) scale(.74)}
   body.touch #boardBox{bottom:250px}
   #toasts{top:150px} body.touch #toasts{top:272px} .toast{font-size:13px} .toast.big{font-size:19px}
-  .bar{grid-template-columns:34px 1fr 26px;font-size:11px}
-}
-@media (max-width:640px){
-  .card{padding:16px} .card h1{font-size:34px} .shop{grid-template-columns:1fr} .keys{grid-template-columns:1fr}
-  .ship-panel h3{font-size:16px} .slot{width:54px}
+  .bar{grid-template-columns:34px 1fr 26px;font-size:11px} .ship-panel h3{font-size:16px} .slot{width:54px}
+  #shop{left:10px;right:10px;width:auto;top:auto;bottom:120px} .keys{grid-template-columns:1fr}
 }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
+<div id="bars"></div>
 
 <div id="hud" class="hidden">
   <div id="pPanel" class="panel ship-panel">
@@ -138,7 +162,7 @@ h4{font:400 20px var(--head);margin:12px 0 5px}
     <div class="bar hull"><span>Hull</span><div class="t"><i id="pHull"></i></div><b id="pHullN"></b></div>
     <div class="bar sail"><span>Sails</span><div class="t"><i id="pSail"></i></div><b id="pSailN"></b></div>
     <div class="bar crew"><span>Crew</span><div class="t"><i id="pCrew"></i></div><b id="pCrewN"></b></div>
-    <div class="status" id="pStatus"></div>
+    <div class="gauge" id="pGauge"></div><div class="status" id="pStatus"></div>
   </div>
   <div id="ePanel" class="panel ship-panel">
     <h3 id="eName"></h3><div class="sub" id="eSub"></div>
@@ -152,25 +176,29 @@ h4{font:400 20px var(--head);margin:12px 0 5px}
     <canvas id="radar" width="300" height="300"></canvas>
     <div id="sailInfo">
       <div><span class="big" id="knots">0</span> kn</div>
-      <div class="pips" id="pips"><i></i><i></i></div>
       <div id="sailName">Full sail</div>
-      <div id="pos" style="font-style:italic"></div>
-      <div id="eff" style="opacity:.8"></div>
+      <div class="meter">Speed<span id="mSpd"></span></div>
+      <div class="meter">Turn<span id="mTurn"></span></div>
+      <div class="meter">Aim<span id="mAim"></span></div>
+      <div id="pos"></div>
     </div>
   </div>
+  <div id="coach" class="hidden"></div>
   <div id="guns" class="panel">
     <div id="ammoTip"></div>
     <div class="battery" id="bPort" data-fire="port"><div>◀ PORT <kbd>Q</kbd></div><div class="g"><i></i></div><div class="s"></div></div>
     <div id="ammo"></div>
-    <div class="battery" id="bStbd" data-fire="stbd"><div>STARBOARD <kbd>E</kbd> ▶</div><div class="g"><i></i></div><div class="s"></div></div>
+    <div class="battery" id="bStbd" data-fire="stbd"><div>STBD <kbd>E</kbd> ▶</div><div class="g"><i></i></div><div class="s"></div></div>
   </div>
-  <div id="help" class="panel">
-    <kbd>A</kbd><kbd>D</kbd> rudder · <kbd>W</kbd><kbd>S</kbd> sails<br>
-    <kbd>Q</kbd><kbd>E</kbd> fire port / starboard · <kbd>Space</kbd> fire bearing side<br>
-    <kbd>1</kbd>–<kbd>4</kbd> ammunition · <kbd>B</kbd> hold to grapple<br>
-    <kbd>V</kbd> camera · drag to look · <kbd>P</kbd> pause · <kbd>M</kbd> mute
+  <div id="help" class="panel" data-tapkey="h">
+    <div class="tip"><kbd>H</kbd> keys</div>
+    <div class="all"><kbd>A</kbd><kbd>D</kbd> rudder · <kbd>W</kbd><kbd>S</kbd> sail<br><kbd>Space</kbd> fire · <kbd>Q</kbd><kbd>E</kbd> one side<br><kbd>1</kbd>–<kbd>4</kbd> shot · <kbd>B</kbd> board<br><kbd>V</kbd> camera · <kbd>P</kbd> pause · <kbd>M</kbd> mute</div>
   </div>
-  <div id="boardBox" class="panel hidden"><div class="h"></div><div class="t"></div><div class="g"><i></i></div></div>
+  <div id="boardBox" class="panel hidden" data-tapkey="b">
+    <h4 id="bbTitle">To board her</h4>
+    <ul><li id="bbNear"></li><li id="bbSlow"></li></ul>
+    <div id="bbOdds"></div><div class="g"><i></i></div>
+  </div>
   <div id="touch">
     <div class="tb" data-key="a" style="left:14px;bottom:20px">◀</div>
     <div class="tb" data-key="d" style="left:84px;bottom:20px">▶</div>
@@ -181,22 +209,26 @@ h4{font:400 20px var(--head);margin:12px 0 5px}
   </div>
 </div>
 
-<div id="boarding" class="hidden"><div class="card">
-  <div class="vs">
-    <div class="side"><div id="bPN"></div><b id="bPC"></b><div class="cbar"><i id="bPB"></i></div></div>
-    <div class="mid">BOARDING</div>
-    <div class="side r"><div id="bEN"></div><b id="bEC"></b><div class="cbar"><i id="bEB"></i></div></div>
-  </div>
-  <div id="bHint"></div><div id="bLog"></div>
-  <div class="orders">
-    <button class="btn" data-o="charge">Charge<small>cutlasses · beats Volley</small></button>
-    <button class="btn" data-o="volley">Volley<small>muskets · beats Hold</small></button>
-    <button class="btn" data-o="hold">Hold the line<small>pikes · beats Charge</small></button>
-  </div>
-  <div class="row end" style="margin-top:8px"><span class="grow" style="font-size:13px;font-style:italic">Read their deck, then give your order.</span><button class="btn sm" id="bCut">Cut the grapples</button></div>
-</div></div>
+<div id="tag" class="hidden"><div class="arrow"></div><span class="d"></span><div class="h"><i></i></div></div>
+<div id="floaters"></div>
 
-<div id="screen"></div>
+<div id="melee" class="hidden">
+  <div id="mStrip" class="panel">
+    <div class="vs"><span class="l"><span id="mPN"></span><b id="mPC"></b><small id="mPL"></small></span><span class="r"><small id="mEL"></small><b id="mEC"></b><span id="mEN"></span></span></div>
+    <div class="tug"><i id="mBar"></i></div>
+    <div class="how" id="mState"></div>
+    <div class="acts"><button class="btn sm" id="mSwivel" data-tapkey="f"><kbd>F</kbd> Swivel gun: spend 1 grape, kill about 8 <span></span></button><button class="btn sm" data-tapkey="x"><kbd>X</kbd> Cut the grapples (lose 1 in 10)</button></div>
+  </div>
+</div>
+
+<div id="port" class="hidden">
+  <div id="portTop"><div class="eyebrow">Home port</div><div class="nm">Port Halcyon</div><div id="purse"></div></div>
+  <div id="spots"></div>
+  <div id="shop" class="panel hidden"></div>
+  <div id="portGo"><div id="nextLine"></div><button class="btn big" data-act="sail">Put to sea</button></div>
+</div>
+
+<div id="screen" class="hidden"></div>
 <script>/*__BUNDLE__*/</script>
 </body>
 </html>

@@ -41,6 +41,11 @@ vec2 detailWave(vec2 p){ vec3 r = vec3(0.); ${glslWave(DETAIL, false)} return r.
 `;
 
 export const ENVS = {
+  harbor: {
+    zenith: 0x3f6fb4, horizon: 0xf3cf9c, sun: [0.55, 0.34, 0.5], sunCol: 0xffd9a0,
+    deep: 0x0f4a63, shallow: 0x3aa0a0, cloud: 0xffe6c8, cover: 0.55,
+    hemi: 1.1, dir: 2.0, fog: [500, 3200], amp: 0.28,
+  },
   noon: {
     zenith: 0x2a6fc4, horizon: 0xb7d8ee, sun: [0.45, 0.8, 0.35], sunCol: 0xfff6e0,
     deep: 0x0a3d63, shallow: 0x1f8a9e, cloud: 0xffffff, cover: 0.52,
@@ -156,7 +161,7 @@ void main(){
 }
 `;
 
-function mulberry(seed) {
+export function mulberry(seed) {
   let a = seed >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) | 0;
@@ -210,7 +215,34 @@ export class World {
     this.sun = new THREE.DirectionalLight(0xffffff, 2);
     scene.add(this.hemi, this.sun, this.sun.target);
     scene.fog = new THREE.Fog(0xffffff, 300, 2000);
+    // wind streaks: faint lines drifting downwind so the wind is something you can see
+    const N = 46;
+    this.streaks = Array.from({ length: N }, () => ({ x: 0, y: 0, z: 0, life: 0, max: 1 }));
+    const sg = new THREE.BufferGeometry();
+    sg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 6), 3));
+    sg.setAttribute('color', new THREE.BufferAttribute(new Float32Array(N * 8), 4));
+    this.streakMesh = new THREE.LineSegments(sg, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, fog: false }));
+    this.streakMesh.frustumCulled = false;
+    scene.add(this.streakMesh);
     this.setEnv('noon');
+  }
+
+  updateStreaks(dt, focus) {
+    const wx = Math.sin(this.wind.dir), wz = Math.cos(this.wind.dir), sp = 34;
+    const pos = this.streakMesh.geometry.attributes.position, col = this.streakMesh.geometry.attributes.color;
+    this.streaks.forEach((s, i) => {
+      s.life -= dt;
+      if (s.life <= 0) {
+        s.max = s.life = 1.6 + Math.random() * 1.8;
+        const a = Math.random() * 6.28, d = 20 + Math.random() * 130;
+        s.x = focus.x + Math.sin(a) * d - wx * 30; s.z = focus.z + Math.cos(a) * d - wz * 30; s.y = 2 + Math.random() * 16;
+      }
+      s.x += wx * sp * dt; s.z += wz * sp * dt;
+      const len = 9, a = Math.sin((s.life / s.max) * Math.PI) * 0.42;
+      pos.setXYZ(i * 2, s.x, s.y, s.z); pos.setXYZ(i * 2 + 1, s.x - wx * len, s.y, s.z - wz * len);
+      col.setXYZW(i * 2, 1, 1, 1, a); col.setXYZW(i * 2 + 1, 1, 1, 1, 0);
+    });
+    pos.needsUpdate = col.needsUpdate = true;
   }
 
   setEnv(name) {
@@ -234,6 +266,8 @@ export class World {
     for (const w of WAVES) h += w.amp * Math.sin(w.k * (x * w.dx + z * w.dz) + t * w.om);
     return h * this.amp;
   }
+
+  clearIslands() { this.islandGroup.clear(); this.islands = []; }
 
   setIslands(seed, count) {
     this.islandGroup.clear();
@@ -268,7 +302,7 @@ export class World {
   }
 }
 
-function makeIsland(r, H, rnd, x, z) {
+export function makeIsland(r, H, rnd, x, z) {
   const seg = 22;
   const g = new THREE.PlaneGeometry(r * 2.3, r * 2.3, seg, seg);
   g.rotateX(-Math.PI / 2);

@@ -4,7 +4,15 @@ export const wrap = (a) => { a = (a + Math.PI) % (Math.PI * 2); if (a < 0) a += 
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // Speed fraction by angle off dead-downwind (deg).
-const POLAR = [[0, 0.8], [45, 1], [90, 0.93], [120, 0.72], [140, 0.45], [152, 0.18], [180, 0.05]];
+const POLAR = [[0, 0.76], [45, 1], [90, 0.88], [115, 0.66], [135, 0.4], [150, 0.14], [180, 0.02]];
+// Sail settings: more canvas is faster, less is a steadier gun platform that turns tighter and is harder to dismast.
+export const SAILS = [
+  { name: 'Furled', spd: 0, turn: 1, aim: 0.8, dmg: 0.3 },
+  { name: 'Reefed', spd: 0.4, turn: 1.12, aim: 0.8, dmg: 0.5 },
+  { name: 'Battle sails', spd: 0.7, turn: 1.22, aim: 1, dmg: 0.75 },
+  { name: 'Full sail', spd: 1, turn: 0.85, aim: 1.3, dmg: 1.15 },
+];
+export const TOP = SAILS.length - 1;
 export function polar(a) {
   const d = (Math.abs(a) * 180) / Math.PI;
   for (let i = 1; i < POLAR.length; i++) {
@@ -34,13 +42,14 @@ export const AMMO_KEYS = ['round', 'chain', 'grape', 'fire'];
 export const ARC = 0.5; // broadside half-angle (rad)
 
 // ---------- procedural ship model ----------
-function halfWidth(spec, t) {
+export function halfWidth(spec, t) {
   const b = spec.B / 2;
   const stern = Math.min(1, 0.7 + t * 1.7);
   const bow = t > 0.6 ? Math.pow(Math.cos(((t - 0.6) / 0.4) * Math.PI * 0.5), 0.75) : 1;
   return Math.max(0.06, b * stern * bow);
 }
 const deckTop = (spec, t) => spec.D + 0.9 * (2 * t - 1) ** 2 * (t < 0.5 ? 1.5 : 1.1);
+export const deckAt = (spec, t) => deckTop(spec, t) - 0.9;
 
 function hullGeometry(spec) {
   const ns = 16, L = spec.L, draft = spec.D * 0.8;
@@ -234,7 +243,7 @@ export class Ship {
     this.group = this.model.group;
     this.pos = new THREE.Vector3(); this.heading = 0; this.speed = 0; this.rudder = 0;
     this.input = { turn: 0 };
-    this.sailLevel = 2;
+    this.sailLevel = TOP;
     this.hullMax = this.hull = spec.hull; this.sailsMax = this.sails = spec.sails; this.crewMax = this.crew = spec.crew;
     this.reload = { port: 0, stbd: 0 }; this.reloadMax = { port: 1, stbd: 1 };
     this.ammo = 'round';
@@ -244,6 +253,7 @@ export class Ship {
     this.sinking = 0; this.dead = false; this.struck = false;
     this.ramCd = 0; this.sailTier = 0; this.roll = 0; this.fxT = 0;
     this.target = null;
+    this.figs = new CrewFigures(this);
   }
   get fwdX() { return Math.sin(this.heading); }
   get fwdZ() { return Math.cos(this.heading); }
@@ -271,7 +281,7 @@ export class Ship {
   }
   maxSpeedNow(world) {
     const off = wrap(this.heading - world.wind.dir);
-    return this.spec.speed * [0, 0.62, 1][this.sailLevel] * polar(off) * (0.25 + 0.75 * this.sailR) * (this.hullR < 0.3 ? 0.82 : 1);
+    return this.spec.speed * SAILS[this.sailLevel].spd * polar(off) * (0.25 + 0.75 * this.sailR) * (this.hullR < 0.3 ? 0.82 : 1);
   }
 
   update(dt, world, frozen) {
@@ -280,10 +290,10 @@ export class Ship {
       this.sinking += dt; this.speed *= Math.max(0, 1 - dt);
     } else if (!frozen) {
       const tgt = this.struck ? 0 : this.maxSpeedNow(world);
-      this.speed += (tgt - this.speed) * Math.min(1, dt * (tgt > this.speed ? 0.3 : 0.42));
+      this.speed += (tgt - this.speed) * Math.min(1, dt * (tgt > this.speed ? 0.42 : 0.7));
       this.rudder += clamp(this.input.turn - this.rudder, -dt * 2.2, dt * 2.2);
       const way = 0.3 + 0.7 * clamp(this.speed / (0.45 * sp.speed), 0, 1);
-      this.heading = wrap(this.heading + this.rudder * sp.turn * way * (this.sailLevel === 1 ? 1.22 : 1) * dt);
+      this.heading = wrap(this.heading + this.rudder * sp.turn * way * SAILS[this.sailLevel].turn * dt);
       this.speed *= 1 - Math.abs(this.rudder) * 0.07 * dt;
       for (const s of ['port', 'stbd']) if (this.reload[s] > 0) this.reload[s] = Math.max(0, this.reload[s] - dt);
     } else {
@@ -300,7 +310,7 @@ export class Ship {
     const hs = world.height(this.pos.x - fx * L * 0.35, this.pos.z - fz * L * 0.35);
     const hp = world.height(this.pos.x + fz * 4, this.pos.z - fx * 4), hq = world.height(this.pos.x - fz * 4, this.pos.z + fx * 4);
     const relWind = wrap(world.wind.dir - this.heading);
-    const set = [0, 0.6, 1][this.sailLevel];
+    const set = SAILS[this.sailLevel].spd;
     let roll = (hp - hq) / 8 * 0.6 - this.rudder * clamp(this.speed / 12, 0, 1) * 0.07 + Math.sin(relWind) * 0.05 * set;
     let y = (hb + hs) * 0.5 * 0.85, pitch = -Math.atan2(hb - hs, L * 0.7) * 0.8;
     if (this.sinking > 0) {
@@ -319,7 +329,7 @@ export class Ship {
     const gone = this.sailR <= 0.02;
     this.model.sails.forEach((s, i) => {
       const u = s.userData;
-      const want = this.sailLevel === 2 ? 1 : this.sailLevel === 1 ? (u.course ? 0.1 : 1) : 0.1;
+      const lv = this.sailLevel, want = lv === 3 ? 1 : lv === 2 ? (u.course ? 0.1 : 1) : lv === 1 ? (u.course ? 0.1 : 0.5) : 0.1;
       u.furl += (want - u.furl) * Math.min(1, dt * 1.6);
       if (u.jib) { s.visible = this.sailLevel > 0 && !(gone && true); }
       else { s.scale.set(1, u.furl, 0.25 + 0.75 * fill * u.furl); s.visible = !(gone && i % 2 === 0); }
@@ -332,5 +342,68 @@ export class Ship {
     const fp = fl.geometry.attributes.position;
     for (let i = 0; i < fp.count; i++) { const x = fp.getX(i); fp.setZ(i, Math.sin(x * 2.2 - world.time * 9) * 0.12 * x); }
     fp.needsUpdate = true;
+    this.figs.update(dt, world.time, this.boardView || null);
+  }
+}
+
+// ---------- crew on deck ----------
+const FIG_MAX = 64;
+let figGeo = null;
+function figureGeometry() {
+  if (figGeo) return figGeo;
+  const parts = [new THREE.BoxGeometry(0.62, 1.35, 0.42).translate(0, 0.68, 0), new THREE.BoxGeometry(0.4, 0.4, 0.4).translate(0, 1.6, 0)].map((g) => g.toNonIndexed());
+  const pos = [], nor = [];
+  for (const g of parts) { pos.push(...g.attributes.position.array); nor.push(...g.attributes.normal.array); }
+  figGeo = new THREE.BufferGeometry();
+  figGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  figGeo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  return figGeo;
+}
+const _fm = new THREE.Matrix4(), _fq = new THREE.Quaternion(), _fs = new THREE.Vector3(), _fp = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
+export class CrewFigures {
+  constructor(ship) {
+    this.ship = ship;
+    const sp = ship.spec;
+    this.per = Math.max(2.5, sp.crew / FIG_MAX);
+    this.mesh = new THREE.InstancedMesh(figureGeometry(), new THREE.MeshLambertMaterial({ flatShading: true }), FIG_MAX);
+    this.mesh.frustumCulled = false;
+    const cols = (sp.crewCols || [0x7a2a22, 0x2c2c2c, 0x8a6a3a, 0x5a4a3a]).map((c) => new THREE.Color(c));
+    this.f = [];
+    for (let i = 0; i < FIG_MAX; i++) {
+      const t = 0.16 + Math.random() * 0.68, z = (t - 0.5) * sp.L, x = (Math.random() - 0.5) * 2 * halfWidth(sp, t) * 0.68;
+      this.f.push({ sx: x, sz: z, x, z, ph: Math.random() * 6.28, yaw: Math.random() * 6.28, r1: Math.random(), r2: Math.random(), s: 1 });
+      this.mesh.setColorAt(i, cols[i % cols.length]);
+    }
+    ship.group.add(this.mesh);
+  }
+  // bd (while boarding): { side: local x sign facing the foe, lanes: [men per lane], won: [bool], flip, reach }
+  update(dt, time, bd) {
+    const sp = this.ship.spec, n = Math.min(FIG_MAX, Math.ceil(this.ship.crew / this.per));
+    let lane = 0, used = 0, quota = bd ? Math.ceil(bd.lanes[0] / this.per) : 0;
+    for (let i = 0; i < FIG_MAX; i++) {
+      const f = this.f[i];
+      let tx = f.sx, tz = f.sz, alive = i < n, fight = 0;
+      if (bd && alive) {
+        while (lane < 2 && used >= quota) { lane++; used = 0; quota = Math.ceil(bd.lanes[lane] / this.per); }
+        if (used >= quota) alive = false;
+        else {
+          used++;
+          const k = bd.flip ? 2 - lane : lane, hw = halfWidth(sp, 0.5);
+          tz = (k - 1) * sp.L * 0.27 + (f.r1 - 0.5) * sp.L * 0.2;
+          tx = bd.won[lane] ? bd.side * (hw + 1.6 + f.r2 * bd.reach) : bd.side * hw * (0.35 + f.r2 * 0.5);
+          fight = 1;
+        }
+      }
+      const k = Math.min(1, dt * 2.6);
+      f.x += (tx - f.x) * k; f.z += (tz - f.z) * k;
+      f.s += ((alive ? 1 : 0) - f.s) * Math.min(1, dt * 6);
+      const t = clamp(f.z / sp.L + 0.5, 0, 1);
+      const lunge = fight ? Math.sin(time * 9 + f.ph) * 0.3 : 0;
+      _fp.set(f.x + (bd ? bd.side * lunge : 0), deckAt(sp, t) + Math.abs(Math.sin(time * (fight ? 9 : 1.3) + f.ph)) * (fight ? 0.25 : 0.05), f.z);
+      _fq.setFromAxisAngle(_up, fight ? (bd.side > 0 ? Math.PI / 2 : -Math.PI / 2) : f.yaw);
+      _fs.setScalar(Math.max(0.0001, f.s) * 1.2);
+      this.mesh.setMatrixAt(i, _fm.compose(_fp, _fq, _fs));
+    }
+    this.mesh.instanceMatrix.needsUpdate = true;
   }
 }
