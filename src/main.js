@@ -296,7 +296,9 @@ function hullHit(b, ship) {
   if (A.ignite && ship.litBy !== b.volley && Math.random() < A.ignite) {
     ship.litBy = b.volley;
     if (ship.fire === 0) floater(ship.isPlayer ? 'FIRE! Our gunners leave their guns' : 'FIRE! Her gunners leave their guns', ship.isPlayer ? 'bad rake' : 'good rake', _v.set(ship.pos.x, ship.model.mastH * 0.8, ship.pos.z).clone());
-    ship.fire = Math.min(3, ship.fire + 1); ship.fireT = 11;
+    // small shot starts small fires: light guns can keep one fire going, medium two, heavy three
+    const most = 1 + ['light', 'medium', 'heavy'].indexOf(b.owner.cal.name);
+    ship.fire = Math.max(ship.fire, Math.min(most, ship.fire + 1)); ship.fireT = 11;
   }
   const p = b.mesh.position;
   if (b.ammo === 'grape') fx.grape(p); else fx.wood(p, rake ? 16 : 10);
