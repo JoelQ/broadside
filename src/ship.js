@@ -48,7 +48,7 @@ export const CAL = [
   { name: 'heavy', pdr: '24-pdr', range: 1.22, dmg: 1.45, reload: 1.4 },
 ];
 // Mass, relative to a brig. Heavy ships gather way, lose way and answer the helm slowly.
-export const massOf = (spec) => clamp((spec.L * spec.B) / 240, 0.55, 2.3);
+export const massOf = (spec) => clamp(Math.sqrt((spec.L * spec.B) / 240) * 0.95 + 0.05, 0.6, 2.3);
 export const noGoHalf = (spec) => Math.max(0.2, 0.6 - (spec.point || 0)); // half-width of the no-sail wedge
 export const JURY = 0.34; // sails jury-rig back to this fraction
 export const BELOW = 0.4; // share of a crew below decks, out of reach of gunfire // broadside half-angle (rad)
@@ -158,30 +158,73 @@ export function buildShipModel(spec) {
   group.add(hull);
   const deckY = (t) => deckTop(spec, t) - 0.9;
 
-  if (spec.castle) {
-    const len = L * 0.2, t = 0.1;
-    const c = new THREE.Mesh(new THREE.BoxGeometry(halfWidth(spec, t) * 1.8, 2.3, len), new THREE.MeshLambertMaterial({ color: spec.trimCol, flatShading: true }));
-    c.position.set(0, deckY(t) + 1.0, -L / 2 + len / 2 + 0.3);
+  const lv = +spec.castle || 0, trimMat = new THREE.MeshLambertMaterial({ color: spec.trimCol, flatShading: true }), glowMat = new THREE.MeshBasicMaterial({ color: 0xffd98a });
+  for (let k = 0; k < lv; k++) {
+    // sterncastle, one storey per level, each shorter than the one below
+    const len = L * (0.24 - k * 0.07), t = 0.1, hgt = 2.4 + L * 0.012;
+    const c = new THREE.Mesh(new THREE.BoxGeometry(halfWidth(spec, t) * (1.85 - k * 0.2), hgt, len), trimMat);
+    c.position.set(0, deckY(t) + hgt * (0.42 + k), -L / 2 + len / 2 + 0.3);
     group.add(c);
-    const win = new THREE.Mesh(new THREE.BoxGeometry(halfWidth(spec, 0) * 1.3, 0.7, 0.2), new THREE.MeshBasicMaterial({ color: 0xffd98a }));
-    win.position.set(0, deckY(0) + 0.9, -L / 2 + 0.22);
+    const win = new THREE.Mesh(new THREE.BoxGeometry(halfWidth(spec, 0) * (1.3 - k * 0.2), 0.7, 0.2), glowMat);
+    win.position.set(0, deckY(0) + hgt * (0.4 + k), -L / 2 + 0.2);
     group.add(win);
+  }
+  if (spec.fore) {
+    const len = L * 0.14, t = 0.86, c = new THREE.Mesh(new THREE.BoxGeometry(halfWidth(spec, t) * 1.7, 2.4, len), trimMat);
+    c.position.set(0, deckY(t) + 1.0, L / 2 - len / 2 - L * 0.07);
+    group.add(c);
   }
 
   // sails: three damage tiers, with and without emblem
   const mats = [0, 1, 2].map((tier) => [null, spec.emblem]/*x*/.map((em) => { const t = sailTexture(spec, em, tier); return new THREE.MeshLambertMaterial({ map: t, emissiveMap: t, emissive: 0x555555, side: THREE.DoubleSide, alphaTest: 0.5 }); }));
-  const yards = [], sails = [], lines = [];
-  const mastZ = { 1: [0.06], 2: [0.24, -0.17], 3: [0.3, 0.0, -0.3] }[spec.masts];
-  const mainIdx = spec.masts === 3 ? 1 : 0;
+  const yards = [], sails = [], lines = [], booms = [];
+  const rig = spec.rig || 'square', thick = L / 30;
+  const mastZ = { 1: [0.1], 2: [0.24, -0.17], 3: [0.3, 0.0, -0.3], 4: [0.35, 0.12, -0.13, -0.36] }[spec.masts];
+  const mainIdx = spec.masts >= 3 ? 1 : 0;
+  // a fore-and-aft sail: a flat panel in the ship's centreline plane that swings with its boom
+  const flatSail = (pts, mat) => {
+    const g = new THREE.BufferGeometry(), ys = pts.map((q) => q[0]), zs = pts.map((q) => q[1]);
+    const y0 = Math.min(...ys), y1 = Math.max(...ys), z0 = Math.min(...zs), z1 = Math.max(...zs), pos = [], uv = [];
+    const tri = pts.length === 3 ? [0, 1, 2] : [0, 1, 2, 0, 2, 3];
+    for (const i of tri) { pos.push(0, pts[i][0], pts[i][1]); uv.push((pts[i][1] - z0) / (z1 - z0 || 1), (pts[i][0] - y0) / (y1 - y0 || 1)); }
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    g.computeVertexNormals();
+    return new THREE.Mesh(g, mat);
+  };
+  const spar = (y0, z0, y1, z1, r) => {
+    const len = Math.hypot(y1 - y0, z1 - z0), m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 5), wood);
+    m.position.set(0, (y0 + y1) / 2, (z0 + z1) / 2); m.rotation.x = Math.atan2(z1 - z0, y1 - y0);
+    return m;
+  };
   let mainTop = null;
   mastZ.forEach((zf, mi) => {
     const z = zf * L, t = zf + 0.5, base = deckY(t);
-    const H = L * (mi === mainIdx ? 0.92 : spec.masts === 3 && mi === 2 ? 0.7 : 0.8) * (spec.rigScale || 1);
-    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.38, H, 6), wood);
+    const H = L * (mi === mainIdx ? 0.92 : spec.masts >= 3 && mi === spec.masts - 1 ? 0.7 : 0.8) * (spec.rigScale || 1);
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.2 * thick, 0.38 * thick, H, 6), wood);
     mast.position.set(0, base + H / 2, z);
     group.add(mast);
     if (mi === mainIdx) mainTop = new THREE.Vector3(0, base + H, z);
-    const n = spec.sailsPerMast, frac = n === 3 ? [0.42, 0.33, 0.25] : [0.56, 0.44];
+    const em = mi === mainIdx ? 1 : 0;
+    if (rig !== 'square') {
+      const boom = new THREE.Group();
+      boom.position.set(0, base + 2.2, z);
+      let sail;
+      if (rig === 'gaff') {
+        // sloop: one big mainsail between boom and gaff, abaft the mast
+        const bl = L * 0.56, th = H * 0.62, pk = H * 0.86;
+        sail = flatSail([[0, 0], [0, -bl], [pk, -bl * 0.62], [th, 0]], mats[0][em]);
+        boom.add(spar(0, 0, 0, -bl * 1.03, 0.16), spar(th, 0, pk, -bl * 0.65, 0.13));
+      } else {
+        // xebec: a triangular lateen sail hung from one long slanting yard
+        const yl = L * 0.3 * (em ? 1.1 : 0.9), lowY = H * 0.08, hiY = H * 0.82;
+        sail = flatSail([[lowY, yl * 0.75], [hiY, -yl * 0.55], [0, -yl * 0.7]], mats[0][em]);
+        boom.add(spar(lowY, yl * 0.78, hiY, -yl * 0.58, 0.15));
+      }
+      sail.userData = { fa: true, course: false, emblem: em, furl: 1 };
+      boom.add(sail); group.add(boom);
+      booms.push(boom); sails.push(sail);
+    }
+    const n = rig === 'square' ? spec.sailsPerMast : 0, frac = n === 4 ? [0.36, 0.27, 0.21, 0.16] : n === 3 ? [0.42, 0.33, 0.25] : [0.56, 0.44];
     let lo = base + 2.6;
     const span = H * 0.95 - 2.6;
     for (let s = 0; s < n; s++) {
@@ -189,9 +232,9 @@ export function buildShipModel(spec) {
       const w = B * 2.05 * (1 - 0.2 * s) * (mi === mainIdx ? 1 : 0.88), h = hi - lo - 0.7;
       const yard = new THREE.Group();
       yard.position.set(0, hi, z + 0.45);
-      const spar = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, w * 1.04, 5), wood);
-      spar.rotation.z = Math.PI / 2;
-      yard.add(spar);
+      const ys = new THREE.Mesh(new THREE.CylinderGeometry(0.14 * thick, 0.14 * thick, w * 1.04, 5), wood);
+      ys.rotation.z = Math.PI / 2;
+      yard.add(ys);
       const sail = squareSail(w, h, mats[0][mi === mainIdx && s === 0 ? 1 : 0]);
       sail.userData = { course: s === 0, emblem: mi === mainIdx && s === 0 ? 1 : 0, furl: 1 };
       yard.add(sail);
@@ -204,7 +247,7 @@ export function buildShipModel(spec) {
   });
   // bowsprit + jib
   const fore = mastZ[0] * L, tipZ = L / 2 + L * 0.2, tipY = deckY(1) + 2.6;
-  const bs = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.24, L * 0.3, 5), wood);
+  const bs = new THREE.Mesh(new THREE.CylinderGeometry(0.14 * thick, 0.24 * thick, L * 0.3, 5), wood);
   bs.position.set(0, deckY(1) + 1.6, L / 2 + L * 0.06);
   bs.rotation.x = Math.PI / 2 - 0.22;
   group.add(bs);
@@ -223,7 +266,7 @@ export function buildShipModel(spec) {
   group.add(new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: 0x2a2018, transparent: true, opacity: 0.7 })));
 
   // flag
-  const fg = new THREE.PlaneGeometry(3.6, 2.1, 6, 1); fg.translate(1.8, 0, 0);
+  const fw = 3.6 * Math.max(1, thick * 0.9), fg = new THREE.PlaneGeometry(fw, fw * 0.58, 6, 1); fg.translate(fw / 2, 0, 0);
   const flag = new THREE.Mesh(fg, new THREE.MeshLambertMaterial({ color: spec.flagCol, side: THREE.DoubleSide }));
   flag.position.copy(mainTop).add(new THREE.Vector3(0, 0.2, 0));
   group.add(flag);
@@ -231,20 +274,23 @@ export function buildShipModel(spec) {
   // guns
   const muzzles = { port: [], stbd: [] };
   const gunG = new THREE.CylinderGeometry(0.2, 0.26, 1.7, 6); gunG.rotateZ(Math.PI / 2);
+  const decks = spec.decks || 1, perRow = Math.ceil(spec.guns / decks);
   for (let i = 0; i < spec.guns; i++) {
-    const t = 0.2 + (0.56 * (i + 0.5)) / spec.guns, z = (t - 0.5) * L, w = halfWidth(spec, t), y = deckY(t) + 0.45;
+    const row = decks === 2 && i >= perRow ? 1 : 0, col = row ? i - perRow : i, inRow = row ? spec.guns - perRow : perRow;
+    const t = 0.2 + (0.58 * (col + 0.5 + row * 0.5)) / (inRow + row * 0.5), z = (t - 0.5) * L, w = halfWidth(spec, t);
+    const y = row ? deckTop(spec, t) * 0.36 : deckY(t) + 0.45, wy = row ? w * 1.0 : w;
     for (const sx of [1, -1]) {
       const gun = new THREE.Mesh(gunG, dark);
-      gun.position.set(sx * (w - 0.35), y, z);
+      gun.position.set(sx * (wy - 0.35), y, z);
       group.add(gun);
-      muzzles[sx > 0 ? 'port' : 'stbd'].push(new THREE.Vector3(sx * (w + 0.6), y, z));
+      muzzles[sx > 0 ? 'port' : 'stbd'].push(new THREE.Vector3(sx * (wy + 0.6), y, z));
     }
   }
   const lantern = new THREE.Mesh(new THREE.SphereGeometry(0.3, 6, 5), new THREE.MeshBasicMaterial({ color: 0xffcf70 }));
-  lantern.position.set(0, deckTop(spec, 0) + (spec.castle ? 2.6 : 1.2), -L / 2 + 0.2);
+  lantern.position.set(0, deckTop(spec, 0) + 1.2 + lv * (2.4 + L * 0.012), -L / 2 + 0.2);
   group.add(lantern);
 
-  return { group, yards, sails, flag, muzzles, mats, mastH: L * 0.92 * (spec.rigScale || 1) + spec.D };
+  return { group, yards, sails, booms, flag, muzzles, mats, mastH: L * 0.92 * (spec.rigScale || 1) + spec.D };
 }
 
 // ---------- ship simulation ----------
@@ -345,6 +391,8 @@ export class Ship {
     // rig: brace yards to the wind, furl by sail level, tatter by damage
     const brace = clamp(Math.sin(relWind) * 0.85, -0.8, 0.8) * (Math.cos(relWind) > -0.5 ? 1 : 0.5);
     for (const yd of this.model.yards) yd.rotation.y += (brace - yd.rotation.y) * Math.min(1, dt * 1.5);
+    const swing = clamp(-Math.sin(relWind) * 0.5, -0.45, 0.45) * (0.4 + 0.6 * set);
+    for (const bm of this.model.booms) bm.rotation.y += (swing - bm.rotation.y) * Math.min(1, dt * 1.5);
     const fill = 0.35 + 0.65 * polar(wrap(this.heading - world.wind.dir)) + Math.sin(world.time * 3 + this.pos.x) * 0.04;
     const tier = this.sailR > 0.66 ? 0 : this.sailR > 0.3 ? 1 : 2;
     const gone = this.sailR <= 0.02;
@@ -353,6 +401,7 @@ export class Ship {
       const lv = this.sailLevel, want = lv === 3 ? 1 : lv === 2 ? (u.course ? 0.1 : 1) : lv === 1 ? (u.course ? 0.1 : 0.5) : 0.1;
       u.furl += (want - u.furl) * Math.min(1, dt * 1.6);
       if (u.jib) { s.visible = this.sailLevel > 1 && !gone; }
+      else if (u.fa) { const f = this.sailLevel >= 2 ? 1 : this.sailLevel === 1 ? 0.5 : 0.08; u.furl += (f - u.furl) * Math.min(1, dt * 1.6) - (want - u.furl) * Math.min(1, dt * 1.6); s.scale.set(1, u.furl, 1); s.visible = !gone; }
       else { s.scale.set(1, u.furl, 0.25 + 0.75 * fill * u.furl); s.visible = !(gone && i % 2 === 0); }
       if (tier !== this.sailTier) s.material = this.model.mats[tier][u.emblem];
     });
