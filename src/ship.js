@@ -389,6 +389,7 @@ export class Ship {
     this.roll += (roll - this.roll) * Math.min(1, dt * 3);
     g.position.set(this.pos.x, y, this.pos.z);
     g.rotation.set(pitch, this.heading, this.roll, 'YXZ');
+    if (world.fast) return;
 
     // rig: brace yards to the wind, furl by sail level, tatter by damage
     const brace = clamp(Math.sin(relWind) * 0.85, -0.8, 0.8) * (Math.cos(relWind) > -0.5 ? 1 : 0.5);

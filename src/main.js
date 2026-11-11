@@ -125,6 +125,7 @@ boardRing.visible = false; scene.add(boardRing);
 
 // ---------- toasts and floating numbers ----------
 function toast(text, cls = '', ms = 2600) {
+  if (G.fast) return;
   const box = $('toasts'), el = document.createElement('div');
   el.className = 'toast ' + cls; el.textContent = text;
   box.appendChild(el);
@@ -141,6 +142,7 @@ function project(p) {
 }
 const floaters = [];
 function floater(text, cls, pos) {
+  if (G.fast) return;
   const el = document.createElement('div');
   el.className = 'fl ' + cls; el.textContent = text;
   $('floaters').appendChild(el);
@@ -507,7 +509,9 @@ function battleUpdate(dt) {
 // of her crew you killed, how many of yours are left, and what was loaded in the guns facing her.
 // Both sides see the odds beforehand. During it you choose when to spend grapeshot in the swivel
 // gun, and whether to cut loose before it is lost.
-const strength = (s) => s.crew * s.melee;
+// A crew fights worse when its ship is in trouble: hands are at the pumps, or fighting a fire.
+const readiness = (s) => (0.5 + 0.5 * s.hullR) * (s.fire > 0 ? 0.75 : 1);
+const strength = (s) => s.crew * s.melee * readiness(s);
 function pointBlank(from, to, side, name) {
   // a loaded battery facing the other ship goes off at the rail as the hulls touch
   if (from.reload[side] > 0) return;
@@ -781,7 +785,8 @@ function updateHUD(dt) {
   // what a boarding would look like, pinned to her marker once you are close
   const near = dist < BOARD_RANGE, slow = relSpeed(p, e) < BOARD_SPEED, warn = G.aiGrapple > 0.02 && G.ai.wantBoard;
   const odds = strength(p) / (strength(e) || 1), o = tag.querySelector('.o');
-  o.textContent = battle && dist < 170 ? `Board: ${Math.round(p.crew)} v ${Math.round(e.crew)}${near && !slow ? ' · match her speed' : ''}` : '';
+  const shaken = readiness(e) < 0.8 ? (e.fire > 0 ? ' · her crew fighting fire' : ' · her crew at the pumps') : '';
+  o.textContent = battle && dist < 170 ? `Board: ${Math.round(strength(p))} v ${Math.round(strength(e))}${near && !slow ? ' · match her speed' : shaken}` : '';
   o.className = 'o ' + (odds > 1.15 ? 'good' : odds > 0.87 ? '' : 'bad');
   const go = $('boardGo');
   go.classList.toggle('hidden', !(battle && (G.canBoard || warn)));
@@ -1110,6 +1115,8 @@ function update(dt) {
   if (!home) { collideIslands(p); shipEffects(p, dt); }
   flushTally(p, dt);
   updateBalls(dt);
+  world.fast = !!G.fast;
+  if (G.fast) { world.update(dt, camera.position); return; } // balance harness: rules only, nothing drawn
   fx.update(dt);
   updateCamera(dt);
   world.update(dt, camera.position);
@@ -1130,7 +1137,8 @@ function frame(now) {
 G.step = (dt, n = 1) => { for (let i = 0; i < n; i++) update(dt); renderer.render(scene, camera); };
 G.newAI = newAI;
 G.tick = (dt, n = 1) => { for (let i = 0; i < n; i++) update(dt); };
-G.api = { rebuild: () => { scene.remove(G.player.group); G.player = null; buildPlayer(true); }, fire, act, tap, keys, startBoarding, boardSwivel, cutGrapples, endBattle, toast, showPort, prize };
+G.world = world;
+G.api = { aiApi, cutGrapples, hullSpec, updateAI, reach, inArc, hasGauge, strength: (s) => strength(s), rebuild: () => { scene.remove(G.player.group); G.player = null; buildPlayer(true); }, fire, act, tap, keys, startBoarding, boardSwivel, endBattle, toast, showPort, prize };
 showTitle();
 snapCamera();
 requestAnimationFrame(frame);
