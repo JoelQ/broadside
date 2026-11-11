@@ -33,7 +33,7 @@ export const ENEMIES = [
     L: 36, B: 7.2, D: 2.5, masts: 3, sailsPerMast: 2, castle: false, rigScale: 0.72,
     rig: 'lateen', hullCol: 0x6b1f1a, trimCol: 0xd8a046, sailCol: '#b3372c', emblem: 'stripes', emblemCol: '#e6c069', flagCol: 0xb3221a,
     hull: 215, sails: 110, crew: 135, guns: 7, speed: 13.5, turn: 0.58, reload: 7.4, disp: 0.032, dmg: 0.9, melee: 1.1, cal: 0, arc: 0.6, point: 0.2,
-    stock: { chain: 4, grape: 10, fire: 0 }, ai: { range: 90, plan: 'grape', boarder: true, battleSail: false },
+    stock: { chain: 9, grape: 10, fire: 0 }, ai: { range: 90, plan: 'grape', boarder: true, battleSail: false },
   },
   {
     name: "Widow's Lament", cls: 'Frigate', captain: 'Silas Thorne', env: 'dusk', islands: 6, bounty: 780,

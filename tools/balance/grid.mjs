@@ -12,6 +12,7 @@ export const PLANS = {
   'rush board': { move: 'duel', ammo: 'round', board: 'rush' },
   'prep board': { move: 'duel', ammo: 'combo', board: 'odds' },
   'hug board': { move: 'hug', ammo: 'combo', board: 'odds' },
+  'chain hug': { move: 'hug', ammo: 'chain', board: 'never' },
 };
 const cells = [];
 for (const ship of Object.keys(SHIPS)) for (const fit of [null, 'full']) for (const plan of Object.keys(PLANS)) for (let level = 0; level < 5; level++) {
