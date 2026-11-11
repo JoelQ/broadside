@@ -20,7 +20,7 @@ for (const fit of [false, true]) {
   }
 }
 console.log('\n=== What each shot adds: win rate of duel with that shot minus duel with round only, averaged over pirates ===');
-for (const s of ships) for (const fit of [false]) console.log('  ' + s.padEnd(9) + ['duel chain', 'duel fire', 'duel combo'].map((p) => `${p.slice(5)} ${String(Math.round(100 * PIRATES.reduce((a, l) => a + cell(s, fit, p, l).win - cell(s, fit, 'duel round', l).win, 0) / 5)).padStart(4)}pt`).join('   ') + `   | hug fire vs hug round ${String(Math.round(100 * PIRATES.reduce((a, l) => a + cell(s, fit, 'hug fire', l).win - cell(s, fit, 'hug round', l).win, 0) / 5)).padStart(4)}pt`);
+for (const s of ships) for (const fit of [false]) console.log('  ' + s.padEnd(9) + ['duel chain', 'duel grape', 'duel fire', 'duel combo'].map((p) => `${p.slice(5)} ${String(Math.round(100 * PIRATES.reduce((a, l) => a + cell(s, fit, p, l).win - cell(s, fit, 'duel round', l).win, 0) / 5)).padStart(4)}pt`).join('   ') + `   | hug fire vs hug round ${String(Math.round(100 * PIRATES.reduce((a, l) => a + cell(s, fit, 'hug fire', l).win - cell(s, fit, 'hug round', l).win, 0) / 5)).padStart(4)}pt`);
 console.log('\n=== What fittings add: best-strategy win rate, fitted minus stock ===');
 for (const s of ships) console.log('  ' + s.padEnd(9) + PIRATES.map((l) => { const b = (f) => Math.max(...plans.map((p) => cell(s, f, p, l).win)); return `${l} ${String(Math.round(100 * (b(true) - b(false)))).padStart(4)}pt`; }).join('   '));
 console.log('\n=== Average fight length of wins (s), stock, best strategy ===');

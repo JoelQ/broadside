@@ -61,7 +61,7 @@ function hullSpec(id) {
 const fitOf = (id) => G.fit[id] || (G.fit[id] = {});
 function playerSpec() {
   const b = hullSpec(G.ship), lv = fitOf(G.ship);
-  const mods = { speed: 1, turn: 1, arc: 1, reload: 1, melee: 1, evade: 1, boardReach: 1, boardSpeed: 1, swivel: 1, reach: 1, guns: 0, hull: 0, crew: 0, sweeps: 0 };
+  const mods = { speed: 1, turn: 1, arc: 1, reload: 1, melee: 1, evade: 1, boardReach: 1, boardSpeed: 1, swivel: 1, reach: 1, dmg: 1, guns: 0, hull: 0, crew: 0, sweeps: 0 };
   for (const it of KITS[KIT_OF[G.ship]].items) {
     const n = lv[it.id] || 0;
     for (const k in it.mul || {}) mods[k] *= it.mul[k] ** n;
@@ -71,7 +71,7 @@ function playerSpec() {
 }
 function buildPlayer(fresh) {
   const old = G.player, p = new Ship(playerSpec(), true);
-  p.reloadMult = p.spec.mods.reload; p.melee = p.spec.mods.melee; p.evade = p.spec.mods.evade;
+  p.reloadMult = p.spec.mods.reload; p.melee = p.spec.mods.melee; p.evade = p.spec.mods.evade; p.dmgMult *= p.spec.mods.dmg;
   if (old) {
     if (!fresh) { p.hull = old.hull + p.hullMax - old.hullMax; p.sails = old.sails + p.sailsMax - old.sailsMax; p.crew = old.crew + p.crewMax - old.crewMax; }
     p.stock = old.stock; p.pos.copy(old.pos); p.heading = old.heading; p.speed = old.speed; p.sailLevel = old.sailLevel; p.input = old.input;
@@ -503,7 +503,7 @@ function battleUpdate(dt) {
   // the boarding ring explains itself the first time you get near it
   if (!G.coach && !store.get('broadside.ringed') && sep(p, e) < 150 && G.battleT > 8) {
     store.set('broadside.ringed', '1');
-    $('coach').innerHTML = '<span>The ring around her is boarding range. Get inside it, match her speed, press <kbd>B</kbd>. Only a boarded ship is yours to keep.</span><button data-act="hidecoach">ok</button>';
+    $('coach').innerHTML = '<span>The ring around her is boarding range. Grapples only hold a slow ship: cut up her sails with chain, then get inside the ring, match her speed and press <kbd>B</kbd>.</span><button data-act="hidecoach">ok</button>';
     $('coach').classList.remove('hidden'); G.coachHide = G.battleT + 9;
   }
   if (G.coachHide && G.battleT > G.coachHide) { G.coachHide = 0; $('coach').classList.add('hidden'); }

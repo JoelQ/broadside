@@ -5,6 +5,7 @@ export const PLANS = {
   'duel round': { move: 'duel', ammo: 'round', board: 'never' },
   'duel chain': { move: 'duel', ammo: 'chain', board: 'never' },
   'duel fire': { move: 'duel', ammo: 'fire', board: 'never' },
+  'duel grape': { move: 'duel', ammo: 'grape', board: 'never' },
   'duel combo': { move: 'duel', ammo: 'combo', board: 'never' },
   'kite round': { move: 'kite', ammo: 'round', board: 'never' },
   'hug round': { move: 'hug', ammo: 'round', board: 'never' },
