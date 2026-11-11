@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { World } from './world.js';
 import { FX, Sfx } from './fx.js';
-import { Ship, AMMO, AMMO_KEYS, ARC, SAILS, TOP, wrap, clamp, polar, pointOfSail } from './ship.js';
+import { Ship, AMMO, AMMO_KEYS, CAL, SAILS, TOP, noGoHalf, wrap, clamp, polar, pointOfSail } from './ship.js';
 import { PLAYER_SPEC, ENEMIES, UPGRADES, SHOPS, REPAIR, upgradeCost } from './data.js';
 import { updateAI, newAI } from './ai.js';
 import { buildHarbor } from './harbor.js';
@@ -39,7 +39,7 @@ const store = {
 
 // ---------- game state ----------
 const freshStats = () => ({ volleys: 0, shots: 0, hits: 0, sunk: 0, captured: 0, time: 0 });
-const freshUps = () => ({ hull: 0, guns: 0, sail: 0, drill: 0, rudder: 0, marines: 0 });
+const freshUps = () => ({ hull: 0, guns: 0, cal: 0, sail: 0, drill: 0, rudder: 0, marines: 0 });
 const G = {
   state: 'title', level: 0, gold: 0, earned: 0, up: freshUps(),
   player: null, enemy: null, ai: newAI(), balls: [], pending: [], paused: false, trophies: [], trophyShips: [],
@@ -58,7 +58,8 @@ function hullSpec(id) {
 }
 function playerSpec() {
   const u = G.up, b = hullSpec(G.ship);
-  return { ...b, guns: b.guns + u.guns, hull: b.hull + 60 * u.hull, sails: b.sails + 20 * u.sail, speed: b.speed * (1 + 0.07 * u.sail), turn: b.turn * (1 + 0.1 * u.rudder), crew: b.crew + 10 * u.marines };
+  const weight = 1 - 0.03 * (u.hull + u.guns) - 0.05 * u.cal; // iron and oak slow a ship down
+  return { ...b, guns: b.guns + u.guns, cal: Math.min(2, b.cal + u.cal), hull: b.hull + 60 * u.hull, sails: b.sails + 20 * u.sail, speed: b.speed * (1 + 0.07 * u.sail) * weight, turn: b.turn * (1 + 0.1 * u.rudder), crew: b.crew + 10 * u.marines };
 }
 function buildPlayer(fresh) {
   const old = G.player, p = new Ship(playerSpec(), true);
@@ -81,12 +82,12 @@ world.setEnv('harbor'); world.wind.dir = world.wind.target = 2.2;
 moor();
 
 // ---------- broadside arcs drawn on the water (yours and hers) ----------
+const arcGeo = (half) => { const g = new THREE.RingGeometry(0.07, 1, 28, 1, -half, half * 2); g.rotateX(-Math.PI / 2); return g; };
+function fitArcs(a, ship) { for (const k in a.sides) { a.sides[k].geometry.dispose(); a.sides[k].geometry = arcGeo(ship.arc); } }
 function makeArcs(color) {
   const grp = new THREE.Group(), sides = {};
   for (const side of ['port', 'stbd']) {
-    const g = new THREE.RingGeometry(0.07, 1, 28, 1, -ARC, ARC * 2);
-    g.rotateX(-Math.PI / 2);
-    const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.1, depthWrite: false, depthTest: false, side: THREE.DoubleSide, fog: false }));
+    const m = new THREE.Mesh(arcGeo(0.5), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.1, depthWrite: false, depthTest: false, side: THREE.DoubleSide, fog: false }));
     if (side === 'stbd') m.rotation.y = Math.PI;
     m.renderOrder = 2;
     sides[side] = m; grp.add(m);
@@ -104,6 +105,7 @@ const decal = (geo, color, opacity) => {
 };
 // Around your ship: a red wedge where the wind will not let you sail, and an arrow showing which way it blows.
 const windRing = new THREE.Group();
+const noGoGeo = (half) => { const g = new THREE.RingGeometry(21, 33, 24, 1, -half, half * 2); g.rotateX(-Math.PI / 2); return g; };
 const noGo = decal(new THREE.RingGeometry(21, 33, 24, 1, -0.6, 1.2), 0xff4a3a, 0.34);
 const arrowShape = new THREE.Shape([[9, 0], [-1, 6.5], [-1, 2.4], [-11, 2.4], [-11, -2.4], [-1, -2.4], [-1, -6.5]].map(([x, y]) => new THREE.Vector2(x, y)));
 const windArrow = decal(new THREE.ShapeGeometry(arrowShape), 0xbfe6ff, 0.75);
@@ -192,7 +194,7 @@ const relSpeed = (a, b) => Math.hypot(a.fwdX * a.speed - b.fwdX * b.speed, a.fwd
 function inArc(ship, side, tgt, slack = 1.1) {
   const dx = tgt.pos.x - ship.pos.x, dz = tgt.pos.z - ship.pos.z;
   const off = wrap(Math.atan2(dx, dz) - (ship.heading + (side === 'port' ? 1 : -1) * Math.PI / 2));
-  return Math.abs(off) <= ARC && Math.hypot(dx, dz) <= AMMO[ship.ammo].range * slack;
+  return Math.abs(off) <= ship.arc && Math.hypot(dx, dz) <= ship.range() * slack;
 }
 // The weather gauge: the ship upwind of the other shoots through clear air.
 function hasGauge(a, b) {
@@ -207,6 +209,7 @@ function clearShot(a, b) {
   }
   return true;
 }
+const aiApi = { fire: (s, side) => fire(s, side), clearShot: (a, b) => clearShot(a, b), shotSpeed: (s) => AMMO[s.ammo].speed };
 function fire(ship, side) {
   if (G.state !== 'battle' || ship.reload[side] > 0 || ship.sinking > 0 || ship.struck) return false;
   let ammo = ship.ammo;
@@ -226,7 +229,8 @@ function launch(p) {
   if (ship.sinking > 0) return;
   ship.toWorld(ship.model.muzzles[side][p.i], _m);
   const normal = ship.heading + sgn * Math.PI / 2;
-  let aim = normal, dist = A.range * 0.75, h = -_m.y, gauge = 1;
+  const R = ship.range(ammo);
+  let aim = normal, dist = R * 0.75, h = -_m.y, gauge = 1;
   const tgt = ship.target;
   if (tgt && tgt.sinking <= 0) {
     let tx = tgt.pos.x, tz = tgt.pos.z;
@@ -234,8 +238,8 @@ function launch(p) {
     const along = (Math.random() - 0.5) * tgt.spec.L * 0.62;
     tx += tgt.fwdX * (tgt.speed * tt + along); tz += tgt.fwdZ * (tgt.speed * tt + along);
     const dx = tx - _m.x, dz = tz - _m.z, ang = Math.atan2(dx, dz), d = Math.hypot(dx, dz);
-    if (Math.abs(wrap(ang - normal)) <= ARC + 0.06 && d <= A.range * 1.12) {
-      aim = ang; dist = Math.min(d, A.range);
+    if (Math.abs(wrap(ang - normal)) <= ship.arc + 0.06 && d <= R * 1.12) {
+      aim = ang; dist = Math.min(d, R);
       h = (ammo === 'chain' ? tgt.model.mastH * 0.5 : tgt.spec.D * 0.45) + tgt.group.position.y - _m.y;
     }
     gauge = hasGauge(ship, tgt) ? 0.75 : hasGauge(tgt, ship) ? 1.15 : 1;
@@ -257,7 +261,8 @@ function hullHit(b, ship) {
   const A = AMMO[b.ammo], hv = Math.hypot(b.vel.x, b.vel.z) || 1;
   const d = (b.vel.x * ship.fwdX + b.vel.z * ship.fwdZ) / hv;
   let m = b.owner.dmgMult, rake = 0;
-  if (Math.abs(d) > 0.78) { rake = d > 0 ? 1.8 : 1.5; m *= rake; }
+  // a raking shot ploughs the whole length of the deck, so the longer the ship the worse it is
+  if (Math.abs(d) > 0.78) { rake = (d > 0 ? 1.8 : 1.5) * clamp(ship.spec.L / 30, 0.8, 1.5); m *= rake; }
   const hd = A.hull * m, sd = b.ammo !== 'chain' ? Math.min(ship.sails, A.sail * 0.4) : 0;
   ship.hull -= hd; ship.sails -= sd;
   let kills = 0;
@@ -421,6 +426,8 @@ function beginBattle() {
   G.state = 'battle'; G.focus = 'player'; G.cam.yaw = 0; G.battleT = 0; G.fired = G.raked = false;
   G.enemy.sailLevel = TOP; G.player.sailLevel = TOP;
   hideScreen(); setMode('battle');
+  fitArcs(myArcs, G.player); fitArcs(herArcs, G.enemy);
+  noGo.geometry.dispose(); noGo.geometry = noGoGeo(noGoHalf(G.player.spec));
   buildAmmoBar(); setupHudNames();
   G.coach = G.level === 0 && !store.get('broadside.coached') ? { i: 0, t: 0 } : null;
   if (!G.coach) setTimeout(() => G.state === 'battle' && toast(ENEMIES[G.level].tip, '', 6000), 1500);
@@ -442,16 +449,17 @@ function endBattle(outcome) {
 function battleUpdate(dt) {
   const p = G.player, e = G.enemy;
   G.battleT += dt; G.stats.time += dt;
-  if (G.auto) updateAI(G.auto, p, e, world, dt, { fire, clearShot });
-  else p.input.turn = (keys.a || keys.arrowleft ? 1 : 0) - (keys.d || keys.arrowright ? 1 : 0);
+  if (G.bot) G.bot(p, e, dt); // test hook: a scripted helmsman
+  else if (G.auto) updateAI(G.auto, p, e, world, dt, aiApi);
+  else if (!G.bot) p.input.turn = (keys.a || keys.arrowleft ? 1 : 0) - (keys.d || keys.arrowright ? 1 : 0);
   if (G.coach && G.coach.i < 2 && G.battleT < 60) G.ai.fireDelay = 2; // first fight: she holds fire until you have fired
-  updateAI(G.ai, e, p, world, dt, { fire, clearShot });
+  updateAI(G.ai, e, p, world, dt, aiApi);
   G.boardCd -= dt;
   const can = sep(p, e) < BOARD_RANGE && relSpeed(p, e) < BOARD_SPEED && G.boardCd <= 0;
   G.canBoard = can;
   G.aiGrapple = clamp(G.aiGrapple + (can && G.ai.wantBoard ? dt / 2.4 : -dt * 0.7), 0, 1);
   if (G.aiGrapple >= 1) return startBoarding('enemy');
-  if (p.sailLevel > 0 && p.speed < 2.5 && Math.abs(wrap(p.heading - world.wind.dir)) > 2.6) toastOnce('irons', 10, 'In irons — turn away from the wind’s eye!', 'bad', 3000);
+  if (p.sailLevel > 0 && p.speed < 2.5 && Math.abs(wrap(p.heading - world.wind.dir)) > Math.PI - noGoHalf(p.spec) + 0.05) toastOnce('irons', 10, 'In irons — turn away from the wind’s eye!', 'bad', 3000);
   if (e.hull <= 0) return endBattle('sunk');
   if (p.hull <= 0) return endBattle('lost');
   // a pirate battered to a wreck gives up rather than soak volleys to the bottom: you collect the
@@ -663,8 +671,8 @@ function buildAmmoBar() {
 }
 function setupHudNames() {
   const p = G.player, e = G.enemy;
-  $('pName').textContent = p.spec.name; $('pSub').textContent = `${p.spec.cls} · ${p.spec.guns * 2} guns`;
-  if (e) { $('eName').textContent = e.spec.name; $('eSub').textContent = `${e.spec.captain} · ${e.spec.cls}`; }
+  $('pName').textContent = p.spec.name; $('pSub').textContent = `${p.spec.cls} · ${p.spec.guns * 2} ${p.cal.name} guns`;
+  if (e) { $('eName').textContent = e.spec.name; $('eSub').textContent = `${e.spec.cls} · ${e.spec.guns * 2} ${e.cal.name} guns`; }
 }
 function selectAmmo(k) {
   const p = G.player;
@@ -683,7 +691,7 @@ function placeArcs(a, ship, on) {
   a.grp.visible = on;
   if (!on) return;
   a.grp.position.set(ship.pos.x, 1.3, ship.pos.z); a.grp.rotation.y = ship.heading;
-  a.grp.scale.setScalar(AMMO[ship.ammo].range);
+  a.grp.scale.setScalar(ship.range());
 }
 function updateHUD(dt) {
   const p = G.player, e = G.enemy, battle = G.state === 'battle';
@@ -695,7 +703,7 @@ function updateHUD(dt) {
     windRing.position.set(p.pos.x, 1.4, p.pos.z);
     noGo.rotation.y = world.wind.dir + Math.PI - Math.PI / 2; // wedge points upwind
     arrowHold.rotation.y = world.wind.dir - Math.PI / 2; // arrow sits downwind of you, pointing the way the wind blows
-    const stalled = Math.abs(wrap(p.heading - world.wind.dir)) > 2.55;
+    const stalled = Math.abs(wrap(p.heading - world.wind.dir)) > Math.PI - noGoHalf(p.spec);
     noGo.material.opacity = stalled ? 0.5 + 0.2 * Math.sin(G.t * 9) : 0.3;
   }
   boardRing.visible = battle && dist < 190 && G.boardCd <= 0;
@@ -747,7 +755,7 @@ function updateHUD(dt) {
   $('knots').textContent = (p.speed * 0.9).toFixed(1);
   $('sailName').textContent = SAILS[lv].name;
   [...$('sailBars').children].forEach((el, i) => el.classList.toggle('on', i < lv));
-  const pos = pointOfSail(off);
+  const pos = pointOfSail(off, p.spec.point);
   $('pos').textContent = pos === 'In irons' ? 'In irons!' : ''; 
   // what a boarding would look like, pinned to her marker once you are close
   const near = dist < BOARD_RANGE, slow = relSpeed(p, e) < BOARD_SPEED, warn = G.aiGrapple > 0.02 && G.ai.wantBoard;
@@ -782,13 +790,13 @@ function drawRadar(p, e) {
   x.save(); x.beginPath(); x.arc(0, 0, R, 0, 7); x.clip();
   const pt = (wx, wz) => { const dx = wx - p.pos.x, dz = wz - p.pos.z, s = Math.sin(p.heading), co = Math.cos(p.heading); return [-(dx * co - dz * s) * k, -(dx * s + dz * co) * k]; };
   const up = wrap(world.wind.dir + Math.PI - p.heading), sa = -Math.PI / 2 - up;
-  x.fillStyle = 'rgba(220,80,60,.2)'; x.beginPath(); x.moveTo(0, 0); x.arc(0, 0, R, sa - 0.56, sa + 0.56); x.fill();
+  x.fillStyle = 'rgba(220,80,60,.2)'; x.beginPath(); x.moveTo(0, 0); x.arc(0, 0, R, sa - noGoHalf(p.spec), sa + noGoHalf(p.spec)); x.fill();
   x.fillStyle = '#8c8266';
   for (const i of world.islands) { const [ix, iy] = pt(i.x, i.z); x.beginPath(); x.arc(ix, iy, i.r * k * 1.1, 0, 7); x.fill(); }
-  const ar = AMMO[p.ammo].range * k;
+  const ar = p.range() * k;
   for (const [side, a0] of [['port', Math.PI], ['stbd', 0]]) {
     x.fillStyle = p.reload[side] <= 0 ? 'rgba(255,214,110,.22)' : 'rgba(255,110,90,.1)';
-    x.beginPath(); x.moveTo(0, 0); x.arc(0, 0, ar, a0 - ARC, a0 + ARC); x.fill();
+    x.beginPath(); x.moveTo(0, 0); x.arc(0, 0, ar, a0 - p.arc, a0 + p.arc); x.fill();
   }
   if (e && e.sinking < 6) {
     let [ex, ey] = pt(e.pos.x, e.pos.z);
@@ -823,7 +831,7 @@ function showTitle() {
 function showIntro(es) {
   setMode(null); $('bars').classList.add('on');
   showScreen(`<div class="lower"><div class="eyebrow">Wanted · ${G.level + 1} of ${ENEMIES.length}</div><h1>${es.captain}</h1>
-    <div class="line">${es.cls} <i>${es.name}</i> · ${es.guns * 2} guns · ${es.crew} crew · ${es.bounty} g bounty</div>
+    <div class="line">${es.cls} <i>${es.name}</i> · ${es.guns * 2} ${CAL[es.cal].name} guns · ${es.crew} crew · ${es.bounty} g bounty</div>
     <div class="hook">${es.hook}</div><button class="btn big" data-act="engage">Engage</button></div>`, 'clear low');
 }
 const acc = () => (G.stats.shots ? Math.round((G.stats.hits / G.stats.shots) * 100) : 0);
@@ -879,7 +887,7 @@ function enterHarbor() {
     return t;
   });
 }
-const ROLE = { wren: 'Your old brig. Does everything fairly well.', 0: 'Fastest afloat, turns on a coin. Thin hull, few guns.', 1: 'A sound, balanced brig.', 2: 'Room for a huge crew: made for boarding. Light guns, thin hull.', 3: 'The heaviest broadside there is. Slow, and short of hands.', 4: 'A fortress.' };
+const ROLE = { wren: 'Your old brig. Does everything fairly well.', 0: 'Darts and turns on a coin, and sails closer to the wind than anything afloat. Light guns with a wide sweep; a thin hull.', 1: 'A sound, balanced brig.', 2: 'Room for a huge crew: made for boarding. Light quick-firing guns, thin hull, points well to windward.', 3: 'Heavy guns that outreach everything smaller, slow to load. Ponderous at the helm, and short of hands.', 4: 'A fortress.' };
 function takeCommand(id) {
   G.ship = id === 'wren' ? 'wren' : +id;
   buildPlayer(true); moor(); enterHarbor(); G.shop = null;
@@ -897,6 +905,7 @@ function showPort() {
   renderPort();
 }
 const COST = (k) => REPAIR[k][1];
+const upCost = (id) => UPGRADES[id].cost ?? upgradeCost(Math.min(2, G.up[id]));
 function renderPort() {
   const p = G.player, g = G.gold, nx = ENEMIES[G.level];
   setBars('p', p);
@@ -914,9 +923,10 @@ function renderPort() {
   if (G.shop.startsWith('ship:')) {
     // another ship of yours: compare her with the one you are sailing, bar for bar
     const id = G.shop.slice(5), h = hullSpec(id === 'wren' ? 'wren' : +id), cur = hullSpec(G.ship);
-    const row = (label, k, max) => `<div class="cmp"><span>${label}</span><div class="t"><i style="width:${(h[k] / max) * 100}%"></i><u style="left:${(cur[k] / max) * 100}%"></u></div><b>${k === 'guns' ? h[k] * 2 : k === 'speed' ? (h[k] * 0.9).toFixed(0) : k === 'turn' ? '' : h[k]}</b></div>`;
+    const val = { hull: (x) => x.hull, guns: (x) => x.guns, reach: (x) => 250 * CAL[x.cal].range, rate: (x) => 60 / (x.reload * CAL[x.cal].reload), crew: (x) => x.crew, speed: (x) => x.speed, turn: (x) => x.turn };
+    const row = (label, k, max, txt) => `<div class="cmp"><span>${label}</span><div class="t"><i style="width:${(val[k](h) / max) * 100}%"></i><u style="left:${(val[k](cur) / max) * 100}%"></u></div><b>${txt || ''}</b></div>`;
     box.innerHTML = `<h3>${h.name}<button class="x" data-act="closeshop">✕</button></h3><div class="role">${h.cls}. ${ROLE[id]}</div>
-      ${row('Hull', 'hull', 660)}${row('Guns', 'guns', 13)}${row('Crew', 'crew', 210)}${row('Speed', 'speed', 16)}${row('Turn', 'turn', 0.8)}
+      ${row('Hull', 'hull', 660, h.hull)}${row('Guns', 'guns', 13, h.guns * 2)}${row('Reach', 'reach', 310, CAL[h.cal].name)}${row('Loading', 'rate', 14)}${row('Crew', 'crew', 210, h.crew)}${row('Speed', 'speed', 16)}${row('Helm', 'turn', 0.8)}
       <div class="role"><u class="mk"></u> marks the ${cur.name}. Your upgrades and shot come with you.</div>
       <div class="rowc" style="margin-top:8px"><button class="btn" data-act="cmd:${id}">Take command</button></div>`;
     return;
@@ -928,9 +938,9 @@ function renderPort() {
       <button class="btn sm" data-act="rep:${k}" ${n < 1 || g < COST(k) ? 'disabled' : ''}>${n < 1 ? 'Full' : g >= full ? full + ' g' : 'Spend ' + g + ' g'}</button></div>`);
   }
   for (const id of sh.ups || []) {
-    const u = UPGRADES[id], lv = G.up[id], c = lv < 3 ? upgradeCost(lv) : 0;
-    rows.push(`<div class="item"><div class="d">${u.name} <span class="lv">${[0, 1, 2].map((i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('')}</span><small>${u.desc}</small></div>
-      <button class="btn sm" data-act="up:${id}" ${lv >= 3 || g < c ? 'disabled' : ''}>${lv >= 3 ? 'Max' : c + ' g'}</button></div>`);
+    const u = UPGRADES[id], lv = G.up[id], max = id === 'cal' ? Math.min(u.max, 2 - hullSpec(G.ship).cal) : u.max || 3, c = upCost(id);
+    rows.push(`<div class="item"><div class="d">${u.name} <span class="lv">${Array.from({ length: max }, (_, i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('')}</span><small>${u.desc}</small></div>
+      <button class="btn sm" data-act="up:${id}" ${lv >= max || g < c ? 'disabled' : ''}>${lv >= max ? (max ? 'Max' : 'Already heavy') : c + ' g'}</button></div>`);
   }
   for (const [k, n, c] of sh.ammo || []) {
     rows.push(`<div class="item"><svg viewBox="0 0 26 26">${ICON[k]}</svg><div class="d">${AMMO[k].long} ×${n}<small>Aboard: ${p.stock[k]}</small></div>
@@ -945,7 +955,7 @@ function portAction(a) {
     p[k] = Math.min(max, p[k] + (k === 'crew' ? Math.floor(amt) : amt)); G.gold -= cost;
     if (max - p[k] < 0.5) p[k] = max;
   } else if (kind === 'ammo') { if (G.gold < +c) return; G.gold -= +c; p.stock[k] += +n; }
-  else if (kind === 'up') { const cost = upgradeCost(G.up[k]); if (G.gold < cost) return; G.gold -= cost; G.up[k]++; buildPlayer(); moor(); setupHudNames(); }
+  else if (kind === 'up') { const cost = upCost(k); if (G.gold < cost) return; G.gold -= cost; G.up[k]++; buildPlayer(); moor(); setupHudNames(); }
   sfx.coin(); renderPort();
 }
 function updatePortUI() {
@@ -1099,7 +1109,7 @@ function frame(now) {
 G.step = (dt, n = 1) => { for (let i = 0; i < n; i++) update(dt); renderer.render(scene, camera); };
 G.newAI = newAI;
 G.tick = (dt, n = 1) => { for (let i = 0; i < n; i++) update(dt); };
-G.api = { fire, act, tap, keys, startBoarding, boardSwivel, cutGrapples, endBattle, toast, showPort, prize };
+G.api = { rebuild: () => { scene.remove(G.player.group); G.player = null; buildPlayer(true); }, fire, act, tap, keys, startBoarding, boardSwivel, cutGrapples, endBattle, toast, showPort, prize };
 showTitle();
 snapCamera();
 requestAnimationFrame(frame);
