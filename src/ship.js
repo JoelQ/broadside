@@ -38,7 +38,7 @@ export const AMMO = {
   round: { name: 'Round', long: 'Round shot', range: 250, speed: 128, hull: 6.2, sail: 0.6, crew: 0.3, reload: 1, tip: 'Smashes hulls at long range' },
   chain: { name: 'Chain', long: 'Chain shot', range: 175, speed: 108, hull: 1, sail: 4.5, crew: 0.1, reload: 1, tip: 'Shreds sails — cripple, then close' },
   grape: { name: 'Grape', long: 'Grapeshot', range: 100, speed: 98, hull: 0.6, sail: 0.5, crew: 0, kills: [2, 4], reload: 0.9, tip: 'Sweeps the deck of crew at close range' },
-  fire: { name: 'Heated', long: 'Heated shot', range: 185, speed: 112, hull: 4.2, sail: 2, crew: 0.2, ignite: 0.3, reload: 1.55, tip: 'Sets fires that burn hull and canvas' },
+  fire: { name: 'Heated', long: 'Heated shot', range: 185, speed: 112, hull: 4.2, sail: 2, crew: 0.2, ignite: 0.3, reload: 1.55, tip: 'Starts fires. A burning ship loses hull steadily and loads her guns at half speed' },
 };
 export const AMMO_KEYS = ['round', 'chain', 'grape', 'fire'];
 // Gun weight. Heavier guns reach further and hit harder, and take longer to load.
@@ -320,9 +320,9 @@ export class Ship {
   get sailR() { return clamp(this.sails / this.sailsMax, 0, 1); }
   get crewR() { return clamp(this.crew / this.crewMax, 0, 1); }
   get exposed() { return Math.max(0, this.crew - this.crewMax * BELOW); } // men a broadside can reach
-  range(ammo = this.ammo) { return AMMO[ammo].range * this.cal.range; }
+  range(ammo = this.ammo) { return AMMO[ammo].range * this.cal.range * (this.spec.reach || 1); }
   reloadTime(ammo = this.ammo) {
-    return (this.spec.reload * this.cal.reload * AMMO[ammo].reload * this.reloadMult * (this.fire > 0 ? 1.25 : 1)) / (0.45 + 0.55 * this.crewR);
+    return (this.spec.reload * this.cal.reload * AMMO[ammo].reload * this.reloadMult) / (0.45 + 0.55 * this.crewR);
   }
   startReload(side, frac = 1) { this.reload[side] = this.reloadMax[side] = this.reloadTime() * frac; }
   setAmmo(a) {
@@ -342,7 +342,8 @@ export class Ship {
   }
   maxSpeedNow(world) {
     const off = wrap(this.heading - world.wind.dir);
-    return this.spec.speed * SAILS[this.sailLevel].spd * polar(off, this.spec.point) * (0.25 + 0.75 * this.sailR) * (this.hullR < 0.3 ? 0.82 : 1);
+    const v = this.spec.speed * SAILS[this.sailLevel].spd * polar(off, this.spec.point) * (0.25 + 0.75 * this.sailR) * (this.hullR < 0.3 ? 0.82 : 1);
+    return this.sailLevel > 0 ? Math.max(v, (this.spec.sweeps || 0) * this.crewR) : v; // sweeps: oars give a floor under the wind
   }
 
   update(dt, world, frozen) {
@@ -359,7 +360,8 @@ export class Ship {
       this.yaw += (this.rudder * sp.turn * way * SAILS[this.sailLevel].turn - this.yaw) * Math.min(1, dt / (0.35 * m));
       this.heading = wrap(this.heading + this.yaw * dt);
       this.speed *= 1 - Math.abs(this.rudder) * 0.07 * dt;
-      for (const s of ['port', 'stbd']) if (this.reload[s] > 0) this.reload[s] = Math.max(0, this.reload[s] - dt);
+      // while a ship burns her gun crews are fighting the fire: she loads at half speed
+      for (const s of ['port', 'stbd']) if (this.reload[s] > 0) this.reload[s] = Math.max(0, this.reload[s] - dt * (this.fire > 0 ? 0.5 : 1));
     } else {
       this.speed *= Math.max(0, 1 - dt * 2);
     }

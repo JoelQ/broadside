@@ -2,14 +2,15 @@ import * as THREE from 'three';
 import { World } from './world.js';
 import { FX, Sfx } from './fx.js';
 import { Ship, AMMO, AMMO_KEYS, CAL, SAILS, TOP, noGoHalf, wrap, clamp, polar, pointOfSail } from './ship.js';
-import { PLAYER_SPEC, ENEMIES, UPGRADES, SHOPS, REPAIR, upgradeCost } from './data.js';
+import { PLAYER_SPEC, ENEMIES, KITS, KIT_OF, kitCost, SHOPS, REPAIR } from './data.js';
 import { updateAI, newAI } from './ai.js';
 import { buildHarbor } from './harbor.js';
 
 const $ = (id) => document.getElementById(id);
 const rand = (a, b) => a + Math.random() * (b - a);
 const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) * 2; // ~unit std
-const GRAV = 22, BOARD_SPEED = 6.5;
+const GRAV = 22;
+let BOARD_SPEED = 6.5;
 let BOARD_RANGE = 33; // set per fight from the two ships' beams
 
 // ---------- renderer ----------
@@ -40,9 +41,8 @@ const store = {
 
 // ---------- game state ----------
 const freshStats = () => ({ volleys: 0, shots: 0, hits: 0, sunk: 0, captured: 0, time: 0 });
-const freshUps = () => ({ hull: 0, guns: 0, cal: 0, sail: 0, drill: 0, rudder: 0, marines: 0 });
 const G = {
-  state: 'title', level: 0, gold: 0, earned: 0, up: freshUps(),
+  state: 'title', level: 0, gold: 0, earned: 0, fit: {}, // fit[ship][fitting] = level
   player: null, enemy: null, ai: newAI(), balls: [], pending: [], paused: false, trophies: [], trophyShips: [],
   aiGrapple: 0, boardCd: 0, endT: 0, outcome: null, bd: null, t: 0, shake: 0, focus: 'player', volley: 0, shop: null,
   stats: freshStats(), coach: null, ship: 'wren',
@@ -57,14 +57,20 @@ function hullSpec(id) {
   const es = ENEMIES[id];
   return { ...es, sailCol: PLAYER_SPEC.sailCol, emblem: 'cross', emblemCol: PLAYER_SPEC.emblemCol, flagCol: PLAYER_SPEC.flagCol, crewCols: PLAYER_SPEC.crewCols, disp: PLAYER_SPEC.disp, dmg: 1, melee: 1, reload: es.reload - 1, ai: PLAYER_SPEC.ai, stock: {} };
 }
+const fitOf = (id) => G.fit[id] || (G.fit[id] = {});
 function playerSpec() {
-  const u = G.up, b = hullSpec(G.ship);
-  const weight = 1 - 0.03 * (u.hull + u.guns) - 0.05 * u.cal; // iron and oak slow a ship down
-  return { ...b, guns: b.guns + u.guns, cal: Math.min(2, b.cal + u.cal), hull: b.hull + 60 * u.hull, sails: b.sails + 20 * u.sail, speed: b.speed * (1 + 0.07 * u.sail) * weight, turn: b.turn * (1 + 0.1 * u.rudder), crew: b.crew + 10 * u.marines };
+  const b = hullSpec(G.ship), lv = fitOf(G.ship);
+  const mods = { speed: 1, turn: 1, arc: 1, reload: 1, melee: 1, evade: 1, boardReach: 1, boardSpeed: 1, swivel: 1, reach: 1, guns: 0, hull: 0, crew: 0, sweeps: 0 };
+  for (const it of KITS[KIT_OF[G.ship]].items) {
+    const n = lv[it.id] || 0;
+    for (const k in it.mul || {}) mods[k] *= it.mul[k] ** n;
+    for (const k in it.add || {}) mods[k] += it.add[k] * n;
+  }
+  return { ...b, mods, guns: b.guns + mods.guns, hull: b.hull + mods.hull, crew: b.crew + mods.crew, speed: b.speed * mods.speed, turn: b.turn * mods.turn, arc: b.arc * mods.arc, reach: mods.reach, sweeps: mods.sweeps };
 }
 function buildPlayer(fresh) {
   const old = G.player, p = new Ship(playerSpec(), true);
-  p.reloadMult = 0.9 ** G.up.drill; p.melee = 1 + 0.18 * G.up.marines;
+  p.reloadMult = p.spec.mods.reload; p.melee = p.spec.mods.melee; p.evade = p.spec.mods.evade;
   if (old) {
     if (!fresh) { p.hull = old.hull + p.hullMax - old.hullMax; p.sails = old.sails + p.sailsMax - old.sailsMax; p.crew = old.crew + p.crewMax - old.crewMax; }
     p.stock = old.stock; p.pos.copy(old.pos); p.heading = old.heading; p.speed = old.speed; p.sailLevel = old.sailLevel; p.input = old.input;
@@ -192,10 +198,18 @@ function clearBalls() {
 }
 const sep = (a, b) => Math.hypot(b.pos.x - a.pos.x, b.pos.z - a.pos.z);
 const relSpeed = (a, b) => Math.hypot(a.fwdX * a.speed - b.fwdX * b.speed, a.fwdZ * a.speed - b.fwdZ * b.speed);
+// Where along her keel (in yards from her middle, bow positive) she comes nearest to a point.
+const alongKeel = (tgt, x, z) => clamp((x - tgt.pos.x) * tgt.fwdX + (z - tgt.pos.z) * tgt.fwdZ, -tgt.spec.L * 0.46, tgt.spec.L * 0.46);
+// Distance from a ship to the nearest part of another's hull: what a gunner cares about.
+function reach(ship, tgt) {
+  const k = alongKeel(tgt, ship.pos.x, ship.pos.z);
+  return Math.hypot(tgt.pos.x + tgt.fwdX * k - ship.pos.x, tgt.pos.z + tgt.fwdZ * k - ship.pos.z);
+}
 function inArc(ship, side, tgt, slack = 1.1) {
-  const dx = tgt.pos.x - ship.pos.x, dz = tgt.pos.z - ship.pos.z;
-  const off = wrap(Math.atan2(dx, dz) - (ship.heading + (side === 'port' ? 1 : -1) * Math.PI / 2));
-  return Math.abs(off) <= ship.arc && Math.hypot(dx, dz) <= ship.range() * slack;
+  const k = alongKeel(tgt, ship.pos.x, ship.pos.z), normal = ship.heading + (side === 'port' ? 1 : -1) * Math.PI / 2;
+  const nx = tgt.pos.x + tgt.fwdX * k - ship.pos.x, nz = tgt.pos.z + tgt.fwdZ * k - ship.pos.z;
+  const bears = Math.abs(wrap(Math.atan2(nx, nz) - normal)) <= ship.arc || Math.abs(wrap(Math.atan2(tgt.pos.x - ship.pos.x, tgt.pos.z - ship.pos.z) - normal)) <= ship.arc;
+  return bears && Math.hypot(nx, nz) <= ship.range() * slack;
 }
 // The weather gauge: the ship upwind of the other shoots through clear air.
 function hasGauge(a, b) {
@@ -210,7 +224,7 @@ function clearShot(a, b) {
   }
   return true;
 }
-const aiApi = { fire: (s, side) => fire(s, side), clearShot: (a, b) => clearShot(a, b), shotSpeed: (s) => AMMO[s.ammo].speed };
+const aiApi = { fire: (s, side) => fire(s, side), clearShot: (a, b) => clearShot(a, b), shotSpeed: (s) => AMMO[s.ammo].speed, reach: (a, b) => reach(a, b) };
 function fire(ship, side) {
   if (G.state !== 'battle' || ship.reload[side] > 0 || ship.sinking > 0 || ship.struck) return false;
   let ammo = ship.ammo;
@@ -236,7 +250,10 @@ function launch(p) {
   if (tgt && tgt.sinking <= 0) {
     let tx = tgt.pos.x, tz = tgt.pos.z;
     const tt = Math.hypot(tx - _m.x, tz - _m.z) / (A.speed * 0.98);
-    const along = (Math.random() - 0.5) * tgt.spec.L * 0.62;
+    // spread the battery along her hull, but only over the part that is within reach
+    const near = alongKeel(tgt, _m.x, _m.z), spanL = tgt.spec.L * 0.31;
+    let along = (Math.random() * 2 - 1) * spanL;
+    if (Math.hypot(tx + tgt.fwdX * along - _m.x, tz + tgt.fwdZ * along - _m.z) > R) along = clamp(near + (Math.random() - 0.5) * tgt.spec.L * 0.2, -tgt.spec.L * 0.44, tgt.spec.L * 0.44);
     tx += tgt.fwdX * (tgt.speed * tt + along); tz += tgt.fwdZ * (tgt.speed * tt + along);
     const dx = tx - _m.x, dz = tz - _m.z, ang = Math.atan2(dx, dz), d = Math.hypot(dx, dz);
     if (Math.abs(wrap(ang - normal)) <= ship.arc + 0.06 && d <= R * 1.12) {
@@ -245,7 +262,7 @@ function launch(p) {
     }
     gauge = hasGauge(ship, tgt) ? 0.75 : hasGauge(tgt, ship) ? 1.15 : 1;
   }
-  const spread = ship.disp * (ammo === 'grape' ? 1.15 : 1) * (1.25 - 0.25 * ship.crewR) * SAILS[ship.sailLevel].aim * gauge;
+  const spread = ship.disp * (ammo === 'grape' ? 1.15 : 1) * (1.25 - 0.25 * ship.crewR) * SAILS[ship.sailLevel].aim * gauge * ((tgt && tgt.evade) || 1);
   aim += gauss() * spread * 1.6;
   const v = A.speed * (1 + gauss() * 0.02), v2 = v * v;
   const disc = v2 * v2 - GRAV * (GRAV * dist * dist + 2 * h * v2);
@@ -275,7 +292,7 @@ function hullHit(b, ship) {
   // one fire per volley at most, so a single broadside can't set three at once
   if (A.ignite && ship.litBy !== b.volley && Math.random() < A.ignite) {
     ship.litBy = b.volley;
-    if (ship.fire === 0) toast(ship.isPlayer ? 'Fire on deck!' : `${ship.spec.name} is ablaze!`, ship.isPlayer ? 'bad' : 'good');
+    if (ship.fire === 0) floater(ship.isPlayer ? 'FIRE! Our gunners leave their guns' : 'FIRE! Her gunners leave their guns', ship.isPlayer ? 'bad rake' : 'good rake', _v.set(ship.pos.x, ship.model.mastH * 0.8, ship.pos.z).clone());
     ship.fire = Math.min(3, ship.fire + 1); ship.fireT = 9;
   }
   const p = b.mesh.position;
@@ -297,9 +314,9 @@ function testHit(b, ship) {
   ship.toLocal(b.mesh.position, _l);
   const sp = ship.spec, hl = sp.L / 2;
   if (Math.abs(_l.z) > hl || Math.abs(_l.x) > sp.B / 2 + 1.5) return false;
-  const zf = _l.z / hl, hw = (sp.B / 2 + 0.3) * (zf > 0.2 ? 1 - ((zf - 0.2) / 0.8) * 0.7 : 1), deck = sp.D + 1.3;
+  const zf = _l.z / hl, hw = (sp.B / 2 + 0.3) * (zf > 0.2 ? 1 - ((zf - 0.2) / 0.8) * 0.7 : 1), deck = sp.D + 1.3 + (zf < -0.45 ? (+sp.castle || 0) * (2.4 + sp.L * 0.012) + 1 : zf > 0.7 && sp.fore ? 2.4 : 0);
   if (_l.y > -1.6 && _l.y <= deck && Math.abs(_l.x) <= hw) { hullHit(b, ship); return true; }
-  if (_l.y > deck && _l.y < ship.model.mastH && Math.abs(_l.z) < hl * 0.82) {
+  if (_l.y > deck && _l.y < ship.model.mastH && Math.abs(_l.z) < hl * 0.86) {
     if (b.ammo === 'chain') { rigHit(b, ship, AMMO.chain.sail); return true; }
     if (!b.rigged) { b.rigged = true; if (Math.random() < 0.3) rigHit(b, ship, 2); }
   }
@@ -429,7 +446,8 @@ function beginBattle() {
   hideScreen(); setMode('battle');
   fitArcs(myArcs, G.player); fitArcs(herArcs, G.enemy);
   noGo.geometry.dispose(); noGo.geometry = noGoGeo(noGoHalf(G.player.spec));
-  BOARD_RANGE = Math.round(20 + (G.player.spec.B + G.enemy.spec.B) * 0.8);
+  BOARD_RANGE = Math.round((20 + (G.player.spec.B + G.enemy.spec.B) * 0.8) * G.player.spec.mods.boardReach);
+  BOARD_SPEED = 6.5 * G.player.spec.mods.boardSpeed;
   boardRing.geometry.dispose(); boardRing.geometry = new THREE.RingGeometry(BOARD_RANGE - 1.6, BOARD_RANGE, 72).rotateX(-Math.PI / 2);
   buildAmmoBar(); setupHudNames();
   G.coach = G.level === 0 && !store.get('broadside.coached') ? { i: 0, t: 0 } : null;
@@ -495,7 +513,7 @@ function pointBlank(from, to, side, name) {
   if (from.reload[side] > 0) return;
   const guns = from.model.muzzles[side].length, a = from.ammo;
   if (a !== 'round') { if (from.stock[a] <= 0) return; from.stock[a]--; }
-  const kills = Math.min(to.crew - 1, Math.round(guns * (a === 'grape' ? 2.6 : a === 'round' ? 0.9 : a === 'fire' ? 0.7 : 0.3) * from.dmgMult));
+  const kills = Math.min(to.crew - 1, Math.round(guns * (a === 'grape' ? 2.6 : a === 'round' ? 0.9 : a === 'fire' ? 0.7 : 0.3) * from.dmgMult * (from.spec.mods ? from.spec.mods.swivel : 1)));
   const hull = guns * (a === 'round' ? 4.5 : a === 'fire' ? 3.2 : 0.6) * from.dmgMult;
   to.crew -= kills; to.hull = Math.max(1, to.hull - hull);
   from.startReload(side);
@@ -566,7 +584,7 @@ function boardSwivel() {
   if (!b || G.state !== 'boarding' || b.cd > 0) return;
   if (p.stock.grape <= 0) return toast('No grapeshot for the swivel gun', 'bad', 1200);
   p.stock.grape--; b.cd = 5;
-  swivel(G.enemy, p, 8);
+  swivel(G.enemy, p, 8 * p.spec.mods.swivel);
 }
 function cutGrapples() {
   const b = G.bd, p = G.player, e = G.enemy;
@@ -908,7 +926,6 @@ function showPort() {
   renderPort();
 }
 const COST = (k) => REPAIR[k][1];
-const upCost = (id) => UPGRADES[id].cost ?? upgradeCost(Math.min(2, G.up[id]));
 function renderPort() {
   const p = G.player, g = G.gold, nx = ENEMIES[G.level];
   setBars('p', p);
@@ -928,9 +945,9 @@ function renderPort() {
     const id = G.shop.slice(5), h = hullSpec(id === 'wren' ? 'wren' : +id), cur = hullSpec(G.ship);
     const val = { hull: (x) => x.hull, guns: (x) => x.guns, reach: (x) => 250 * CAL[x.cal].range, rate: (x) => 60 / (x.reload * CAL[x.cal].reload), crew: (x) => x.crew, speed: (x) => x.speed, turn: (x) => x.turn };
     const row = (label, k, max, txt) => `<div class="cmp"><span>${label}</span><div class="t"><i style="width:${(val[k](h) / max) * 100}%"></i><u style="left:${(val[k](cur) / max) * 100}%"></u></div><b>${txt || ''}</b></div>`;
-    box.innerHTML = `<h3>${h.name}<button class="x" data-act="closeshop">✕</button></h3><div class="role">${h.cls}. ${ROLE[id]}</div>
+    box.innerHTML = `<h3>${h.name}<button class="x" data-act="closeshop">✕</button></h3><div class="role">${h.cls} · <b>${KITS[KIT_OF[id]].name}</b>. ${ROLE[id]}</div>
       ${row('Hull', 'hull', 660, h.hull)}${row('Guns', 'guns', 13, h.guns * 2)}${row('Reach', 'reach', 310, CAL[h.cal].name)}${row('Loading', 'rate', 14)}${row('Crew', 'crew', 210, h.crew)}${row('Speed', 'speed', 16)}${row('Helm', 'turn', 0.8)}
-      <div class="role"><u class="mk"></u> marks the ${cur.name}. Your upgrades and shot come with you.</div>
+      <div class="role"><u class="mk"></u> marks the ${cur.name}. Fittings stay with each ship; your shot comes with you.</div>
       <div class="rowc" style="margin-top:8px"><button class="btn" data-act="cmd:${id}">Take command</button></div>`;
     return;
   }
@@ -940,11 +957,12 @@ function renderPort() {
     rows.push(`<div class="item"><div class="d">${REPAIR[k][0]}<small>${Math.floor(p[k])} / ${p[k + 'Max']}</small></div>
       <button class="btn sm" data-act="rep:${k}" ${n < 1 || g < COST(k) ? 'disabled' : ''}>${n < 1 ? 'Full' : g >= full ? full + ' g' : 'Spend ' + g + ' g'}</button></div>`);
   }
-  for (const id of sh.ups || []) {
-    const u = UPGRADES[id], lv = G.up[id], max = id === 'cal' ? Math.min(u.max, 2 - hullSpec(G.ship).cal) : u.max || 3, c = upCost(id);
-    rows.push(`<div class="item"><div class="d">${u.name} <span class="lv">${Array.from({ length: max }, (_, i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('')}</span><small>${u.desc}</small></div>
-      <button class="btn sm" data-act="up:${id}" ${lv >= max || g < c ? 'disabled' : ''}>${lv >= max ? (max ? 'Max' : 'Already heavy') : c + ' g'}</button></div>`);
+  for (const it of KITS[KIT_OF[G.ship]].items.filter((x) => x.at === G.shop)) {
+    const lv = fitOf(G.ship)[it.id] || 0, c = kitCost(lv);
+    rows.push(`<div class="item"><div class="d">${it.name} <span class="lv">${[0, 1].map((i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('')}</span><small>${it.desc}</small></div>
+      <button class="btn sm" data-act="up:${it.id}" ${lv >= 2 || g < c ? 'disabled' : ''}>${lv >= 2 ? 'Fitted' : c + ' g'}</button></div>`);
   }
+  if (!rows.length) rows.push(`<div class="role">Nothing here suits a ${KITS[KIT_OF[G.ship]].name.toLowerCase()} like the ${p.spec.name}.</div>`);
   for (const [k, n, c] of sh.ammo || []) {
     rows.push(`<div class="item"><svg viewBox="0 0 26 26">${ICON[k]}</svg><div class="d">${AMMO[k].long} ×${n}<small>Aboard: ${p.stock[k]}</small></div>
       <button class="btn sm" data-act="ammo:${k}:${n}:${c}" ${g < c ? 'disabled' : ''}>${c} g</button></div>`);
@@ -958,7 +976,7 @@ function portAction(a) {
     p[k] = Math.min(max, p[k] + (k === 'crew' ? Math.floor(amt) : amt)); G.gold -= cost;
     if (max - p[k] < 0.5) p[k] = max;
   } else if (kind === 'ammo') { if (G.gold < +c) return; G.gold -= +c; p.stock[k] += +n; }
-  else if (kind === 'up') { const cost = upCost(k); if (G.gold < cost) return; G.gold -= cost; G.up[k]++; buildPlayer(); moor(); setupHudNames(); }
+  else if (kind === 'up') { const f = fitOf(G.ship), cost = kitCost(f[k] || 0); if ((f[k] || 0) >= 2 || G.gold < cost) return; G.gold -= cost; f[k] = (f[k] || 0) + 1; buildPlayer(); moor(); setupHudNames(); }
   sfx.coin(); renderPort();
 }
 function updatePortUI() {
@@ -975,7 +993,7 @@ function restart(full) {
   G.paused = false;
   const p = G.player;
   if (full) {
-    G.level = 0; G.gold = 0; G.earned = 0; G.up = freshUps(); G.stats = freshStats(); G.trophies = []; G.ship = 'wren';
+    G.level = 0; G.gold = 0; G.earned = 0; G.fit = {}; G.stats = freshStats(); G.trophies = []; G.ship = 'wren';
     for (const t of G.trophyShips) scene.remove(t.group);
     G.trophyShips = [];
     scene.remove(p.group); G.player = null; buildPlayer();
