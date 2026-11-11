@@ -1,4 +1,4 @@
-import { AMMO, ARC, wrap, clamp } from './ship.js';
+import { wrap, clamp } from './ship.js';
 
 // Pirate captain: picks ammo, steers for a broadside (or a boarding), fires when the arc bears.
 export function updateAI(ai, me, foe, world, dt, api) {
@@ -16,14 +16,14 @@ export function updateAI(ai, me, foe, world, dt, api) {
     let a = 'round';
     const st = me.stock;
     if (ai.wantBoard) {
-      if (st.grape > 0 && dist < 125) a = 'grape';
-      else if (st.chain > 0 && foe.sailR > 0.45 && dist < 190) a = 'chain';
+      if (st.grape > 0 && dist < me.range('grape') * 1.25) a = 'grape';
+      else if (st.chain > 0 && foe.sailR > 0.45 && dist < me.range('chain') * 1.08) a = 'chain';
     } else if (P.plan === 'chain' && st.chain > 0 && foe.sailR > 0.5) a = 'chain';
     else if (P.plan === 'fire' && st.fire > 0 && foe.fire < 2) a = 'fire';
-    else if (P.plan === 'grape' && st.grape > 0 && dist < 110) a = 'grape';
+    else if (P.plan === 'grape' && st.grape > 0 && dist < me.range('grape') * 1.1) a = 'grape';
     else if (P.plan === 'mixed') {
       if (st.fire > 0 && foe.fire < 1 && dist > 90) a = 'fire';
-      else if (st.grape > 0 && dist < 85 && foe.crew > 25) a = 'grape';
+      else if (st.grape > 0 && dist < me.range('grape') * 0.85 && foe.exposed > 10) a = 'grape';
       else if (st.chain > 0 && foe.sailR > 0.7 && foe.speed > me.speed + 1) a = 'chain';
     }
     if (a !== me.ammo && me.reload.port > 0.5 && me.reload.stbd > 0.5) me.setAmmo(a);
@@ -85,12 +85,12 @@ export function updateAI(ai, me, foe, world, dt, api) {
   // gunnery
   ai.fireDelay -= dt;
   if (ai.fireDelay <= 0 && !foe.dead && foe.sinking <= 0) {
-    const lt = dist / AMMO[me.ammo].speed;
+    const lt = dist / api.shotSpeed(me);
     const pb = Math.atan2(dx + foe.fwdX * foe.speed * lt, dz + foe.fwdZ * foe.speed * lt);
     for (const side of ['port', 'stbd']) {
       if (me.reload[side] > 0) continue;
       const off = wrap(pb - (me.heading + (side === 'port' ? 1 : -1) * Math.PI / 2));
-      if (Math.abs(off) < ARC * 0.85 && dist < AMMO[me.ammo].range * 1.02 && api.clearShot(me, foe)) {
+      if (Math.abs(off) < me.arc * 0.85 && dist < me.range() * 1.02 && api.clearShot(me, foe)) {
         api.fire(me, side);
         ai.fireDelay = 0.4 + Math.random() * 0.8;
       }

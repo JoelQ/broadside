@@ -7,6 +7,17 @@ A 3D age-of-sail duel for the browser. Hunt five pirate captains in a brig-of-wa
 - Four sail settings trade speed against steadier guns and tighter turns
 - Four kinds of shot: round (hull), chain (sails), grape (crew), heated (fire)
 
+Ships differ by weight, and the differences pull on each other:
+
+- **Gun weight** (light, medium, heavy): heavier guns reach further and hit harder but load slowly
+- **Mass**: big hulls gather way, lose way and answer the helm slowly; small ones dart
+- **Firing angle**: a small ship's guns sweep wide, a big ship's only bear nearly square off her sides
+- **Rig**: sloops and xebecs sail closer to the wind than square-riggers
+- **Length**: a raking shot does more the longer the deck it travels
+- More guns and more oak cost speed
+
+Each ship's reach and firing angle are the arcs drawn on the water, and its wind limit is the red wedge.
+
 Three ways to win, and each pirate favours a different one:
 
 - **Out-gun her.** Batter the hull below 15% and she gives up as a wreck. You collect the bounty.

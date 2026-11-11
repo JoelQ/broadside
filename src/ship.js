@@ -13,8 +13,10 @@ export const SAILS = [
   { name: 'Full sail', spd: 1, turn: 0.85, aim: 1.3, dmg: 1.15 },
 ];
 export const TOP = SAILS.length - 1;
-export function polar(a) {
-  const d = (Math.abs(a) * 180) / Math.PI;
+// `point` (radians) is how much closer to the wind a rig can sail than a square-rigger.
+export function polar(a, point = 0) {
+  let d = (Math.abs(a) * 180) / Math.PI;
+  d -= ((point * 180) / Math.PI) * clamp((d - 60) / 60, 0, 1);
   for (let i = 1; i < POLAR.length; i++) {
     if (d <= POLAR[i][0]) {
       const [a0, v0] = POLAR[i - 1], [a1, v1] = POLAR[i];
@@ -23,8 +25,8 @@ export function polar(a) {
   }
   return 0.05;
 }
-export function pointOfSail(a) {
-  const d = (Math.abs(a) * 180) / Math.PI;
+export function pointOfSail(a, point = 0) {
+  const d = (Math.abs(a) * 180) / Math.PI - (point * 180) / Math.PI;
   if (d > 148) return 'In irons';
   if (d > 118) return 'Close-hauled';
   if (d > 75) return 'Beam reach';
@@ -39,7 +41,15 @@ export const AMMO = {
   fire: { name: 'Heated', long: 'Heated shot', range: 185, speed: 112, hull: 4.2, sail: 2, crew: 0.2, ignite: 0.3, reload: 1.55, tip: 'Sets fires that burn hull and canvas' },
 };
 export const AMMO_KEYS = ['round', 'chain', 'grape', 'fire'];
-export const ARC = 0.5;
+// Gun weight. Heavier guns reach further and hit harder, and take longer to load.
+export const CAL = [
+  { name: 'light', pdr: '6-pdr', range: 0.8, dmg: 0.7, reload: 0.72 },
+  { name: 'medium', pdr: '12-pdr', range: 1, dmg: 1, reload: 1 },
+  { name: 'heavy', pdr: '24-pdr', range: 1.22, dmg: 1.45, reload: 1.4 },
+];
+// Mass, relative to a brig. Heavy ships gather way, lose way and answer the helm slowly.
+export const massOf = (spec) => clamp((spec.L * spec.B) / 240, 0.55, 2.3);
+export const noGoHalf = (spec) => Math.max(0.2, 0.6 - (spec.point || 0)); // half-width of the no-sail wedge
 export const JURY = 0.34; // sails jury-rig back to this fraction
 export const BELOW = 0.4; // share of a crew below decks, out of reach of gunfire // broadside half-angle (rad)
 
@@ -251,7 +261,8 @@ export class Ship {
     this.ammo = 'round';
     this.stock = { chain: 0, grape: 0, fire: 0, ...(spec.stock || {}) };
     this.fire = 0; this.fireT = 0;
-    this.dmgMult = spec.dmg || 1; this.disp = spec.disp || 0.022; this.reloadMult = 1; this.melee = spec.melee || 1;
+    this.cal = CAL[spec.cal ?? 1]; this.arc = spec.arc || 0.5; this.mass = massOf(spec); this.yaw = 0;
+    this.dmgMult = (spec.dmg || 1) * this.cal.dmg; this.disp = spec.disp || 0.022; this.reloadMult = 1; this.melee = spec.melee || 1;
     this.sinking = 0; this.dead = false; this.struck = false;
     this.ramCd = 0; this.sailTier = 0; this.roll = 0; this.fxT = 0;
     this.target = null; this.rigT = 0;
@@ -263,8 +274,9 @@ export class Ship {
   get sailR() { return clamp(this.sails / this.sailsMax, 0, 1); }
   get crewR() { return clamp(this.crew / this.crewMax, 0, 1); }
   get exposed() { return Math.max(0, this.crew - this.crewMax * BELOW); } // men a broadside can reach
+  range(ammo = this.ammo) { return AMMO[ammo].range * this.cal.range; }
   reloadTime(ammo = this.ammo) {
-    return (this.spec.reload * AMMO[ammo].reload * this.reloadMult * (this.fire > 0 ? 1.25 : 1)) / (0.45 + 0.55 * this.crewR);
+    return (this.spec.reload * this.cal.reload * AMMO[ammo].reload * this.reloadMult * (this.fire > 0 ? 1.25 : 1)) / (0.45 + 0.55 * this.crewR);
   }
   startReload(side, frac = 1) { this.reload[side] = this.reloadMax[side] = this.reloadTime() * frac; }
   setAmmo(a) {
@@ -284,7 +296,7 @@ export class Ship {
   }
   maxSpeedNow(world) {
     const off = wrap(this.heading - world.wind.dir);
-    return this.spec.speed * SAILS[this.sailLevel].spd * polar(off) * (0.25 + 0.75 * this.sailR) * (this.hullR < 0.3 ? 0.82 : 1);
+    return this.spec.speed * SAILS[this.sailLevel].spd * polar(off, this.spec.point) * (0.25 + 0.75 * this.sailR) * (this.hullR < 0.3 ? 0.82 : 1);
   }
 
   update(dt, world, frozen) {
@@ -293,10 +305,13 @@ export class Ship {
       this.sinking += dt; this.speed *= Math.max(0, 1 - dt);
     } else if (!frozen) {
       const tgt = this.struck ? 0 : this.maxSpeedNow(world);
-      this.speed += (tgt - this.speed) * Math.min(1, dt * (tgt > this.speed ? 0.42 : 0.7));
+      const m = this.mass;
+      this.speed += (tgt - this.speed) * Math.min(1, (dt * (tgt > this.speed ? 0.42 : 0.7)) / m ** 0.8);
       this.rudder += clamp(this.input.turn - this.rudder, -dt * 2.2, dt * 2.2);
       const way = 0.3 + 0.7 * clamp(this.speed / (0.45 * sp.speed), 0, 1);
-      this.heading = wrap(this.heading + this.rudder * sp.turn * way * SAILS[this.sailLevel].turn * dt);
+      // the hull swings toward the rate the rudder asks for; a heavy hull takes longer to start and to stop swinging
+      this.yaw += (this.rudder * sp.turn * way * SAILS[this.sailLevel].turn - this.yaw) * Math.min(1, dt / (0.35 * m));
+      this.heading = wrap(this.heading + this.yaw * dt);
       this.speed *= 1 - Math.abs(this.rudder) * 0.07 * dt;
       for (const s of ['port', 'stbd']) if (this.reload[s] > 0) this.reload[s] = Math.max(0, this.reload[s] - dt);
     } else {
