@@ -21,11 +21,16 @@ Each ship's reach and firing angle are the arcs drawn on the water, and its wind
 Three ways to win, and each pirate favours a different one:
 
 - **Out-gun her.** Batter the hull below 15% and she gives up as a wreck. You collect the bounty.
-- **Board her.** Get inside the ring drawn around her, match her speed, press `B`. Guns can only
-  reach the crew on deck (40% are always below), so a ship is never taken from range. A boarded
-  prize pays up to double, and you can take command of her in port.
-- **Out-sail her.** Sit across her bow or stern where her guns cannot answer and rake. Torn sails
-  are jury-rigged back to about a third, so a crippled ship is a window, not a kill.
+  Stock for stock, the bigger ship wins a plain exchange of broadsides.
+- **Out-sail her.** A big ship's guns only bear nearly square off her sides. Get past them, sit
+  astern and rake. This is how a small ship beats a big one.
+- **Board her.** Grapples only hold a ship that has been slowed, so cut up her sails with chain
+  first. Guns reach only the crew on deck (30% are always below), and a crew fights worse when
+  its ship is holed or burning. A boarded prize pays up to double and is yours to sail.
+
+Each shot has a job: round for hulls, chain to slow a ship so she can be boarded, grape to thin a
+crew (and to stop a boarder), heated to burn big ships, which lose hull in proportion to their size
+and load at half speed while alight.
 
 Port Halcyon is home: your ship at the pier, shops along the quay, and every ship you own at anchor.
 
