@@ -1,0 +1,14 @@
+{
+  "name": "broadside",
+  "version": "0.1.0",
+  "description": "Age-of-sail 1v1 ship combat in the browser: broadsides, wind, four kinds of shot, and boarding.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "three": "^0.187.0"
+  }
+}
