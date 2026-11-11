@@ -9,7 +9,8 @@ import { buildHarbor } from './harbor.js';
 const $ = (id) => document.getElementById(id);
 const rand = (a, b) => a + Math.random() * (b - a);
 const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) * 2; // ~unit std
-const GRAV = 22, BOARD_RANGE = 33, BOARD_SPEED = 6.5;
+const GRAV = 22, BOARD_SPEED = 6.5;
+let BOARD_RANGE = 33; // set per fight from the two ships' beams
 
 // ---------- renderer ----------
 const canvas = $('c');
@@ -74,7 +75,7 @@ function buildPlayer(fresh) {
 }
 function moor() {
   const p = G.player, b = harbor.berth;
-  p.pos.set(b.x, 0, b.z); p.heading = b.heading; p.speed = 0; p.sailLevel = 0; p.input.turn = 0; p.rudder = 0;
+  p.pos.set(4.4 + p.spec.B / 2, 0, b.z); p.heading = b.heading; p.speed = 0; p.sailLevel = 0; p.input.turn = 0; p.rudder = 0;
   p.sinking = 0; p.struck = false; p.fire = 0; p.boardView = null;
 }
 buildPlayer();
@@ -428,6 +429,8 @@ function beginBattle() {
   hideScreen(); setMode('battle');
   fitArcs(myArcs, G.player); fitArcs(herArcs, G.enemy);
   noGo.geometry.dispose(); noGo.geometry = noGoGeo(noGoHalf(G.player.spec));
+  BOARD_RANGE = Math.round(20 + (G.player.spec.B + G.enemy.spec.B) * 0.8);
+  boardRing.geometry.dispose(); boardRing.geometry = new THREE.RingGeometry(BOARD_RANGE - 1.6, BOARD_RANGE, 72).rotateX(-Math.PI / 2);
   buildAmmoBar(); setupHudNames();
   G.coach = G.level === 0 && !store.get('broadside.coached') ? { i: 0, t: 0 } : null;
   if (!G.coach) setTimeout(() => G.state === 'battle' && toast(ENEMIES[G.level].tip, '', 6000), 1500);
@@ -607,7 +610,7 @@ function coachUpdate(dt) {
 function updateCamera(dt) {
   const c = G.cam, p = G.player, e = G.enemy, st = G.state;
   const center = _m.set(p.pos.x, 7, p.pos.z);
-  let want, dist = c.dist, pitch = c.pitch, rate = 1.5;
+  let want, dist = c.dist * clamp(p.spec.L / 30, 0.85, 1.6), pitch = c.pitch, rate = 1.5;
   if (st === 'title' || st === 'won') { center.set(p.pos.x - 6, 9, p.pos.z); want = 0.75 + Math.sin(G.t * 0.1) * 0.25 + c.yaw; dist = 72; pitch = 0.16; }
   else if (st === 'port') {
     const sp = G.shop && harbor.spots.find((s) => s.id === G.shop), ts = G.shop && G.trophyShips.find((t) => 'ship:' + t.id === G.shop);
@@ -618,19 +621,19 @@ function updateCamera(dt) {
     center.set(e.pos.x, intro ? 2 : 8, e.pos.z); want = G.t * 0.12 + c.yaw; dist = 52 + e.spec.L * 1.3; pitch = intro ? 0.12 : 0.22;
   } else if (G.focus === 'both' && e) {
     center.set((p.pos.x + e.pos.x) / 2, 5, (p.pos.z + e.pos.z) / 2);
-    want = p.heading - (G.bd ? G.bd.side : 1) * Math.PI / 2 + c.yaw; dist = 50; pitch = 1.02; rate = 2.5;
+    want = p.heading - (G.bd ? G.bd.side : 1) * Math.PI / 2 + c.yaw; dist = 30 + (p.spec.L + e.spec.L) * 0.38; pitch = 1.02; rate = 2.5;
   } else if (c.mode === 'helm' && e) {
     // behind your own ship, so left on screen is always port, but swung toward whichever side she is on
     const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z, d = Math.hypot(dx, dz) || 1;
     const rel = wrap(Math.atan2(dx, dz) - p.heading), ease = clamp((3.0 - Math.abs(rel)) / 0.7, 0.2, 1);
     const lead = clamp(d * 0.18, 0, 40);
     center.x += (dx / d) * lead * ease; center.z += (dz / d) * lead * ease;
-    want = p.heading + Math.PI + clamp(rel, -1.25, 1.25) * ease + c.yaw; dist = c.dist * clamp(1 + d / 420, 1.1, 1.75); pitch = c.pitch + 0.1; rate = 1.8;
+    want = p.heading + Math.PI + clamp(rel, -1.25, 1.25) * ease + c.yaw; dist *= clamp(1 + d / 420, 1.1, 1.75); pitch = c.pitch + 0.1; rate = 1.8;
   } else if (c.mode === 'combat' && e) {
     // stay behind the player on the line to the enemy, so she is always ahead of the lens
     const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z, d = Math.hypot(dx, dz) || 1, lead = clamp(d * 0.28, 0, 70);
     center.x += (dx / d) * lead; center.z += (dz / d) * lead;
-    want = Math.atan2(-dx, -dz) + c.yaw; dist = c.dist * clamp(0.85 + d / 330, 0.9, 2); rate = 3;
+    want = Math.atan2(-dx, -dz) + c.yaw; dist *= clamp(0.85 + d / 330, 0.9, 2); rate = 3;
   } else { want = p.heading + Math.PI + c.yaw; rate = 3.2; }
   if (camera.aspect < 1) dist *= 1.55;
   c.angle += wrap(want - c.angle) * Math.min(1, dt * rate);
