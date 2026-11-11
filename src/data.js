@@ -41,36 +41,51 @@ export const ENEMIES = [
     tip: 'His guns outreach yours and hit hard, but load slowly and only bear square off his sides. Get past them, or get aboard.',
     L: 46, B: 11.2, D: 4.3, masts: 3, sailsPerMast: 3, castle: 1,
     rigScale: 0.88, decks: 1, hullCol: 0x2c2a33, trimCol: 0x5d3f7a, sailCol: '#cfc8d6', emblem: 'skull', emblemCol: '#3b2a52', flagCol: 0x3b2a52,
-    hull: 460, sails: 120, crew: 64, guns: 10, speed: 12.4, turn: 0.32, reload: 7, disp: 0.024, dmg: 1, melee: 1, cal: 2, arc: 0.42, point: 0,
-    stock: { chain: 4, grape: 4, fire: 9 }, ai: { range: 215, plan: 'fire', boarder: false, battleSail: true },
+    hull: 500, sails: 120, crew: 64, guns: 12, speed: 12.4, turn: 0.32, reload: 6.6, disp: 0.021, dmg: 1, melee: 1, cal: 2, arc: 0.42, point: 0,
+    stock: { chain: 4, grape: 4, fire: 9 }, ai: { range: 180, plan: 'fire', boarder: false, battleSail: true },
   },
   {
     name: "Leviathan's Maw", cls: 'War galleon', captain: 'Dread Admiral Korrigan', env: 'storm', islands: 5, bounty: 1500,
-    hook: 'Twenty-six heavy guns. She outreaches you, and she turns like an island.',
+    hook: 'Thirty-six heavy guns on two decks. She outreaches you, and she turns like an island.',
     tip: 'Her guns only bear square off her sides. Get past them, sit astern, and stay there.',
     L: 64, B: 16, D: 6.2, masts: 4, sailsPerMast: 4, castle: 2,
     fore: true, rigScale: 0.74, decks: 2, hullCol: 0x16110f, trimCol: 0x9a1c1c, sailCol: '#1b1b1e', emblem: 'skull', emblemCol: '#c22a2a', flagCol: 0x9a1c1c,
-    hull: 640, sails: 150, crew: 210, guns: 13, speed: 11.2, turn: 0.21, reload: 7.4, disp: 0.026, dmg: 1, melee: 1.15, cal: 2, arc: 0.38, point: -0.1,
+    hull: 820, sails: 170, crew: 210, guns: 18, speed: 11.2, turn: 0.21, reload: 7.2, disp: 0.024, dmg: 1, melee: 1.15, cal: 2, arc: 0.38, point: -0.1,
     stock: { chain: 2, grape: 8, fire: 6 }, ai: { range: 190, plan: 'mixed', boarder: false, battleSail: true },
   },
 ];
 
-// Port Halcyon: what each building on the quay sells.
-export const UPGRADES = {
-  hull: { name: 'Oak bracing', desc: '+60 hull. The weight costs 3% speed' },
-  rudder: { name: 'Copper sheathing', desc: '+10% turn' },
-  sail: { name: 'Fine canvas', desc: '+7% speed, +20 sails' },
-  guns: { name: 'Extra gun ports', desc: '+1 gun per side. The weight costs 3% speed' },
-  cal: { name: 'Heavier guns', desc: 'Longer reach, harder hits, slower to load, 5% slower ship', max: 1, cost: 380 },
-  drill: { name: 'Gun drill', desc: '−10% reload' },
-  marines: { name: 'Marines', desc: '+18% in a boarding, +10 crew' },
+// Fittings belong to a ship and make her better at what she already is. Each has two levels.
+// `at` is the building on the quay that sells it. Effects: numbers under `mul` multiply per
+// level, numbers under `add` add per level.
+const DRILL = { id: 'drill', at: 'guns', name: 'Gun drill', desc: 'Load 10% faster', mul: { reload: 0.9 } };
+export const KITS = {
+  runner: { name: 'Runner', items: [
+    { id: 'canvas', at: 'sails', name: 'Racing canvas', desc: '+7% speed', mul: { speed: 1.07 } },
+    { id: 'helm', at: 'wright', name: 'Balanced rudder', desc: '+12% faster helm', mul: { turn: 1.12 } },
+    { id: 'pivots', at: 'guns', name: 'Pivot mounts', desc: 'Guns sweep wider and load 10% faster', mul: { arc: 1.1, reload: 0.9 } },
+    { id: 'low', at: 'wright', name: 'Cut-down topsides', desc: 'A smaller target: shot aimed at you scatters 15% wider', mul: { evade: 1.15 } },
+  ] },
+  line: { name: 'All-rounder', items: [
+    DRILL,
+    { id: 'ports', at: 'guns', name: 'Extra gun ports', desc: '+1 gun per side', add: { guns: 1 } },
+    { id: 'canvas', at: 'sails', name: 'Fine canvas', desc: '+5% speed', mul: { speed: 1.05 } },
+    { id: 'oak', at: 'wright', name: 'Oak bracing', desc: '+45 hull', add: { hull: 45 } },
+  ] },
+  boarder: { name: 'Boarder', items: [
+    { id: 'marines', at: 'tavern', name: 'Marines', desc: '+15 crew and +15% strength in a boarding', add: { crew: 15 }, mul: { melee: 1.15 } },
+    { id: 'hooks', at: 'wright', name: 'Grappling crews', desc: 'Board from 30% further off, at a bigger speed gap', mul: { boardReach: 1.3, boardSpeed: 1.4 } },
+    { id: 'rail', at: 'guns', name: 'Rail guns', desc: 'Point-blank volley and swivel gun kill 40% more', mul: { swivel: 1.4 } },
+    { id: 'sweeps', at: 'sails', name: 'Sweeps', desc: 'Oars: +3 knots whatever the wind, even dead into it', add: { sweeps: 3.4 } },
+  ] },
+  gun: { name: 'Gun platform', items: [
+    { id: 'charge', at: 'guns', name: 'Heavier charges', desc: '+8% reach', mul: { reach: 1.08 } },
+    DRILL,
+    { id: 'ports', at: 'guns', name: 'Extra gun ports', desc: '+1 gun per side', add: { guns: 1 } },
+    { id: 'oak', at: 'wright', name: 'Oak bracing', desc: '+70 hull', add: { hull: 70 } },
+  ] },
 };
-export const SHOPS = {
-  wright: { repair: 'hull', ups: ['hull', 'rudder'] },
-  sails: { repair: 'sails', ups: ['sail'] },
-  guns: { ups: ['guns', 'cal', 'drill'] },
-  tavern: { repair: 'crew', ups: ['marines'] },
-  stores: { ammo: [['chain', 3, 25], ['grape', 3, 40], ['fire', 2, 35]] },
-};
+export const KIT_OF = { wren: 'line', 0: 'runner', 1: 'line', 2: 'boarder', 3: 'gun', 4: 'gun' };
+export const kitCost = (lv) => [220, 380][lv];
+export const SHOPS = { wright: { repair: 'hull' }, sails: { repair: 'sails' }, guns: {}, tavern: { repair: 'crew' }, stores: { ammo: [['chain', 3, 25], ['grape', 3, 40], ['fire', 2, 35]] } };
 export const REPAIR = { hull: ['Repair hull', 0.6], sails: ['Mend sails', 0.5], crew: ['Sign on hands', 3] };
-export const upgradeCost = (lvl) => [160, 290, 440][lvl];

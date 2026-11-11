@@ -90,7 +90,7 @@ export function updateAI(ai, me, foe, world, dt, api) {
     for (const side of ['port', 'stbd']) {
       if (me.reload[side] > 0) continue;
       const off = wrap(pb - (me.heading + (side === 'port' ? 1 : -1) * Math.PI / 2));
-      if (Math.abs(off) < me.arc * 0.85 && dist < me.range() * 1.02 && api.clearShot(me, foe)) {
+      if (Math.abs(off) < me.arc * 0.85 && api.reach(me, foe) < me.range() * 1.02 && api.clearShot(me, foe)) {
         api.fire(me, side);
         ai.fireDelay = 0.4 + Math.random() * 0.8;
       }

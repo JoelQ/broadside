@@ -14,7 +14,7 @@ Ships differ by weight, and the differences pull on each other:
 - **Firing angle**: a small ship's guns sweep wide, a big ship's only bear nearly square off her sides
 - **Rig**: sloops and xebecs sail closer to the wind than square-riggers
 - **Length**: a raking shot does more the longer the deck it travels
-- More guns and more oak cost speed
+- **Fittings** belong to a ship and make her better at what she already is: a runner gets faster and harder to hit, a boarder gets marines, grapples and oars, a gun platform gets reach and more guns
 
 Each ship's reach and firing angle are the arcs drawn on the water, and its wind limit is the red wedge.
 
