@@ -6,10 +6,17 @@ A 3D age-of-sail duel for the browser. Hunt five pirate captains in a brig-of-wa
 - Wind sets your speed, you cannot sail straight into it, and the ship upwind of the other shoots straighter
 - Four sail settings trade speed against steadier guns and tighter turns
 - Four kinds of shot: round (hull), chain (sails), grape (crew), heated (fire)
-- Come alongside at matching speed and board. The odds are shown before you commit; a loaded
-  battery facing her fires point-blank as the hulls touch, and grapeshot feeds the swivel gun
-- A prize pays more the less you have wrecked her: the bounty for a hulk, double for an intact hull
-- Port Halcyon is home: your ship at the pier, shops along the quay, captured ships at anchor in the bay
+
+Three ways to win, and each pirate favours a different one:
+
+- **Out-gun her.** Batter the hull below 15% and she gives up as a wreck. You collect the bounty.
+- **Board her.** Get inside the ring drawn around her, match her speed, press `B`. Guns can only
+  reach the crew on deck (40% are always below), so a ship is never taken from range. A boarded
+  prize pays up to double, and you can take command of her in port.
+- **Out-sail her.** Sit across her bow or stern where her guns cannot answer and rake. Torn sails
+  are jury-rigged back to about a third, so a crippled ship is a window, not a kill.
+
+Port Halcyon is home: your ship at the pier, shops along the quay, and every ship you own at anchor.
 
 ## Build
 

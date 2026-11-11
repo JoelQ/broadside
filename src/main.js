@@ -44,20 +44,27 @@ const G = {
   state: 'title', level: 0, gold: 0, earned: 0, up: freshUps(),
   player: null, enemy: null, ai: newAI(), balls: [], pending: [], paused: false, trophies: [], trophyShips: [],
   aiGrapple: 0, boardCd: 0, endT: 0, outcome: null, bd: null, t: 0, shake: 0, focus: 'player', volley: 0, shop: null,
-  stats: freshStats(), coach: null,
-  cam: { yaw: 0, pitch: 0.4, dist: 78, mode: 'combat', angle: 0.4, look: new THREE.Vector3(0, 7, -20), pos: new THREE.Vector3(40, 30, 90) },
+  stats: freshStats(), coach: null, ship: 'wren',
+  cam: { yaw: 0, pitch: 0.4, dist: 78, mode: 'helm', angle: 0.4, look: new THREE.Vector3(0, 7, -20), pos: new THREE.Vector3(40, 30, 90) },
 };
 window.G = G;
 
-function playerSpec() {
-  const u = G.up;
-  return { ...PLAYER_SPEC, guns: 7 + u.guns, hull: 300 + 60 * u.hull, sails: 100 + 20 * u.sail, speed: 14 * (1 + 0.07 * u.sail), turn: 0.62 * (1 + 0.1 * u.rudder), crew: 80 + 10 * u.marines };
+// Any ship you have boarded and taken is yours to command. In your hands she keeps her hull
+// and her handling, under your colours and with your gunners.
+function hullSpec(id) {
+  if (id === 'wren') return PLAYER_SPEC;
+  const es = ENEMIES[id];
+  return { ...es, sailCol: PLAYER_SPEC.sailCol, emblem: 'cross', emblemCol: PLAYER_SPEC.emblemCol, flagCol: PLAYER_SPEC.flagCol, crewCols: PLAYER_SPEC.crewCols, disp: PLAYER_SPEC.disp, dmg: 1, melee: 1, reload: es.reload - 1, ai: PLAYER_SPEC.ai, stock: {} };
 }
-function buildPlayer() {
+function playerSpec() {
+  const u = G.up, b = hullSpec(G.ship);
+  return { ...b, guns: b.guns + u.guns, hull: b.hull + 60 * u.hull, sails: b.sails + 20 * u.sail, speed: b.speed * (1 + 0.07 * u.sail), turn: b.turn * (1 + 0.1 * u.rudder), crew: b.crew + 10 * u.marines };
+}
+function buildPlayer(fresh) {
   const old = G.player, p = new Ship(playerSpec(), true);
   p.reloadMult = 0.9 ** G.up.drill; p.melee = 1 + 0.18 * G.up.marines;
   if (old) {
-    p.hull = old.hull + p.hullMax - old.hullMax; p.sails = old.sails + p.sailsMax - old.sailsMax; p.crew = old.crew + p.crewMax - old.crewMax;
+    if (!fresh) { p.hull = old.hull + p.hullMax - old.hullMax; p.sails = old.sails + p.sailsMax - old.sailsMax; p.crew = old.crew + p.crewMax - old.crewMax; }
     p.stock = old.stock; p.pos.copy(old.pos); p.heading = old.heading; p.speed = old.speed; p.sailLevel = old.sailLevel; p.input = old.input;
     scene.remove(old.group);
   }
@@ -89,6 +96,23 @@ function makeArcs(color) {
   return { grp, sides };
 }
 const myArcs = makeArcs(0xffffff), herArcs = makeArcs(0xff4a3a);
+const decal = (geo, color, opacity) => {
+  geo.rotateX(-Math.PI / 2);
+  const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, depthTest: false, side: THREE.DoubleSide, fog: false }));
+  m.renderOrder = 3;
+  return m;
+};
+// Around your ship: a red wedge where the wind will not let you sail, and an arrow showing which way it blows.
+const windRing = new THREE.Group();
+const noGo = decal(new THREE.RingGeometry(21, 33, 24, 1, -0.6, 1.2), 0xff4a3a, 0.34);
+const arrowShape = new THREE.Shape([[9, 0], [-1, 6.5], [-1, 2.4], [-11, 2.4], [-11, -2.4], [-1, -2.4], [-1, -6.5]].map(([x, y]) => new THREE.Vector2(x, y)));
+const windArrow = decal(new THREE.ShapeGeometry(arrowShape), 0xbfe6ff, 0.75);
+const arrowHold = new THREE.Group(); arrowHold.add(windArrow); windArrow.position.x = 46;
+windRing.add(noGo, arrowHold);
+windRing.visible = false; scene.add(windRing);
+// Around her: the ring you must be inside to board. White far off, amber when inside but passing too fast, green when ready.
+const boardRing = decal(new THREE.RingGeometry(BOARD_RANGE - 1.6, BOARD_RANGE, 72), 0xffffff, 0.3);
+boardRing.visible = false; scene.add(boardRing);
 
 // ---------- toasts and floating numbers ----------
 function toast(text, cls = '', ms = 2600) {
@@ -239,8 +263,9 @@ function hullHit(b, ship) {
   let kills = 0;
   if (A.kills) kills = Math.round(rand(A.kills[0], A.kills[1]) * (rake ? 1.6 : 1) * b.owner.dmgMult);
   else if (Math.random() < A.crew * (rake ? 2.4 : 1)) kills = 1 + (rake && Math.random() < 0.5 ? 1 : 0);
-  kills = Math.min(kills, ship.crew);
+  kills = Math.min(kills, Math.floor(ship.exposed)); // the men below decks are out of reach
   ship.crew -= kills;
+  if (sd > 0) ship.rigT = 0;
   // one fire per volley at most, so a single broadside can't set three at once
   if (A.ignite && ship.litBy !== b.volley && Math.random() < A.ignite) {
     ship.litBy = b.volley;
@@ -256,7 +281,7 @@ function hullHit(b, ship) {
 }
 function rigHit(b, ship, amt) {
   const d = Math.min(ship.sails, amt * b.owner.dmgMult * SAILS[ship.sailLevel].dmg);
-  ship.sails -= d;
+  ship.sails -= d; ship.rigT = 0;
   fx.canvas(b.mesh.position, new THREE.Color(ship.spec.sailCol));
   sfx.rip(0.2 + 0.8 * camVol(b.mesh.position));
   tally(ship, 0, d, 0, false, b.mesh.position);
@@ -338,7 +363,7 @@ function shipEffects(s, dt) {
   const sp = s.spec;
   if (s.fire > 0 && s.sinking <= 0) {
     s.hull -= 1.3 * s.fire * dt; s.sails = Math.max(0, s.sails - 0.5 * s.fire * dt);
-    if (Math.random() < 0.13 * s.fire * dt) s.crew = Math.max(0, s.crew - 1);
+    if (s.exposed >= 1 && Math.random() < 0.13 * s.fire * dt) s.crew -= 1;
     s.fireT -= dt * (0.5 + 0.9 * s.crewR);
     if (s.fireT <= 0) { s.fire--; s.fireT = 9; if (s.fire === 0 && s.isPlayer) toast('Fires are out', 'good'); }
     for (let i = 0; i < s.fire; i++) {
@@ -405,12 +430,13 @@ function endBattle(outcome) {
   if (G.state === 'ending') return;
   const e = G.enemy, p = G.player;
   if (outcome === 'captured') G.prize = prize(e);
+  const wreck = outcome === 'struck';
   G.outcome = outcome; G.state = 'ending';
-  G.endT = outcome === 'captured' ? 3.2 : 6.5;
+  G.endT = outcome === 'captured' || wreck ? 3.2 : 6.5;
   G.pending.length = 0; G.bd = null;
   setMode('battle');
   if (outcome === 'sunk') { G.stats.sunk++; e.sinking = Math.max(e.sinking, 0.01); toast(`${e.spec.name} is going down!`, 'big', 4000); sfx.horn(true); G.focus = 'enemy'; }
-  else if (outcome === 'captured') { G.stats.captured++; e.struck = true; e.fire = 0; toast(`${e.spec.name} strikes her colours!`, 'big', 4000); sfx.horn(true); G.focus = 'enemy'; }
+  else if (outcome === 'captured' || wreck) { if (wreck) G.stats.sunk++; else G.stats.captured++; e.struck = true; e.fire = 0; toast(wreck ? `${e.spec.name} strikes — a floating wreck` : `${e.spec.name} is yours!`, 'big', 4000); sfx.horn(true); G.focus = 'enemy'; }
   else { if (outcome === 'lost') p.sinking = Math.max(p.sinking, 0.01); toast(outcome === 'lost' ? 'We are sinking!' : 'The deck is lost!', 'bad', 4000); sfx.horn(false); }
 }
 function battleUpdate(dt) {
@@ -418,6 +444,7 @@ function battleUpdate(dt) {
   G.battleT += dt; G.stats.time += dt;
   if (G.auto) updateAI(G.auto, p, e, world, dt, { fire, clearShot });
   else p.input.turn = (keys.a || keys.arrowleft ? 1 : 0) - (keys.d || keys.arrowright ? 1 : 0);
+  if (G.coach && G.coach.i < 2 && G.battleT < 60) G.ai.fireDelay = 2; // first fight: she holds fire until you have fired
   updateAI(G.ai, e, p, world, dt, { fire, clearShot });
   G.boardCd -= dt;
   const can = sep(p, e) < BOARD_RANGE && relSpeed(p, e) < BOARD_SPEED && G.boardCd <= 0;
@@ -427,11 +454,23 @@ function battleUpdate(dt) {
   if (p.sailLevel > 0 && p.speed < 2.5 && Math.abs(wrap(p.heading - world.wind.dir)) > 2.6) toastOnce('irons', 10, 'In irons — turn away from the wind’s eye!', 'bad', 3000);
   if (e.hull <= 0) return endBattle('sunk');
   if (p.hull <= 0) return endBattle('lost');
-  // a beaten pirate strikes rather than soak volleys to the bottom; the last one fights to the end
-  if (G.level < ENEMIES.length - 1 && e.hullR < 0.15) return endBattle('captured');
-  if (e.crew < 1) return endBattle('captured');
-  if (p.crew <= 2) return endBattle('overrun');
+  // a pirate battered to a wreck gives up rather than soak volleys to the bottom: you collect the
+  // bounty, but the hulk is worth nothing. Only a boarding takes a ship. The last one fights on.
+  if (G.level < ENEMIES.length - 1 && e.hullR < 0.15) return endBattle('struck');
+  // whoever is upwind shoots through clear air; say so when it changes hands
+  const gauge = hasGauge(p, e) ? 1 : hasGauge(e, p) ? -1 : 0;
+  if (gauge !== G.gauge && G.battleT > 3) {
+    if (gauge) floater(gauge > 0 ? 'Upwind of her: steadier guns' : 'Downwind of her: smoke in your eyes', gauge > 0 ? 'good' : 'bad', _m.set(p.pos.x, 16, p.pos.z));
+  }
+  G.gauge = gauge;
   coachUpdate(dt);
+  // the boarding ring explains itself the first time you get near it
+  if (!G.coach && !store.get('broadside.ringed') && sep(p, e) < 150 && G.battleT > 8) {
+    store.set('broadside.ringed', '1');
+    $('coach').innerHTML = '<span>The ring around her is boarding range. Get inside it, match her speed, press <kbd>B</kbd>. Only a boarded ship is yours to keep.</span><button data-act="hidecoach">ok</button>';
+    $('coach').classList.remove('hidden'); G.coachHide = G.battleT + 9;
+  }
+  if (G.coachHide && G.battleT > G.coachHide) { G.coachHide = 0; $('coach').classList.add('hidden'); }
 }
 
 // ---------- boarding ----------
@@ -454,6 +493,7 @@ function pointBlank(from, to, side, name) {
   const q = to.toWorld(_l.set(0, to.spec.D + 8, 0), new THREE.Vector3());
   fx.grape(q);
   floater(`${name}  −${kills} crew` + (hull >= 5 ? `  −${Math.round(hull)} hull` : ''), to.isPlayer ? 'bad rake' : 'good rake', q);
+  toast(from.isPlayer ? `Point-blank ${AMMO[a].long.toLowerCase()}: ${kills} of her crew cut down` : `Her guns at the rail: ${kills} of ours cut down`, from.isPlayer ? 'good' : 'bad', 3500);
 }
 function startBoarding(by) {
   const p = G.player, e = G.enemy;
@@ -484,7 +524,7 @@ function boardingUpdate(dt) {
   e.heading = wrap(e.heading + wrap(p.heading + b.th - e.heading) * k);
   b.t += dt; b.cd -= dt; b.eCd -= dt;
   syncBoardView();
-  if (b.t < 1.5) return; // a beat to read the odds before blades meet
+  if (b.t < 2.4) return; // a beat to take in the opening volley before blades meet
   // each side cuts the other down in proportion to its own strength, so the bigger crew pulls
   // ahead faster and faster; the pace climbs so no fight drags
   const rush = b.t < 6 ? (b.by === 'player' ? 1.15 : 1 / 1.15) : 1, pace = 0.028 + 0.0035 * b.t;
@@ -539,13 +579,10 @@ function tryBoard() {
 
 // ---------- first-fight coaching: one line at a time, each cleared by doing it ----------
 const COACH = [
-  { text: '<kbd>A</kbd> <kbd>D</kbd> steer. Turn until she sits inside a glowing arc off your side.', done: (p, e) => ['port', 'stbd'].some((s) => inArc(p, s, e, 1.05)) },
-  { text: '<kbd>Space</kbd> fires the side that bears.', done: () => G.fired },
-  { text: '<kbd>W</kbd> <kbd>S</kbd> set sail. Less sail: steadier guns, tighter turns. More sail: speed.', done: (p) => p.sailLevel !== TOP, max: 14 },
-  { text: 'The red wedge on the dial is the eye of the wind. You cannot sail into it.', max: 6 },
-  { text: '<kbd>2</kbd> chain shot tears sails. <kbd>3</kbd> grape kills crew. <kbd>1</kbd> round shot holes the hull.', done: (p) => p.ammo !== 'round', max: 12 },
-  { text: 'Shot along her length, from dead ahead or astern, rakes — and she cannot answer.', done: () => G.raked, max: 9 },
-  { text: 'To take her as a prize: get close, match her speed, press <kbd>B</kbd>. An intact prize pays double.', max: 9 },
+  { text: '<kbd>A</kbd> <kbd>D</kbd> steer. Bring her inside one of the pale arcs off your sides.', done: (p, e) => ['port', 'stbd'].some((s) => inArc(p, s, e, 1.05)) },
+  { text: '<kbd>Space</kbd> fires the side she is on.', done: () => G.fired },
+  { text: '<kbd>W</kbd> <kbd>S</kbd> more or less sail. The red wedge on the water is where the wind will not take you.', done: (p) => p.sailLevel !== TOP, max: 16 },
+  { text: '<kbd>1</kbd>–<kbd>4</kbd> change shot: round for the hull, chain for sails, grape for crew, heated for fire.', done: (p) => p.ammo !== 'round', max: 14 },
 ];
 function endCoach() { G.coach = null; store.set('broadside.coached', '1'); $('coach').classList.add('hidden'); }
 function coachUpdate(dt) {
@@ -565,8 +602,8 @@ function updateCamera(dt) {
   let want, dist = c.dist, pitch = c.pitch, rate = 1.5;
   if (st === 'title' || st === 'won') { center.set(p.pos.x - 6, 9, p.pos.z); want = 0.75 + Math.sin(G.t * 0.1) * 0.25 + c.yaw; dist = 72; pitch = 0.16; }
   else if (st === 'port') {
-    const sp = G.shop && harbor.spots.find((s) => s.id === G.shop);
-    if (sp) { center.set(sp.pos.x * 0.75, 7, sp.pos.z + 16); dist = 72; } else { center.copy(harbor.focus); dist = 108; }
+    const sp = G.shop && harbor.spots.find((s) => s.id === G.shop), ts = G.shop && G.trophyShips.find((t) => 'ship:' + t.id === G.shop);
+    if (sp) { center.set(sp.pos.x * 0.75, 7, sp.pos.z + 16); dist = 72; } else if (ts) { center.set(ts.pos.x, 8, ts.pos.z); dist = 80; } else { center.set(0, 7, 4); dist = 128; }
     want = 0.3 + Math.sin(G.t * 0.07) * 0.14 + c.yaw; pitch = 0.27;
   } else if (G.focus === 'enemy' && e) {
     const intro = st === 'intro';
@@ -574,6 +611,13 @@ function updateCamera(dt) {
   } else if (G.focus === 'both' && e) {
     center.set((p.pos.x + e.pos.x) / 2, 5, (p.pos.z + e.pos.z) / 2);
     want = p.heading - (G.bd ? G.bd.side : 1) * Math.PI / 2 + c.yaw; dist = 50; pitch = 1.02; rate = 2.5;
+  } else if (c.mode === 'helm' && e) {
+    // behind your own ship, so left on screen is always port, but swung toward whichever side she is on
+    const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z, d = Math.hypot(dx, dz) || 1;
+    const rel = wrap(Math.atan2(dx, dz) - p.heading), ease = clamp((3.0 - Math.abs(rel)) / 0.7, 0.2, 1);
+    const lead = clamp(d * 0.18, 0, 40);
+    center.x += (dx / d) * lead * ease; center.z += (dz / d) * lead * ease;
+    want = p.heading + Math.PI + clamp(rel, -1.25, 1.25) * ease + c.yaw; dist = c.dist * clamp(1 + d / 420, 1.1, 1.75); pitch = c.pitch + 0.1; rate = 1.8;
   } else if (c.mode === 'combat' && e) {
     // stay behind the player on the line to the enemy, so she is always ahead of the lens
     const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z, d = Math.hypot(dx, dz) || 1, lead = clamp(d * 0.28, 0, 70);
@@ -611,8 +655,8 @@ function setMode(m) { // which layer of interface is up: battle, melee, port, or
   $('melee').classList.toggle('hidden', m !== 'melee');
   $('port').classList.toggle('hidden', m !== 'port');
   $('bars').classList.remove('on');
-  if (m !== 'battle' && m !== 'melee') { $('pGauge').textContent = ''; $('pStatus').textContent = ''; $('toasts').innerHTML = ''; }
-  if (m !== 'battle') { $('coach').classList.add('hidden'); $('tag').classList.add('hidden'); $('boardBox').classList.add('hidden'); }
+  if (m !== 'battle' && m !== 'melee') { $('pStatus').textContent = ''; $('toasts').innerHTML = ''; }
+  if (m !== 'battle') { $('coach').classList.add('hidden'); $('tag').classList.add('hidden'); $('boardGo').classList.add('hidden'); }
 }
 function buildAmmoBar() {
   $('ammo').innerHTML = AMMO_KEYS.map((k, i) => `<div class="slot" data-ammo="${k}" title="${AMMO[k].tip}"><kbd>${i + 1}</kbd><svg viewBox="0 0 26 26">${ICON[k]}</svg><div class="n">${AMMO[k].name}</div><div class="c"></div></div>`).join('');
@@ -635,8 +679,6 @@ function setBars(pre, s) {
   $(pre + 'Hull').style.width = s.hullR * 100 + '%'; $(pre + 'Sail').style.width = s.sailR * 100 + '%'; $(pre + 'Crew').style.width = s.crewR * 100 + '%';
   $(pre + 'HullN').textContent = Math.max(0, Math.ceil(s.hull)); $(pre + 'SailN').textContent = Math.max(0, Math.ceil(s.sails)); $(pre + 'CrewN').textContent = Math.round(s.crew);
 }
-const METER = { spd: [0, 2, 3, 4], turn: [3, 3, 4, 2], aim: [4, 4, 3, 1] };
-const pipsHTML = (n) => '<i class="on"></i>'.repeat(n) + '<i></i>'.repeat(4 - n);
 function placeArcs(a, ship, on) {
   a.grp.visible = on;
   if (!on) return;
@@ -648,11 +690,26 @@ function updateHUD(dt) {
   const dist = sep(p, e);
   placeArcs(myArcs, p, battle);
   placeArcs(herArcs, e, battle && dist < 420);
+  windRing.visible = battle;
+  if (battle) {
+    windRing.position.set(p.pos.x, 1.4, p.pos.z);
+    noGo.rotation.y = world.wind.dir + Math.PI - Math.PI / 2; // wedge points upwind
+    arrowHold.rotation.y = world.wind.dir - Math.PI / 2; // arrow sits downwind of you, pointing the way the wind blows
+    const stalled = Math.abs(wrap(p.heading - world.wind.dir)) > 2.55;
+    noGo.material.opacity = stalled ? 0.5 + 0.2 * Math.sin(G.t * 9) : 0.3;
+  }
+  boardRing.visible = battle && dist < 190 && G.boardCd <= 0;
+  if (boardRing.visible) {
+    const inside = dist < BOARD_RANGE, ready = inside && relSpeed(p, e) < BOARD_SPEED;
+    boardRing.position.set(e.pos.x, 1.5, e.pos.z);
+    boardRing.material.color.set(ready ? 0x7fff7a : inside ? 0xffb04a : 0xffffff);
+    boardRing.material.opacity = ready ? 0.6 + 0.25 * Math.sin(G.t * 9) : inside ? 0.55 : 0.28;
+  }
   for (const side of ['port', 'stbd']) {
     const ready = p.reload[side] <= 0, bear = battle && inArc(p, side, e, 1.05), el = $(side === 'port' ? 'bPort' : 'bStbd');
     const m = myArcs.sides[side].material;
     m.color.set(ready ? (bear ? 0xffd45a : 0xffffff) : 0xff6a5a); m.opacity = ready ? (bear ? 0.26 + 0.06 * Math.sin(G.t * 8) : 0.08) : 0.04;
-    herArcs.sides[side].material.opacity = e.reload[side] <= 0 ? (inArc(e, side, p, 1.05) ? 0.24 : 0.1) : 0.03;
+    herArcs.sides[side].material.opacity = e.reload[side] <= 0 ? (inArc(e, side, p, 1.05) ? 0.15 : 0.08) : 0.025;
     el.classList.toggle('ready', ready); el.classList.toggle('bear', ready && bear);
     el.querySelector('i').style.width = (ready ? 100 : (1 - p.reload[side] / p.reloadMax[side]) * 100) + '%';
     el.querySelector('.s').textContent = ready ? (bear ? 'FIRE!' : 'Ready') : p.reload[side].toFixed(1) + 's';
@@ -679,9 +736,6 @@ function updateHUD(dt) {
   setBars('p', p); setBars('e', e);
   if (battle) { tag.querySelector('.d').textContent = `${Math.round(dist)} yds`; tag.querySelector('.h i').style.width = e.hullR * 100 + '%'; }
   const st = (s) => [s.fire > 0 ? 'On fire' : '', s.hullR < 0.3 ? 'Taking on water' : '', s.sailR < 0.3 ? 'Rigging in tatters' : ''].filter(Boolean).join(' · ');
-  const gauge = hasGauge(p, e) ? 1 : hasGauge(e, p) ? -1 : 0;
-  $('pGauge').className = 'gauge ' + (gauge > 0 ? 'good' : gauge < 0 ? 'bad' : '');
-  $('pGauge').textContent = gauge > 0 ? 'Upwind of her: steadier aim' : gauge < 0 ? 'Downwind of her: aim hampered' : '';
   $('pStatus').textContent = st(p);
   $('eStatus').textContent = [AMMO[e.ammo].long, st(e)].filter(Boolean).join(' · ');
   document.querySelectorAll('#ammo .slot').forEach((el) => {
@@ -692,23 +746,18 @@ function updateHUD(dt) {
   const off = wrap(p.heading - world.wind.dir), lv = p.sailLevel;
   $('knots').textContent = (p.speed * 0.9).toFixed(1);
   $('sailName').textContent = SAILS[lv].name;
-  $('mSpd').innerHTML = pipsHTML(METER.spd[lv]); $('mTurn').innerHTML = pipsHTML(METER.turn[lv]); $('mAim').innerHTML = pipsHTML(METER.aim[lv]);
+  [...$('sailBars').children].forEach((el, i) => el.classList.toggle('on', i < lv));
   const pos = pointOfSail(off);
-  $('pos').textContent = `${pos} · wind ${Math.round(polar(off) * 100)}%`; $('pos').className = pos === 'In irons' ? 'bad' : '';
-  // boarding checklist: always says what is still missing
-  const bb = $('boardBox'), warn = G.aiGrapple > 0.02 && G.ai.wantBoard, show = battle && (dist < 120 || warn);
-  bb.classList.toggle('hidden', !show);
-  if (show) {
-    const near = dist < BOARD_RANGE, slow = relSpeed(p, e) < BOARD_SPEED, pc = Math.round(p.crew), ec = Math.round(e.crew);
-    bb.classList.toggle('warn', warn); bb.classList.toggle('go', G.canBoard && !warn);
-    $('bbTitle').textContent = warn ? 'She is grappling — pull away!' : G.canBoard ? 'Press B — board her!' : 'To board her';
-    $('bbNear').className = near ? 'ok' : ''; $('bbNear').textContent = `Within ${BOARD_RANGE - 3} yds (now ${Math.round(dist)})`;
-    $('bbSlow').className = slow ? 'ok' : ''; $('bbSlow').textContent = slow ? 'Speeds matched' : `Match her speed (${(relSpeed(p, e) * 0.9).toFixed(0)} kn apart)`;
-    const odds = strength(p) / (strength(e) || 1), word = odds > 1.6 ? 'strong odds' : odds > 1.15 ? 'good odds' : odds > 0.87 ? 'even odds' : odds > 0.6 ? 'poor odds' : 'hopeless';
-    const mySide = wrap(Math.atan2(e.pos.x - p.pos.x, e.pos.z - p.pos.z) - p.heading) > 0 ? 'port' : 'stbd';
-    $('bbOdds').innerHTML = `Crew <b class="${odds > 1.15 ? 'good' : odds > 0.87 ? '' : 'bad'}">${pc} v ${ec} — ${word}</b><br>Facing guns: <b>${p.reload[mySide] <= 0 ? AMMO[p.ammo].name.toLowerCase() + ' loaded' : 'reloading'}</b> · prize <b>${prize(e)} g</b>`;
-    bb.querySelector('.g i').style.width = (warn ? G.aiGrapple : 0) * 100 + '%';
-  }
+  $('pos').textContent = pos === 'In irons' ? 'In irons!' : ''; 
+  // what a boarding would look like, pinned to her marker once you are close
+  const near = dist < BOARD_RANGE, slow = relSpeed(p, e) < BOARD_SPEED, warn = G.aiGrapple > 0.02 && G.ai.wantBoard;
+  const odds = strength(p) / (strength(e) || 1), o = tag.querySelector('.o');
+  o.textContent = battle && dist < 170 ? `Board: ${Math.round(p.crew)} v ${Math.round(e.crew)}${near && !slow ? ' · match her speed' : ''}` : '';
+  o.className = 'o ' + (odds > 1.15 ? 'good' : odds > 0.87 ? '' : 'bad');
+  const go = $('boardGo');
+  go.classList.toggle('hidden', !(battle && (G.canBoard || warn)));
+  go.classList.toggle('warn', warn);
+  go.innerHTML = warn ? `She is grappling — pull away!<i style="width:${G.aiGrapple * 100}%"></i>` : `<kbd>B</kbd> Board her <small>${odds > 1.6 ? 'strong odds' : odds > 1.15 ? 'good odds' : odds > 0.87 ? 'even odds' : odds > 0.6 ? 'poor odds' : 'hopeless'} · prize ${prize(e)} g</small>`;
   drawRadar(p, e);
 }
 function updateMelee() {
@@ -718,7 +767,7 @@ function updateMelee() {
   $('mPC').textContent = Math.round(p.crew); $('mEC').textContent = Math.round(e.crew);
   $('mBar').style.width = r * 100 + '%';
   // where each side breaks: the notch on its half of the bar
-  $('mState').textContent = b.t < 1.5 ? 'Grapples fast…' : r > 0.57 ? 'Your men are driving them back' : r < 0.43 ? 'They are driving your men back' : 'Evenly matched — every man counts';
+  $('mState').textContent = b.t < 2.4 ? 'Grapples fast…' : r > 0.57 ? 'Your men are driving them back' : r < 0.43 ? 'They are driving your men back' : 'Evenly matched — every man counts';
   $('mState').className = r > 0.57 ? 'good' : r < 0.43 ? 'bad' : '';
   $('mPL').textContent = `breaks at ${Math.ceil(b.p0 * 0.3)}`; $('mEL').textContent = `breaks at ${Math.ceil(b.e0 * 0.3)}`;
   const sw = $('mSwivel');
@@ -734,8 +783,6 @@ function drawRadar(p, e) {
   const pt = (wx, wz) => { const dx = wx - p.pos.x, dz = wz - p.pos.z, s = Math.sin(p.heading), co = Math.cos(p.heading); return [-(dx * co - dz * s) * k, -(dx * s + dz * co) * k]; };
   const up = wrap(world.wind.dir + Math.PI - p.heading), sa = -Math.PI / 2 - up;
   x.fillStyle = 'rgba(220,80,60,.2)'; x.beginPath(); x.moveTo(0, 0); x.arc(0, 0, R, sa - 0.56, sa + 0.56); x.fill();
-  x.strokeStyle = 'rgba(255,255,255,.13)'; x.lineWidth = 1.5;
-  for (const r of [0.33, 0.66]) { x.beginPath(); x.arc(0, 0, R * r, 0, 7); x.stroke(); }
   x.fillStyle = '#8c8266';
   for (const i of world.islands) { const [ix, iy] = pt(i.x, i.z); x.beginPath(); x.arc(ix, iy, i.r * k * 1.1, 0, 7); x.fill(); }
   const ar = AMMO[p.ammo].range * k;
@@ -748,11 +795,6 @@ function drawRadar(p, e) {
     const d = Math.hypot(ex, ey);
     if (d > R - 8) { ex *= (R - 8) / d; ey *= (R - 8) / d; }
     x.save(); x.translate(ex, ey); x.rotate(-(e.heading - p.heading));
-    const ea = AMMO[e.ammo].range * k;
-    if (d <= R - 8) for (const [side, a0] of [['port', Math.PI], ['stbd', 0]]) {
-      x.fillStyle = e.reload[side] <= 0 ? 'rgba(255,80,60,.26)' : 'rgba(255,80,60,.07)';
-      x.beginPath(); x.moveTo(0, 0); x.arc(0, 0, ea, a0 - ARC, a0 + ARC); x.fill();
-    }
     x.fillStyle = '#ff5b4a'; x.beginPath(); x.moveTo(0, -11); x.lineTo(6, 8); x.lineTo(-6, 8); x.fill();
     x.restore();
   }
@@ -802,13 +844,13 @@ function showResult() {
     const men = Math.max(0, Math.min(15, p.crewMax - Math.round(p.crew)));
     p.crew += men; p.stock.chain += 3; p.stock.grape += 3; p.stock.fire += 2;
     G.trophies.push(G.level);
-    loot = `<div class="loot">+3 chain · +3 grape · +2 heated${men ? ` · +${men} crew` : ''}</div>`;
-  }
+    loot = `<div class="loot">She is yours to sail — take command of her in port</div><div class="loot">+3 chain · +3 grape · +2 heated${men ? ` · +${men} crew` : ''}</div>`;
+  } else loot = `<div class="loot">${o === 'struck' ? 'A wreck, sold for the bounty.' : 'Gone to the bottom.'} Boarded, she would have paid up to ${es.bounty * 2} g and been yours to sail.</div>`;
   p.fire = 0; p.hull = Math.max(p.hull, p.hullMax * 0.35); p.sails = Math.max(p.sails, p.sailsMax * 0.5);
   sfx.coin();
   const last = G.level + 1 >= ENEMIES.length;
-  showScreen(`<div class="banner"><div class="eyebrow">${es.captain} is finished</div><h1>${es.name} ${cap ? 'taken' : 'sunk'}</h1>
-    <div class="gold">+${gold} g</div>${loot}${cap ? '' : `<div class="loot">Taken intact she would have paid up to ${es.bounty * 2} g</div>`}
+  showScreen(`<div class="banner"><div class="eyebrow">${es.captain} is finished</div><h1>${es.name} ${cap ? 'taken' : o === 'struck' ? 'wrecked' : 'sunk'}</h1>
+    <div class="gold">+${gold} g</div>${loot}
     <div class="rowc"><button class="btn big" data-act="${last ? 'final' : 'port'}">${last ? 'Sail home' : 'Make port'}</button></div></div>`, 'clear');
 }
 function showFinal() {
@@ -827,23 +869,31 @@ function enterHarbor() {
   clearBalls();
   if (G.enemy) { scene.remove(G.enemy.group); G.enemy = null; }
   moor();
-  // every prize you have taken rides at anchor in the bay, under your flag
-  G.trophies.forEach((lv, i) => {
-    let t = G.trophyShips.find((s) => s.lv === lv);
-    if (!t) {
-      t = new Ship({ ...ENEMIES[lv], flagCol: PLAYER_SPEC.flagCol, crewCols: PLAYER_SPEC.crewCols }, false);
-      t.lv = lv; t.crew = 14; t.sailLevel = 0;
-      const m = harbor.moorings[i % harbor.moorings.length];
-      t.pos.set(m[0], 0, m[1]); t.heading = m[2];
-      scene.add(t.group); G.trophyShips.push(t);
-    }
-    t.group.visible = true;
+  // every ship you own but are not sailing rides at anchor in the bay
+  for (const t of G.trophyShips) scene.remove(t.group);
+  G.trophyShips = ['wren', ...G.trophies].filter((id) => id !== G.ship).map((id, i) => {
+    const t = new Ship(hullSpec(id), false), m = harbor.moorings[i % harbor.moorings.length];
+    t.id = id; t.crew = 14; t.sailLevel = 0;
+    t.pos.set(m[0], 0, m[1]); t.heading = m[2];
+    scene.add(t.group);
+    return t;
   });
+}
+const ROLE = { wren: 'Your old brig. Does everything fairly well.', 0: 'Fastest afloat, turns on a coin. Thin hull, few guns.', 1: 'A sound, balanced brig.', 2: 'Room for a huge crew: made for boarding. Light guns, thin hull.', 3: 'The heaviest broadside there is. Slow, and short of hands.', 4: 'A fortress.' };
+function takeCommand(id) {
+  G.ship = id === 'wren' ? 'wren' : +id;
+  buildPlayer(true); moor(); enterHarbor(); G.shop = null;
+  buildSpots(); renderPort(); setupHudNames(); sfx.horn(true);
+  toast(`You take command of the ${G.player.spec.name}`, 'big', 3000);
+}
+function buildSpots() {
+  $('spots').innerHTML = harbor.spots.map((s) => `<button class="spot" data-spot="${s.id}">${s.name}<i></i></button>`).join('')
+    + G.trophyShips.map((t) => `<button class="spot ship" data-spot="ship:${t.id}">${t.spec.name}</button>`).join('');
 }
 function showPort() {
   G.state = 'port'; G.focus = 'player'; G.shop = null; G.cam.yaw = 0;
   enterHarbor(); hideScreen(); setMode('port'); setupHudNames();
-  $('spots').innerHTML = harbor.spots.map((s) => `<button class="spot" data-spot="${s.id}">${s.name}<i></i></button>`).join('');
+  buildSpots();
   renderPort();
 }
 const COST = (k) => REPAIR[k][1];
@@ -854,13 +904,23 @@ function renderPort() {
   $('nextLine').innerHTML = `Next: <b>${nx.captain}</b><br>${nx.cls} <i>${nx.name}</i>`;
   const need = { hull: p.hullMax - p.hull, sails: p.sailsMax - p.sails, crew: Math.round(p.crewMax - p.crew) };
   document.querySelectorAll('#spots .spot').forEach((el) => {
-    const sh = SHOPS[el.dataset.spot];
+    const sh = SHOPS[el.dataset.spot] || {};
     el.classList.toggle('need', !!sh.repair && need[sh.repair] >= 1);
     el.classList.toggle('sel', G.shop === el.dataset.spot);
   });
   const box = $('shop');
   box.classList.toggle('hidden', !G.shop);
   if (!G.shop) return;
+  if (G.shop.startsWith('ship:')) {
+    // another ship of yours: compare her with the one you are sailing, bar for bar
+    const id = G.shop.slice(5), h = hullSpec(id === 'wren' ? 'wren' : +id), cur = hullSpec(G.ship);
+    const row = (label, k, max) => `<div class="cmp"><span>${label}</span><div class="t"><i style="width:${(h[k] / max) * 100}%"></i><u style="left:${(cur[k] / max) * 100}%"></u></div><b>${k === 'guns' ? h[k] * 2 : k === 'speed' ? (h[k] * 0.9).toFixed(0) : k === 'turn' ? '' : h[k]}</b></div>`;
+    box.innerHTML = `<h3>${h.name}<button class="x" data-act="closeshop">✕</button></h3><div class="role">${h.cls}. ${ROLE[id]}</div>
+      ${row('Hull', 'hull', 660)}${row('Guns', 'guns', 13)}${row('Crew', 'crew', 210)}${row('Speed', 'speed', 16)}${row('Turn', 'turn', 0.8)}
+      <div class="role"><u class="mk"></u> marks the ${cur.name}. Your upgrades and shot come with you.</div>
+      <div class="rowc" style="margin-top:8px"><button class="btn" data-act="cmd:${id}">Take command</button></div>`;
+    return;
+  }
   const sh = SHOPS[G.shop], rows = [];
   if (sh.repair) {
     const k = sh.repair, n = need[k], full = Math.ceil(n * COST(k));
@@ -889,8 +949,10 @@ function portAction(a) {
   sfx.coin(); renderPort();
 }
 function updatePortUI() {
+  const n = harbor.spots.length;
   document.querySelectorAll('#spots .spot').forEach((el, i) => {
-    const s = project(harbor.spots[i].pos);
+    const t = G.trophyShips[i - n];
+    const s = project(i < n ? harbor.spots[i].pos : _l.set(t.pos.x, t.model.mastH + 6, t.pos.z));
     el.style.transform = `translate(-50%,-100%) translate(${s.x}px,${s.y}px)`;
     el.style.display = s.behind ? 'none' : '';
   });
@@ -900,7 +962,7 @@ function restart(full) {
   G.paused = false;
   const p = G.player;
   if (full) {
-    G.level = 0; G.gold = 0; G.earned = 0; G.up = freshUps(); G.stats = freshStats(); G.trophies = [];
+    G.level = 0; G.gold = 0; G.earned = 0; G.up = freshUps(); G.stats = freshStats(); G.trophies = []; G.ship = 'wren';
     for (const t of G.trophyShips) scene.remove(t.group);
     G.trophyShips = [];
     scene.remove(p.group); G.player = null; buildPlayer();
@@ -918,7 +980,9 @@ function act(a) {
   else if (a === 'resume') togglePause();
   else if (a === 'closeshop') { G.shop = null; renderPort(); }
   else if (a === 'skipcoach') endCoach();
-  else if (a.includes(':')) portAction(a);
+  else if (a === 'hidecoach') { G.coachHide = 0; $('coach').classList.add('hidden'); }
+  else if (a.startsWith('cmd:')) takeCommand(a.slice(4));
+  else if (a.includes(':') && !a.startsWith('cmd:')) portAction(a);
 }
 function togglePause() {
   if (G.state !== 'battle' && G.state !== 'boarding' && !G.paused) return;
@@ -940,11 +1004,13 @@ function tap(k) {
     else if (k === 'x') cutGrapples();
     return;
   }
-  if (k === 'v') { G.cam.mode = G.cam.mode === 'chase' ? 'combat' : 'chase'; G.cam.yaw = 0; return toast(G.cam.mode === 'chase' ? 'Camera: behind your ship' : 'Camera: facing the enemy', '', 1400); }
+  if (k === 'v') { G.cam.mode = G.cam.mode === 'helm' ? 'combat' : 'helm'; G.cam.yaw = 0; return toast(G.cam.mode === 'helm' ? 'Camera: at the helm' : 'Camera: facing the enemy', '', 1400); }
   if (k === 'h') return $('help').classList.toggle('open');
   if (G.state !== 'battle') return;
-  if (k === 'w' || k === 'arrowup') { if (p.sailLevel < TOP) { p.sailLevel++; sfx.creak(); } }
-  else if (k === 's' || k === 'arrowdown') { if (p.sailLevel > 0) { p.sailLevel--; sfx.creak(); } }
+  if (k === 'w' || k === 'arrowup' || k === 's' || k === 'arrowdown') {
+    const lv = clamp(p.sailLevel + (k === 'w' || k === 'arrowup' ? 1 : -1), 0, TOP);
+    if (lv !== p.sailLevel) { p.sailLevel = lv; sfx.creak(); floater(SAILS[lv].name + (lv === TOP ? ' — fast, unsteady guns' : lv === 0 ? '' : ' — steadier guns'), '', _m.set(p.pos.x, p.model.mastH + 6, p.pos.z)); }
+  }
   else if (k === 'q') fire(p, 'port');
   else if (k === 'e') fire(p, 'stbd');
   else if (k === 'b') tryBoard();
@@ -1000,7 +1066,7 @@ function update(dt) {
   if (now === 'intro') { p.input.turn = 0.12; p.sailLevel = 2; if (e) { e.input.turn = -0.15; e.sailLevel = 2; } }
   if (now === 'ending' || now === 'result' || now === 'over') {
     p.input.turn = 0; if (e) e.input.turn = 0;
-    if (G.outcome === 'captured' || G.outcome === 'overrun') { if (e) e.sailLevel = 0; p.sailLevel = 0; }
+    if (G.outcome === 'captured' || G.outcome === 'overrun' || G.outcome === 'struck') { if (e) e.sailLevel = 0; p.sailLevel = 0; }
   }
   const frozen = now === 'boarding' || home;
   p.update(dt, world, frozen);
@@ -1018,7 +1084,7 @@ function update(dt) {
   world.update(dt, camera.position);
   world.updateStreaks(dt, home ? harbor.focus : p.pos);
   if (e && (now === 'battle' || now === 'boarding' || now === 'ending')) updateHUD(dt);
-  else { myArcs.grp.visible = herArcs.grp.visible = false; }
+  else { myArcs.grp.visible = herArcs.grp.visible = windRing.visible = boardRing.visible = false; }
   if (now === 'boarding') updateMelee();
   if (now === 'port') updatePortUI();
   updateFloaters(dt);
