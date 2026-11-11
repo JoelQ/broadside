@@ -29,7 +29,7 @@ export const ENEMIES = [
   {
     name: 'Red Sirocco', cls: 'Corsair xebec', captain: 'Yusra the Red', env: 'overcast', islands: 5, bounty: 580,
     hook: '135 cutthroats behind light guns. She wants your deck.',
-    tip: 'Never let her alongside. Her hull is thin: keep your distance and hammer it.',
+    tip: 'She must slow you with chain before her grapples will hold. Keep your speed, and sweep her deck with grape as she closes.',
     L: 36, B: 7.2, D: 2.5, masts: 3, sailsPerMast: 2, castle: false, rigScale: 0.72,
     rig: 'lateen', hullCol: 0x6b1f1a, trimCol: 0xd8a046, sailCol: '#b3372c', emblem: 'stripes', emblemCol: '#e6c069', flagCol: 0xb3221a,
     hull: 215, sails: 110, crew: 135, guns: 7, speed: 13.5, turn: 0.58, reload: 7.4, disp: 0.032, dmg: 0.9, melee: 1.1, cal: 0, arc: 0.6, point: 0.2,
@@ -50,7 +50,7 @@ export const ENEMIES = [
     tip: 'Her guns only bear square off her sides. Get past them, sit astern, and stay there.',
     L: 64, B: 16, D: 6.2, masts: 4, sailsPerMast: 4, castle: 2,
     fore: true, rigScale: 0.74, decks: 2, hullCol: 0x16110f, trimCol: 0x9a1c1c, sailCol: '#1b1b1e', emblem: 'skull', emblemCol: '#c22a2a', flagCol: 0x9a1c1c,
-    hull: 820, sails: 170, crew: 210, guns: 18, speed: 11.2, turn: 0.21, reload: 7.2, disp: 0.024, dmg: 1, melee: 1.15, cal: 2, arc: 0.38, point: -0.1,
+    hull: 900, sails: 170, crew: 220, guns: 18, speed: 11.2, turn: 0.21, reload: 7.2, disp: 0.024, dmg: 1, melee: 1.15, cal: 2, arc: 0.38, point: -0.1,
     stock: { chain: 2, grape: 8, fire: 6 }, ai: { range: 190, plan: 'mixed', boarder: false, battleSail: true },
   },
 ];
@@ -73,13 +73,13 @@ export const KITS = {
     { id: 'oak', at: 'wright', name: 'Oak bracing', desc: '+45 hull', add: { hull: 45 } },
   ] },
   boarder: { name: 'Boarder', items: [
-    { id: 'marines', at: 'tavern', name: 'Marines', desc: '+15 crew and +15% strength in a boarding', add: { crew: 15 }, mul: { melee: 1.15 } },
+    { id: 'marines', at: 'tavern', name: 'Marines', desc: '+20 crew and +20% strength in a boarding', add: { crew: 20 }, mul: { melee: 1.2 } },
     { id: 'hooks', at: 'wright', name: 'Grappling crews', desc: 'Board from 30% further off, at a bigger speed gap', mul: { boardReach: 1.3, boardSpeed: 1.4 } },
-    { id: 'rail', at: 'guns', name: 'Rail guns', desc: 'Point-blank volley and swivel gun kill 40% more', mul: { swivel: 1.4 } },
+    { id: 'rail', at: 'guns', name: 'Rail guns', desc: 'Point-blank volley and swivel gun kill 50% more', mul: { swivel: 1.5 } },
     { id: 'sweeps', at: 'sails', name: 'Sweeps', desc: 'Oars: +3 knots whatever the wind, even dead into it', add: { sweeps: 3.4 } },
   ] },
   gun: { name: 'Gun platform', items: [
-    { id: 'charge', at: 'guns', name: 'Heavier charges', desc: '+8% reach', mul: { reach: 1.08 } },
+    { id: 'charge', at: 'guns', name: 'Heavier charges', desc: '+8% damage and +5% reach', mul: { dmg: 1.08, reach: 1.05 } },
     DRILL,
     { id: 'ports', at: 'guns', name: 'Extra gun ports', desc: '+1 gun per side', add: { guns: 1 } },
     { id: 'oak', at: 'wright', name: 'Oak bracing', desc: '+70 hull', add: { hull: 70 } },
