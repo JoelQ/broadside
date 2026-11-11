@@ -33,13 +33,15 @@ export function pointOfSail(a) {
 }
 
 export const AMMO = {
-  round: { name: 'Round', long: 'Round shot', range: 250, speed: 128, hull: 4.5, sail: 0.6, crew: 0.3, reload: 1, tip: 'Smashes hulls at long range' },
+  round: { name: 'Round', long: 'Round shot', range: 250, speed: 128, hull: 6.2, sail: 0.6, crew: 0.3, reload: 1, tip: 'Smashes hulls at long range' },
   chain: { name: 'Chain', long: 'Chain shot', range: 175, speed: 108, hull: 1, sail: 4.5, crew: 0.1, reload: 1, tip: 'Shreds sails — cripple, then close' },
   grape: { name: 'Grape', long: 'Grapeshot', range: 100, speed: 98, hull: 0.6, sail: 0.5, crew: 0, kills: [2, 4], reload: 0.9, tip: 'Sweeps the deck of crew at close range' },
-  fire: { name: 'Heated', long: 'Heated shot', range: 185, speed: 112, hull: 3.2, sail: 2, crew: 0.2, ignite: 0.3, reload: 1.55, tip: 'Sets fires that burn hull and canvas' },
+  fire: { name: 'Heated', long: 'Heated shot', range: 185, speed: 112, hull: 4.2, sail: 2, crew: 0.2, ignite: 0.3, reload: 1.55, tip: 'Sets fires that burn hull and canvas' },
 };
 export const AMMO_KEYS = ['round', 'chain', 'grape', 'fire'];
-export const ARC = 0.5; // broadside half-angle (rad)
+export const ARC = 0.5;
+export const JURY = 0.34; // sails jury-rig back to this fraction
+export const BELOW = 0.4; // share of a crew below decks, out of reach of gunfire // broadside half-angle (rad)
 
 // ---------- procedural ship model ----------
 export function halfWidth(spec, t) {
@@ -252,7 +254,7 @@ export class Ship {
     this.dmgMult = spec.dmg || 1; this.disp = spec.disp || 0.022; this.reloadMult = 1; this.melee = spec.melee || 1;
     this.sinking = 0; this.dead = false; this.struck = false;
     this.ramCd = 0; this.sailTier = 0; this.roll = 0; this.fxT = 0;
-    this.target = null;
+    this.target = null; this.rigT = 0;
     this.figs = new CrewFigures(this);
   }
   get fwdX() { return Math.sin(this.heading); }
@@ -260,6 +262,7 @@ export class Ship {
   get hullR() { return clamp(this.hull / this.hullMax, 0, 1); }
   get sailR() { return clamp(this.sails / this.sailsMax, 0, 1); }
   get crewR() { return clamp(this.crew / this.crewMax, 0, 1); }
+  get exposed() { return Math.max(0, this.crew - this.crewMax * BELOW); } // men a broadside can reach
   reloadTime(ammo = this.ammo) {
     return (this.spec.reload * AMMO[ammo].reload * this.reloadMult * (this.fire > 0 ? 1.25 : 1)) / (0.45 + 0.55 * this.crewR);
   }
@@ -301,6 +304,9 @@ export class Ship {
     }
     this.pos.x += this.fwdX * this.speed * dt; this.pos.z += this.fwdZ * this.speed * dt;
     this.ramCd -= dt;
+    // a crew left alone for a few seconds jury-rigs torn canvas back to about a third
+    this.rigT += dt;
+    if (this.rigT > 4 && this.sinking <= 0 && this.sails < this.sailsMax * JURY) this.sails = Math.min(this.sailsMax * JURY, this.sails + 1.4 * dt);
     this.syncVisual(dt, world);
   }
 
@@ -331,7 +337,7 @@ export class Ship {
       const u = s.userData;
       const lv = this.sailLevel, want = lv === 3 ? 1 : lv === 2 ? (u.course ? 0.1 : 1) : lv === 1 ? (u.course ? 0.1 : 0.5) : 0.1;
       u.furl += (want - u.furl) * Math.min(1, dt * 1.6);
-      if (u.jib) { s.visible = this.sailLevel > 0 && !(gone && true); }
+      if (u.jib) { s.visible = this.sailLevel > 1 && !gone; }
       else { s.scale.set(1, u.furl, 0.25 + 0.75 * fill * u.furl); s.visible = !(gone && i % 2 === 0); }
       if (tier !== this.sailTier) s.material = this.model.mats[tier][u.emblem];
     });
@@ -401,7 +407,7 @@ export class CrewFigures {
       const lunge = fight ? Math.sin(time * 9 + f.ph) * 0.3 : 0;
       _fp.set(f.x + (bd ? bd.side * lunge : 0), deckAt(sp, t) + Math.abs(Math.sin(time * (fight ? 9 : 1.3) + f.ph)) * (fight ? 0.25 : 0.05), f.z);
       _fq.setFromAxisAngle(_up, fight ? (bd.side > 0 ? Math.PI / 2 : -Math.PI / 2) : f.yaw);
-      _fs.setScalar(Math.max(0.0001, f.s) * 1.2);
+      _fs.setScalar(Math.max(0.0001, f.s) * 1.65);
       this.mesh.setMatrixAt(i, _fm.compose(_fp, _fq, _fs));
     }
     this.mesh.instanceMatrix.needsUpdate = true;

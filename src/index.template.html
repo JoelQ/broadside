@@ -43,13 +43,13 @@ kbd{font-family:ui-monospace,Menlo,monospace;font-size:.74em;background:rgba(255
 @keyframes tin{from{transform:translateY(-8px);opacity:0}}
 
 #dial{left:10px;bottom:10px;padding:6px 10px 6px 6px;display:flex;gap:10px;align-items:center}
-#radar{width:150px;height:150px;display:block}
+#radar{width:176px;height:176px;display:block}
 #sailInfo{font-size:13px;line-height:1.45;min-width:128px}
 #sailInfo .big{font:400 26px/1 var(--head);color:var(--brass)}
 #sailName{font:400 17px var(--head);letter-spacing:.5px}
-.meter{display:grid;grid-template-columns:42px 1fr;align-items:center;font-size:12px;opacity:.95}
-.meter span{display:flex;gap:2px} .meter i{width:13px;height:6px;border-radius:2px;background:rgba(255,255,255,.16)} .meter i.on{background:var(--cream)}
-#pos{font-size:12px;font-style:italic;margin-top:2px}
+#sailBars{display:flex;align-items:flex-end;gap:4px;height:44px;margin:4px 0 2px} #sailBars i{width:20px;background:rgba(255,255,255,.14);border-radius:2px 2px 0 0;border:1px solid rgba(255,255,255,.2)}
+#sailBars i:nth-child(1){height:38%} #sailBars i:nth-child(2){height:68%} #sailBars i:nth-child(3){height:100%} #sailBars i.on{background:var(--cream);border-color:var(--cream)}
+#pos{font:400 17px var(--head);min-height:20px}
 #guns{left:50%;bottom:10px;transform:translateX(-50%);display:flex;gap:10px;align-items:stretch;padding:8px 10px;pointer-events:auto}
 .battery{width:86px;text-align:center;font-size:11px;letter-spacing:1px;display:flex;flex-direction:column;justify-content:center;gap:4px;border-radius:6px;padding:3px;cursor:pointer}
 .battery .g{height:12px;border-radius:6px;background:rgba(0,0,0,.5);overflow:hidden;border:1px solid rgba(255,255,255,.15)}
@@ -66,23 +66,17 @@ kbd{font-family:ui-monospace,Menlo,monospace;font-size:.74em;background:rgba(255
 #ammoTip{position:absolute;left:50%;bottom:100%;transform:translate(-50%,-6px);white-space:nowrap;font-size:14px;font-style:italic;text-shadow:0 1px 4px #000,0 0 2px #000}
 #coach{position:absolute;left:50%;bottom:118px;transform:translateX(-50%);width:min(620px,92vw);background:rgba(8,14,22,.86);border:1px solid var(--brass);border-radius:8px;padding:9px 14px;font-size:17px;display:flex;gap:10px;align-items:center;pointer-events:auto;box-shadow:0 0 22px rgba(215,178,90,.25)}
 #coach span{flex:1} #coach i{font-size:12px;opacity:.6;font-style:normal} #coach button{background:none;border:0;font-size:12px;opacity:.6;cursor:pointer;text-decoration:underline}
-#boardBox{right:10px;bottom:10px;width:232px;pointer-events:auto;cursor:pointer;font-size:13.5px;line-height:1.5}
-#boardBox h4{margin:0 0 2px;font:400 19px var(--head);letter-spacing:.5px;color:var(--brass)}
-#boardBox li{list-style:none;padding-left:20px;position:relative;opacity:.9}
-#boardBox ul{margin:0;padding:0}
-#boardBox li:before{content:'';position:absolute;left:2px;top:5px;width:10px;height:10px;border:1px solid var(--cream);border-radius:2px}
-#boardBox li.ok{color:var(--green)} #boardBox li.ok:before{background:var(--green);border-color:var(--green)}
-#boardBox.go{border-color:var(--green);box-shadow:0 0 18px rgba(127,206,122,.5);animation:pulse .7s infinite alternate} #boardBox.go h4{color:#c9f5c4}
-#boardBox.warn{border-color:#e0685c} #boardBox.warn h4{color:var(--bad)}
-#boardBox .g{height:6px;background:rgba(0,0,0,.5);border-radius:3px;overflow:hidden;margin-top:4px;display:none} #boardBox.warn .g{display:block}
-#boardBox .g i{display:block;height:100%;width:0;background:#e0685c}
-@keyframes pulse{to{transform:scale(1.03)}}
+#boardGo{position:absolute;left:50%;bottom:200px;transform:translateX(-50%);pointer-events:auto;cursor:pointer;font:400 30px var(--head);letter-spacing:1px;color:#0b1a0b;background:#8dff86;border-radius:10px;padding:8px 26px;box-shadow:0 0 30px rgba(127,255,122,.7);animation:pulse .6s infinite alternate;text-align:center;white-space:nowrap;overflow:hidden}
+#boardGo kbd{background:#0b1a0b;color:#8dff86;border-color:#0b1a0b;font-size:.7em} #boardGo small{display:block;font:italic 14px var(--body);letter-spacing:0}
+#boardGo.warn{background:#ff8a78;box-shadow:0 0 30px rgba(255,120,100,.7);font-size:22px} #boardGo i{position:absolute;left:0;bottom:0;height:5px;background:#7a160c}
+@keyframes pulse{to{transform:translateX(-50%) scale(1.05)}}
 #help{right:10px;top:150px;font-size:12px;line-height:1.8;padding:4px 10px;opacity:.8;pointer-events:auto;cursor:pointer}
 #help .all{display:none} #help.open .all{display:block} #help.open .tip{display:none}
 #hud.m-melee #dial,#hud.m-melee #guns,#hud.m-melee #help,#hud.m-melee #touch,#hud.m-port #dial,#hud.m-port #guns,#hud.m-port #help,#hud.m-port #touch,#hud.m-port #ePanel{display:none!important}
 
 #tag{position:fixed;left:0;top:0;pointer-events:none;text-align:center;font-size:12px;text-shadow:0 1px 3px #000;white-space:nowrap}
 #tag .h{width:64px;height:5px;background:rgba(0,0,0,.55);border-radius:3px;overflow:hidden;margin:2px auto 0;border:1px solid rgba(255,255,255,.25)} #tag .h i{display:block;height:100%;background:#ff5b4a}
+#tag .o{font:400 16px var(--head);letter-spacing:.5px;margin-top:2px} #tag .o:empty{display:none}
 #tag .arrow{display:none;width:0;height:0;border:9px solid transparent;border-left:15px solid #ff5b4a;margin:0 auto 2px;transform-origin:50% 50%}
 #tag.off .arrow{display:block} #tag.off .h{display:none}
 #floaters{position:fixed;inset:0;pointer-events:none;overflow:hidden}
@@ -95,7 +89,6 @@ body.touch #touch{display:block} body.touch #help{display:none} body.touch kbd{d
 .tb:active,.tb.on{background:rgba(201,162,74,.45)}
 body.touch #dial{bottom:auto;top:150px;transform:scale(.72);transform-origin:top left}
 body.touch #guns{bottom:6px;transform:translateX(-50%) scale(.82);transform-origin:bottom center}
-body.touch #boardBox{bottom:160px;right:8px}
 body.touch #coach{bottom:auto;top:130px;font-size:14px}
 
 /* ---------- boarding ---------- */
@@ -117,6 +110,9 @@ body.touch #coach{bottom:auto;top:130px;font-size:14px}
 .spot.need i{display:block}
 #shop{left:10px;top:150px;width:300px;pointer-events:auto}
 #shop h3{margin:0 0 6px;font:400 24px var(--head);color:var(--brass);display:flex;justify-content:space-between}
+#shop .role{font-size:14px;font-style:italic;opacity:.85;margin:4px 0 8px}
+.cmp{display:grid;grid-template-columns:46px 1fr 30px;gap:8px;align-items:center;font-size:13px;margin:5px 0} .cmp .t{position:relative;height:11px;background:rgba(0,0,0,.45);border-radius:6px} .cmp .t i{display:block;height:100%;background:var(--brass);border-radius:6px} .cmp .t u,.mk{position:absolute;top:-3px;width:3px;height:17px;background:#fff;border-radius:2px} .mk{position:static;display:inline-block;height:11px;vertical-align:-1px}
+.spot.ship{background:rgba(31,70,120,.8);border-color:#8cc4f5}
 #shop .x{background:none;border:0;cursor:pointer;font-size:16px;opacity:.7}
 .item{display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px solid rgba(255,255,255,.12);font-size:15px}
 .item .d{flex:1;line-height:1.2} .item .d small{display:block;opacity:.7;font-size:12.5px}
@@ -145,7 +141,6 @@ body.touch #coach{bottom:auto;top:130px;font-size:14px}
 @media (max-width:700px){
   body.touch .tb{margin-bottom:92px}
   body.touch #guns{transform:translateX(-50%) scale(.74)}
-  body.touch #boardBox{bottom:250px}
   #toasts{top:150px} body.touch #toasts{top:272px} .toast{font-size:13px} .toast.big{font-size:19px}
   .bar{grid-template-columns:34px 1fr 26px;font-size:11px} .ship-panel h3{font-size:16px} .slot{width:54px}
   #shop{left:10px;right:10px;width:auto;top:auto;bottom:120px} .keys{grid-template-columns:1fr}
@@ -162,7 +157,7 @@ body.touch #coach{bottom:auto;top:130px;font-size:14px}
     <div class="bar hull"><span>Hull</span><div class="t"><i id="pHull"></i></div><b id="pHullN"></b></div>
     <div class="bar sail"><span>Sails</span><div class="t"><i id="pSail"></i></div><b id="pSailN"></b></div>
     <div class="bar crew"><span>Crew</span><div class="t"><i id="pCrew"></i></div><b id="pCrewN"></b></div>
-    <div class="gauge" id="pGauge"></div><div class="status" id="pStatus"></div>
+    <div class="status" id="pStatus"></div>
   </div>
   <div id="ePanel" class="panel ship-panel">
     <h3 id="eName"></h3><div class="sub" id="eSub"></div>
@@ -176,11 +171,9 @@ body.touch #coach{bottom:auto;top:130px;font-size:14px}
     <canvas id="radar" width="300" height="300"></canvas>
     <div id="sailInfo">
       <div><span class="big" id="knots">0</span> kn</div>
+      <div id="sailBars"><i></i><i></i><i></i></div>
       <div id="sailName">Full sail</div>
-      <div class="meter">Speed<span id="mSpd"></span></div>
-      <div class="meter">Turn<span id="mTurn"></span></div>
-      <div class="meter">Aim<span id="mAim"></span></div>
-      <div id="pos"></div>
+      <div id="pos" class="bad"></div>
     </div>
   </div>
   <div id="coach" class="hidden"></div>
@@ -192,13 +185,9 @@ body.touch #coach{bottom:auto;top:130px;font-size:14px}
   </div>
   <div id="help" class="panel" data-tapkey="h">
     <div class="tip"><kbd>H</kbd> keys</div>
-    <div class="all"><kbd>A</kbd><kbd>D</kbd> rudder · <kbd>W</kbd><kbd>S</kbd> sail<br><kbd>Space</kbd> fire · <kbd>Q</kbd><kbd>E</kbd> one side<br><kbd>1</kbd>–<kbd>4</kbd> shot · <kbd>B</kbd> board<br><kbd>V</kbd> camera · <kbd>P</kbd> pause · <kbd>M</kbd> mute</div>
+    <div class="all"><kbd>A</kbd><kbd>D</kbd> rudder · <kbd>W</kbd><kbd>S</kbd> sail<br><kbd>Space</kbd> fire · <kbd>Q</kbd><kbd>E</kbd> one side<br><kbd>1</kbd>–<kbd>4</kbd> shot · <kbd>B</kbd> board inside her ring<br><kbd>V</kbd> camera · <kbd>P</kbd> pause · <kbd>M</kbd> mute</div>
   </div>
-  <div id="boardBox" class="panel hidden" data-tapkey="b">
-    <h4 id="bbTitle">To board her</h4>
-    <ul><li id="bbNear"></li><li id="bbSlow"></li></ul>
-    <div id="bbOdds"></div><div class="g"><i></i></div>
-  </div>
+  <div id="boardGo" class="hidden" data-tapkey="b"></div>
   <div id="touch">
     <div class="tb" data-key="a" style="left:14px;bottom:20px">◀</div>
     <div class="tb" data-key="d" style="left:84px;bottom:20px">▶</div>
@@ -209,7 +198,7 @@ body.touch #coach{bottom:auto;top:130px;font-size:14px}
   </div>
 </div>
 
-<div id="tag" class="hidden"><div class="arrow"></div><span class="d"></span><div class="h"><i></i></div></div>
+<div id="tag" class="hidden"><div class="arrow"></div><span class="d"></span><div class="h"><i></i></div><div class="o"></div></div>
 <div id="floaters"></div>
 
 <div id="melee" class="hidden">

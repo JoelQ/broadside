@@ -216,7 +216,7 @@ export class World {
     scene.add(this.hemi, this.sun, this.sun.target);
     scene.fog = new THREE.Fog(0xffffff, 300, 2000);
     // wind streaks: faint lines drifting downwind so the wind is something you can see
-    const N = 46;
+    const N = 80;
     this.streaks = Array.from({ length: N }, () => ({ x: 0, y: 0, z: 0, life: 0, max: 1 }));
     const sg = new THREE.BufferGeometry();
     sg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 6), 3));
@@ -238,7 +238,7 @@ export class World {
         s.x = focus.x + Math.sin(a) * d - wx * 30; s.z = focus.z + Math.cos(a) * d - wz * 30; s.y = 2 + Math.random() * 16;
       }
       s.x += wx * sp * dt; s.z += wz * sp * dt;
-      const len = 9, a = Math.sin((s.life / s.max) * Math.PI) * 0.42;
+      const len = 15, a = Math.sin((s.life / s.max) * Math.PI) * 0.7;
       pos.setXYZ(i * 2, s.x, s.y, s.z); pos.setXYZ(i * 2 + 1, s.x - wx * len, s.y, s.z - wz * len);
       col.setXYZW(i * 2, 1, 1, 1, a); col.setXYZW(i * 2 + 1, 1, 1, 1, 0);
     });
