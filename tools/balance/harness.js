@@ -23,7 +23,11 @@
       if ((a === 'chain' || a === 'combo') && sk.chain > 0 && foe.sailR > 0.45 && d < me.range('chain') * 1.1) want = 'chain';
       else if ((a === 'fire' || a === 'combo') && sk.fire > 0 && foe.fire < 1 && d < me.range('fire') * 1.1) want = 'fire';
       else if ((a === 'grape' || a === 'combo') && sk.grape > 0 && foe.exposed > 2 && d < me.range('grape')) want = 'grape';
-      if (st.boardMode && sk.grape > 0 && d < me.range('grape') * 1.2) want = 'grape'; // arrive with grape in the guns
+      if (st.boardMode) {
+        // grapples only hold a slowed ship: chain until she is slow, then arrive with grape in the guns
+        if (foe.speed > 6.5 && sk.chain > 0 && d < me.range('chain') * 1.1) want = 'chain';
+        else if (sk.grape > 0 && d < me.range('grape') * 1.2) want = 'grape';
+      }
       st.swap -= dt;
       if (want !== me.ammo && st.swap <= 0) { me.setAmmo(want); st.swap = 2.5; }
       // helm

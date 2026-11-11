@@ -38,7 +38,7 @@ export const AMMO = {
   round: { name: 'Round', long: 'Round shot', range: 250, speed: 128, hull: 6.2, sail: 0.6, crew: 0.3, reload: 1, tip: 'Smashes hulls at long range' },
   chain: { name: 'Chain', long: 'Chain shot', range: 175, speed: 108, hull: 1, sail: 4.5, crew: 0.1, reload: 1, tip: 'Shreds sails — cripple, then close' },
   grape: { name: 'Grape', long: 'Grapeshot', range: 100, speed: 98, hull: 0.6, sail: 0.5, crew: 0, kills: [2, 4], reload: 0.9, tip: 'Sweeps the deck of crew at close range' },
-  fire: { name: 'Heated', long: 'Heated shot', range: 185, speed: 112, hull: 4.2, sail: 2, crew: 0.2, ignite: 0.3, reload: 1.55, tip: 'Starts fires. A burning ship loses hull steadily and loads her guns at half speed' },
+  fire: { name: 'Heated', long: 'Heated shot', range: 185, speed: 112, hull: 4.2, sail: 2, crew: 0.2, ignite: 0.4, reload: 1.3, tip: 'Starts fires. A burning ship loses hull steadily and loads her guns at half speed' },
 };
 export const AMMO_KEYS = ['round', 'chain', 'grape', 'fire'];
 // Gun weight. Heavier guns reach further and hit harder, and take longer to load.
@@ -51,7 +51,7 @@ export const CAL = [
 export const massOf = (spec) => clamp(Math.sqrt((spec.L * spec.B) / 240) * 0.95 + 0.05, 0.6, 2.3);
 export const noGoHalf = (spec) => Math.max(0.2, 0.6 - (spec.point || 0)); // half-width of the no-sail wedge
 export const JURY = 0.34; // sails jury-rig back to this fraction
-export const BELOW = 0.4; // share of a crew below decks, out of reach of gunfire // broadside half-angle (rad)
+export const BELOW = 0.3; // share of a crew below decks, out of reach of gunfire // broadside half-angle (rad)
 
 // ---------- procedural ship model ----------
 export function halfWidth(spec, t) {

@@ -4,7 +4,9 @@ import { wrap, clamp } from './ship.js';
 export function updateAI(ai, me, foe, world, dt, api) {
   const P = me.spec.ai;
   const dx = foe.pos.x - me.pos.x, dz = foe.pos.z - me.pos.z;
-  const dist = Math.hypot(dx, dz), bearing = Math.atan2(dx, dz);
+  // a heavy ship answers her helm late, so she steers for where a nimbler foe is about to be
+  const ahead = clamp((me.mass - 0.8) * 2.2, 0, 3.2);
+  const dist = Math.hypot(dx, dz), bearing = Math.atan2(dx + foe.fwdX * foe.speed * ahead, dz + foe.fwdZ * foe.speed * ahead);
   const upwind = world.wind.dir + Math.PI;
 
   ai.think -= dt;
@@ -16,7 +18,8 @@ export function updateAI(ai, me, foe, world, dt, api) {
     let a = 'round';
     const st = me.stock;
     if (ai.wantBoard) {
-      if (st.grape > 0 && dist < me.range('grape') * 1.25) a = 'grape';
+      if (st.chain > 0 && foe.speed > 6.8 && dist < me.range('chain') * 1.08) a = 'chain'; // grapples will not hold a fast ship
+      else if (st.grape > 0 && dist < me.range('grape') * 1.25) a = 'grape';
       else if (st.chain > 0 && foe.sailR > 0.45 && dist < me.range('chain') * 1.08) a = 'chain';
     } else if (P.plan === 'chain' && st.chain > 0 && foe.sailR > 0.5) a = 'chain';
     else if (P.plan === 'fire' && st.fire > 0 && foe.fire < 2) a = 'fire';

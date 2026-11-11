@@ -11,6 +11,7 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) * 2; // ~unit std
 const GRAV = 22;
 let BOARD_SPEED = 6.5;
+const BOARD_SLOW = 7; // grapples only hold a ship making less than this (about 6 knots): slow her first
 let BOARD_RANGE = 33; // set per fight from the two ships' beams
 
 // ---------- renderer ----------
@@ -295,7 +296,7 @@ function hullHit(b, ship) {
   if (A.ignite && ship.litBy !== b.volley && Math.random() < A.ignite) {
     ship.litBy = b.volley;
     if (ship.fire === 0) floater(ship.isPlayer ? 'FIRE! Our gunners leave their guns' : 'FIRE! Her gunners leave their guns', ship.isPlayer ? 'bad rake' : 'good rake', _v.set(ship.pos.x, ship.model.mastH * 0.8, ship.pos.z).clone());
-    ship.fire = Math.min(3, ship.fire + 1); ship.fireT = 9;
+    ship.fire = Math.min(3, ship.fire + 1); ship.fireT = 11;
   }
   const p = b.mesh.position;
   if (b.ammo === 'grape') fx.grape(p); else fx.wood(p, rake ? 16 : 10);
@@ -387,10 +388,11 @@ function collideIslands(s) {
 function shipEffects(s, dt) {
   const sp = s.spec;
   if (s.fire > 0 && s.sinking <= 0) {
-    s.hull -= 1.3 * s.fire * dt; s.sails = Math.max(0, s.sails - 0.5 * s.fire * dt);
+    s.hull -= 0.0042 * s.hullMax * s.fire * dt; // the more timber, the more there is to burn
+    s.sails = Math.max(0, s.sails - 0.5 * s.fire * dt);
     if (s.exposed >= 1 && Math.random() < 0.13 * s.fire * dt) s.crew -= 1;
     s.fireT -= dt * (0.5 + 0.9 * s.crewR);
-    if (s.fireT <= 0) { s.fire--; s.fireT = 9; if (s.fire === 0 && s.isPlayer) toast('Fires are out', 'good'); }
+    if (s.fireT <= 0) { s.fire--; s.fireT = 11; if (s.fire === 0 && s.isPlayer) toast('Fires are out', 'good'); }
     for (let i = 0; i < s.fire; i++) {
       const p = s.toWorld(_l.set(rand(-0.3, 0.3) * sp.B, sp.D + rand(0, 4), rand(-0.35, 0.35) * sp.L), _m);
       fx.flame(p.x, p.y, p.z);
@@ -478,8 +480,9 @@ function battleUpdate(dt) {
   if (G.coach && G.coach.i < 2 && G.battleT < 60) G.ai.fireDelay = 2; // first fight: she holds fire until you have fired
   updateAI(G.ai, e, p, world, dt, aiApi);
   G.boardCd -= dt;
-  const can = sep(p, e) < BOARD_RANGE && relSpeed(p, e) < BOARD_SPEED && G.boardCd <= 0;
-  G.canBoard = can;
+  const alongside = sep(p, e) < BOARD_RANGE && relSpeed(p, e) < BOARD_SPEED && G.boardCd <= 0;
+  const can = alongside && p.speed < BOARD_SLOW; // she can grapple you only if you are slow
+  G.canBoard = alongside && e.speed < BOARD_SLOW * p.spec.mods.boardSpeed;
   G.aiGrapple = clamp(G.aiGrapple + (can && G.ai.wantBoard ? dt / 2.4 : -dt * 0.7), 0, 1);
   if (G.aiGrapple >= 1) return startBoarding('enemy');
   if (p.sailLevel > 0 && p.speed < 2.5 && Math.abs(wrap(p.heading - world.wind.dir)) > Math.PI - noGoHalf(p.spec) + 0.05) toastOnce('irons', 10, 'In irons — turn away from the wind’s eye!', 'bad', 3000);
@@ -607,6 +610,7 @@ function tryBoard() {
   const d = sep(p, e);
   if (G.boardCd > 0 && d < BOARD_RANGE) toast('The crew needs a moment before another attempt', '', 1400);
   else if (d >= BOARD_RANGE) toast(`Too far to board: ${Math.round(d)} yds, need under ${BOARD_RANGE - 3}`, '', 1600);
+  else if (e.speed >= BOARD_SLOW * p.spec.mods.boardSpeed) toast('She is moving too fast for grapples to hold — cut up her sails first', '', 2200);
   else toast('Match her speed first — you are passing too fast', '', 1600);
 }
 
@@ -733,7 +737,7 @@ function updateHUD(dt) {
   }
   boardRing.visible = battle && dist < 190 && G.boardCd <= 0;
   if (boardRing.visible) {
-    const inside = dist < BOARD_RANGE, ready = inside && relSpeed(p, e) < BOARD_SPEED;
+    const inside = dist < BOARD_RANGE, ready = inside && relSpeed(p, e) < BOARD_SPEED && e.speed < BOARD_SLOW * p.spec.mods.boardSpeed;
     boardRing.position.set(e.pos.x, 1.5, e.pos.z);
     boardRing.material.color.set(ready ? 0x7fff7a : inside ? 0xffb04a : 0xffffff);
     boardRing.material.opacity = ready ? 0.6 + 0.25 * Math.sin(G.t * 9) : inside ? 0.55 : 0.28;
@@ -786,7 +790,8 @@ function updateHUD(dt) {
   const near = dist < BOARD_RANGE, slow = relSpeed(p, e) < BOARD_SPEED, warn = G.aiGrapple > 0.02 && G.ai.wantBoard;
   const odds = strength(p) / (strength(e) || 1), o = tag.querySelector('.o');
   const shaken = readiness(e) < 0.8 ? (e.fire > 0 ? ' · her crew fighting fire' : ' · her crew at the pumps') : '';
-  o.textContent = battle && dist < 170 ? `Board: ${Math.round(strength(p))} v ${Math.round(strength(e))}${near && !slow ? ' · match her speed' : shaken}` : '';
+  const fast = e.speed >= BOARD_SLOW * p.spec.mods.boardSpeed;
+  o.textContent = battle && dist < 170 ? `Board: ${Math.round(strength(p))} v ${Math.round(strength(e))}${fast ? ' · too fast to grapple, slow her' : near && !slow ? ' · match her speed' : shaken}` : '';
   o.className = 'o ' + (odds > 1.15 ? 'good' : odds > 0.87 ? '' : 'bad');
   const go = $('boardGo');
   go.classList.toggle('hidden', !(battle && (G.canBoard || warn)));
