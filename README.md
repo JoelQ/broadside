@@ -1,6 +1,18 @@
 # Broadside
 
-A 3D age-of-sail duel for the browser. Hunt five pirate captains in a brig-of-war.
+Age-of-sail ship combat in the browser. You command a brig-of-war out of Port Halcyon and hunt
+five pirate captains, each in a bigger ship than the last.
+
+**[Play it in your browser](https://joelq.github.io/broadside/)** — desktop or phone, nothing to install.
+
+[![Broadside title screen: a brig at the pier in Port Halcyon](docs/title.jpg)](https://joelq.github.io/broadside/)
+
+| | |
+| --- | --- |
+| ![Trading broadsides with a frigate at dusk](docs/battle.jpg) | ![Boarding a corsair xebec](docs/boarding.jpg) |
+| ![Port Halcyon, with a captured brig at anchor](docs/port.jpg) | Fight with guns, sail and steel; spend the bounty in port; sail any ship you capture. |
+
+## The game
 
 - Guns fire only from the sides, inside a limited arc; shots along the length of a hull rake for extra damage
 - Wind sets your speed, you cannot sail straight into it, and the ship upwind of the other shoots straighter
@@ -34,18 +46,6 @@ and load at half speed while alight.
 
 Port Halcyon is home: your ship at the pier, shops along the quay, and every ship you own at anchor.
 
-## Build
-
-```bash
-npm install
-```
-
-```bash
-npm run build
-```
-
-This writes a single self-contained page to `dist/index.html`. Open it in a browser.
-
 ## Controls
 
 | Key | Action |
@@ -61,6 +61,33 @@ This writes a single self-contained page to `dist/index.html`. Open it in a brow
 | `P`, `M` | Pause, mute |
 
 Touch devices get on-screen buttons.
+
+## Build
+
+The game is plain JavaScript on [three.js](https://threejs.org), bundled by esbuild. You need Node 20 or newer.
+
+```bash
+npm install
+```
+
+```bash
+npm run build
+```
+
+This writes a single self-contained page to `dist/index.html`. Open it in a browser; no server is needed.
+
+Everything you see and hear is made in code: there are no model, texture or sound files. Ships,
+crews, islands and the town are built from each ship's numbers in `src/data.js`, and the sound is
+synthesized.
+
+Pushing to `main` publishes the build to GitHub Pages, and pushing a tag attaches the built page to
+a GitHub release (see `.github/workflows`).
+
+## Balance
+
+The five fights were tuned with a harness that plays whole battles headlessly, a scripted captain
+against the game's own pirate AI. See [`tools/balance`](tools/balance/README.md) before changing any
+of the numbers.
 
 ## Layout
 
@@ -79,3 +106,8 @@ Touch devices get on-screen buttons.
 | `src/data.js` | Player ship, the five pirates, upgrades and shop stock |
 | `src/index.template.html` | Page markup and styles; the bundle is inlined here |
 | `build.mjs` | Bundles with esbuild into `dist/index.html` |
+| `tools/balance` | Headless balance harness |
+
+## Licence
+
+[MIT](LICENSE)

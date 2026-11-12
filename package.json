@@ -10,5 +10,11 @@
   "devDependencies": {
     "esbuild": "^0.28.2",
     "three": "^0.187.0"
+  },
+  "license": "MIT",
+  "homepage": "https://joelq.github.io/broadside/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JoelQ/broadside.git"
   }
 }
