@@ -1113,7 +1113,7 @@ function update(dt) {
   }
   const frozen = now === 'boarding' || home;
   p.update(dt, world, frozen);
-  if (home) for (const t of G.trophyShips) t.update(dt, world, true);
+  if (home) { for (const t of G.trophyShips) t.update(dt, world, true); if (!G.fast) harbor.update(dt); }
   if (e) {
     e.update(dt, world, frozen);
     if (now === 'battle' || now === 'ending') collide(p, e);
@@ -1144,7 +1144,7 @@ function frame(now) {
 G.step = (dt, n = 1) => { for (let i = 0; i < n; i++) update(dt); renderer.render(scene, camera); };
 G.newAI = newAI;
 G.tick = (dt, n = 1) => { for (let i = 0; i < n; i++) update(dt); };
-G.world = world;
+G.world = world; G.view = { renderer, scene, camera };
 G.api = { aiApi, cutGrapples, hullSpec, updateAI, reach, inArc, hasGauge, strength: (s) => strength(s), rebuild: () => { scene.remove(G.player.group); G.player = null; buildPlayer(true); }, fire, act, tap, keys, startBoarding, boardSwivel, endBattle, toast, showPort, prize };
 showTitle();
 snapCamera();
