@@ -7,7 +7,9 @@ moving (`duel`, `kite`, `hug` the stern, `close` to board), a shot policy (`roun
 `fire`, `combo`) and a boarding policy (`never`, `rush`, `odds`). Any ownable ship, stock or fully
 fitted, against any of the five pirates.
 
-Build the game first, then run a jobs file:
+It drives a headless browser, so it needs [Playwright](https://playwright.dev) and its Chromium
+(`npm install --no-save playwright && npx playwright install chromium`). Build the game first, then run
+a jobs file:
 
 ```bash
 npm run build
