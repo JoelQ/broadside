@@ -1,13 +1,23 @@
-# Pushing a tag builds the game and attaches the single-file page to a GitHub release.
+# Builds the game and attaches the single-file page to a GitHub release.
+# Runs when a tag is pushed, or by hand from the Actions tab (which also creates the tag).
 name: Release
 on:
   push:
     tags: ['*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to create for this release
+        required: true
+        default: demo
 permissions:
   contents: write
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -17,6 +27,4 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: cp dist/index.html broadside.html
-      - run: gh release create "$GITHUB_REF_NAME" broadside.html --title "Broadside $GITHUB_REF_NAME" --generate-notes
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - run: gh release create "$TAG" broadside.html --target "$GITHUB_SHA" --title "Broadside $TAG" --generate-notes
