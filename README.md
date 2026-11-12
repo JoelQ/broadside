@@ -80,8 +80,8 @@ Everything you see and hear is made in code: there are no model, texture or soun
 crews, islands and the town are built from each ship's numbers in `src/data.js`, and the sound is
 synthesized.
 
-Pushing to `main` publishes the build to GitHub Pages, and pushing a tag attaches the built page to
-a GitHub release (see `.github/workflows`).
+Pushing to `main` publishes the build to GitHub Pages. Pushing a tag, or running the Release
+workflow from the Actions tab, attaches the built page to a GitHub release (see `.github/workflows`).
 
 ## Balance
 
