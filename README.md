@@ -67,9 +67,13 @@ Touch devices get on-screen buttons.
 | File | Contents |
 | --- | --- |
 | `src/main.js` | Game loop, gunnery, boarding, first-fight coaching, camera, HUD, port and screens |
-| `src/ship.js` | Procedural ship model, crew figures, sailing physics, sail and ammunition tables |
+| `src/ship.js` | Sailing physics, sail and ammunition tables |
+| `src/model.js` | Procedural ship model: hull, decks, rig, sails, guns |
+| `src/crew.js` | Animated figures: ship's crews and townsfolk |
+| `src/geo.js` | Builder that merges coloured shapes into one mesh; shared maths |
 | `src/ai.js` | Pirate captain AI |
-| `src/world.js` | Sea, sky, weather presets, islands, wind |
+| `src/world.js` | Sea, sky, weather presets, wind |
+| `src/land.js` | Islands, trees and rocks |
 | `src/fx.js` | Particles and synthesized sound |
 | `src/harbor.js` | Port Halcyon scenery and shop locations |
 | `src/data.js` | Player ship, the five pirates, upgrades and shop stock |

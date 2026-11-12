@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { mulberry } from './geo.js';
+import { makeIsland } from './land.js';
 
 // ---------- shared wave model (JS + GLSL stay in sync) ----------
 const RAW_WAVES = [
@@ -161,16 +163,6 @@ void main(){
 }
 `;
 
-export function mulberry(seed) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 export class World {
   constructor(scene) {
     this.scene = scene;
@@ -300,31 +292,4 @@ export class World {
     this.sun.position.copy(camPos).addScaledVector(this.u.uSun.value, 500);
     this.sun.target.position.copy(camPos);
   }
-}
-
-export function makeIsland(r, H, rnd, x, z) {
-  const seg = 22;
-  const g = new THREE.PlaneGeometry(r * 2.3, r * 2.3, seg, seg);
-  g.rotateX(-Math.PI / 2);
-  const p = g.attributes.position;
-  const ph = [rnd() * 6, rnd() * 6, rnd() * 6, rnd() * 6];
-  const col = new Float32Array(p.count * 3);
-  const sand = new THREE.Color(0xd8c690), rock = new THREE.Color(0x6f6a62), grass = new THREE.Color(0x4f7a3a), dark = new THREE.Color(0x3c3a36);
-  const c = new THREE.Color();
-  for (let i = 0; i < p.count; i++) {
-    const px = p.getX(i), pz = p.getZ(i);
-    const d = Math.hypot(px, pz) / r;
-    const n = 0.55 + 0.25 * Math.sin(px * 0.21 + ph[0]) * Math.cos(pz * 0.17 + ph[1]) + 0.2 * Math.sin(px * 0.5 + pz * 0.43 + ph[2]) + (rnd() - 0.5) * 0.18;
-    let y = (1 - d * d) * H * n * 1.5;
-    if (d > 1) y = -3 - (d - 1) * 20;
-    p.setY(i, y);
-    if (y < 1.6) c.copy(sand); else if (y < H * 0.45) c.copy(rock).lerp(dark, rnd() * 0.5); else c.copy(grass).lerp(rock, rnd() * 0.4);
-    col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
-  }
-  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  const ng = g.toNonIndexed();
-  ng.computeVertexNormals();
-  const m = new THREE.Mesh(ng, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
-  m.position.set(x, -0.6, z);
-  return m;
 }
