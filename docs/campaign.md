@@ -27,7 +27,16 @@ need a research pass before any text is written.
    are helpless in a calm against oars. No mission is gated on tonnage.
 3. **Fittings belong to a ship; officers belong to you.** This is the existing fittings rule,
    extended.
-4. **The story is told in the gaps.** Briefing in port, a few lines in each pause at sea, a
+4. **The player holds the initiative.** No mission ties you to slow ships you do not control.
+   If a cargo has to get through, you are sailing it.
+5. **No mission is won by one quality alone.** Running is always allowed and never the only
+   answer. Each mission lists a route for a heavy ship, a nimble one and an oared or boarding
+   one, and none has a clock that only speed can beat. Time pressure changes the situation
+   (the wind fills in, the garrison turns out) instead of ending the mission.
+6. **Mirror the story, not always the fight.** Both sides live through the same events, but
+   each gets the active seat. Where the other end of a fight would be passive, that side plays
+   a different fight in the same episode.
+7. **The story is told in the gaps.** Briefing in port, a few lines in each pause at sea, a
    closing scene. Text only, in keeping with a game that has no asset files.
 
 ## Structure
@@ -53,57 +62,87 @@ Venice's home port is Suda; the Ottoman one is Chania. Both reuse the existing h
 
 ## The campaign
 
-| # | Mission | Venetian goal | Ottoman goal |
-| --- | --- | --- | --- |
-| 0 | **Home waters** (shared prologue) | A pirate comes for your island's harbour. Keep her off the anchored boats. | Same |
-| 1 | **Powder for Candia** (mirrored) | Escort a supply convoy into the city | Stop that convoy |
-| 2 | **Independent command** (shared, random) | Clear the pirates from the Cyclades | Same |
-| 3 | **The Chania run** (mirrored) | Stop the army's supply ships reaching Chania | Bring them in past the Suda patrol |
-| 4 | **The raid** (exclusive) | Corsairs under Ottoman colours descend on Tinos. Hold them off until the garrison turns out. | Knights' galleys descend on an Ottoman island town. Same. |
-| 5 | **Candia** (mirrored finale) | Force the relief fleet through to the city | Turn it back |
+| # | Episode | Venetian mission | Ottoman mission | Mirror |
+| --- | --- | --- | --- | --- |
+| 0 | **Home waters** | Keep a pirate off your island's harbour | Same | Shared |
+| 1 | **Powder for Candia** | Run the powder ship into the city through the patrol | Deal with the powder ship at her anchorage before she sails | Story |
+| 2 | **Independent command** | Clear the pirates from the Cyclades | Same | Shared |
+| 3 | **The calm** | Galleys come out at dawn in a dead calm; the wind is coming | Same, under the other flag | Fight |
+| 4 | **The raid** | Break up a corsair landing on Tinos | Break up a landing by the Knights' galleys on an Ottoman island town | Story |
+| 5 | **Candia** | The defence of the harbour on the day of the assault | The assault | Story |
 
-**0. Home waters.** One leg, in your own trading brig. It is the tutorial and it reuses the
+Each mission below lists three routes, to show it is not a one-answer problem. They are
+examples, not the only ways through.
+
+**0. Home waters.** One fight, in your own trading brig. It is the tutorial and it reuses the
 existing coaching. Afterwards both powers offer a commission, and you choose in the story.
 Replays can skip straight to the choice.
 
-**1. Powder for Candia.** Open sea, a steady breeze, slow merchantmen. Leg one is a scout
-shadowing the convoy; if she gets away, the attack in leg two comes from upwind. The escort can
-fight, screen or lead the attackers off. The attacker can take the escort, cripple the
-merchantmen, or cut one out and run.
+**1. Powder for Candia.** The same powder ship and the same rival captain appear in both
+stories; in each, your side wins.
 
-**2. Independent command.** Three legs drawn at random from a pool of about six pirate
+- *Venice: the run.* You carry the powder in your own ship. Two patrol ships lie between you
+  and the harbour, with shoals inshore. Heavy: fight through; the mission is also won if the
+  patrol is beaten. Nimble: take the shoal channel and let a deeper ship run aground after
+  you. Boarder: take a patrol ship and sail in under her colours.
+- *Ottomans: the anchorage.* The powder ship lies in a cove under a small battery, waiting
+  for dark. Take her, burn her or draw her out. Heavy: silence the battery and batter her.
+  Nimble: come in through the battery's dead ground and set her alight with heated shot.
+  Boarder: cut her out and sail her home as a prize.
+
+**2. Independent command.** Three fights drawn at random from a pool of about six pirate
 scenarios, with a jury-rig pause between each. The pool reuses the five existing pirate
-captains. Examples: a pirate anchored in a cove under a shore battery; two galliots hunting
-together in a calm; a pirate chasing a merchantman; a captured ship being sailed home by a
-prize crew; a lure into shoal water. This is the experiment with roguelike play, and the
-chapter where most players will fill their stable.
+captains and the cheaper archetypes: two galliots working together, a duel on a lee shore in
+a gale, a pirate at anchor in a cove, a ship hiding among islets, a pirate who can be
+approached under false colours. This is the experiment with roguelike play, and the chapter
+where most players will fill their stable.
 
-**3. The Chania run.** Deliberately unlike mission 1: narrow water, a fort, light and shifting
-wind, and galleys on both sides. Timing and wind matter more than weight of shot.
+**3. The calm.** A true mirror, because both ends are active. At dawn there is no wind and
+enemy galleys come out to fight; the wind fills in during the battle and brings an enemy
+sailing ship with it. In a sailing ship you must live through the calm and then turn on them.
+In a galley you meet them oar to oar and try to finish before the wind arrives. Heavy:
+anchor on a spring, hold them off with grape and wait for the breeze. Nimble: use every
+cat's-paw of wind to keep your broadside on their bows. Oared: fight them on their own terms.
 
-**4. The raid.** The one mission that is not mirrored, so that nobody plays the raider. There
-are more raiders than you can stop, and the goal is time, not kills. The briefing admits that
-your own admirals license the same thing.
+**4. The raid.** Raiders are putting boats ashore near a town. The goal is to make them give
+up the landing: sink or take their leader, burn the boats, or drive the ships off. The longer
+it takes, the worse the town fares and the smaller your reward, but there is no clock that
+fails you. Each side only ever defends, so nobody plays the raider, and the briefing admits
+that your own admirals license the same thing.
 
-**5. Candia.** Three legs without port: the blockade line outside the bay, the roadstead under
-the guns of the walls, and the enemy commander's ship. Each is a goal with no prescribed
-method. Your whole stable sails with you in reserve, and at each pause you may shift your flag
-to another of your ships. Captures made through the campaign therefore become your options
-and your second chances in the finale.
+**5. Candia.** Three fights without port on the day of the final assault, around the Koules,
+the sea fortress at the harbour mouth. Your whole stable is in reserve, and at each pause you
+may shift your flag to another of your ships.
 
-## Ships
+- *Ottomans: the assault.* (1) The mouth: get in under the fortress guns and silence a
+  battery or fire its magazine, by any means. (2) The harbour: a melee, with the rest of both
+  fleets paired off around you; choose where to weigh in. (3) The flagship: a duel in
+  confined water, with the fort's arcs drawn on the water.
+- *Venice: the defence.* (1) The sortie: go out and break up the fireships and bomb vessels
+  leading the assault before they reach the mole. (2) The harbour: the same melee. (3) The
+  flagship: the Ottoman commander comes in, and you fight him under your own failing guns.
+
+The background battle is affordable because each pair of ships simply runs the existing duel
+AI against each other.
+
+## Ships, oars and wind
 
 The existing five hulls are re-dressed for the period: sloop, brig, xebec, a hired armed
-merchantman (the frigate) and a flagship (the galleon). Three oared types are new:
+merchantman (the frigate) and a flagship (the galleon).
 
-| Ship | Character |
-| --- | --- |
-| Galliot | Small, fast under oars, a few light guns, a pirate's favourite |
-| Galley | Heavy guns firing forward, weak sides, a large crew, ignores the wind, suffers in a blow |
-| Galleass | A Venetian speciality: broadside guns and oars, slow under both |
+**Galleys** are the new kind of ship: heavy guns firing forward, weak sides, a large crew.
 
-Galleys need two new rules: **wind strength** per leg (calm, breeze, gale) and **guns that
-fire ahead**. The existing sweeps fitting is the starting point for oars.
+- They are nearly independent of the wind. Only a gale troubles them.
+- Oars run on **stamina**: sprinting drains it and lying still refills it. Losing crew cuts
+  oar power, so grapeshot has a second use against them.
+- Start with one galley. Ships are built from numbers, so a small galliot and a Venetian
+  galleass (oars and broadside guns, slow under both) can follow if playtests want them.
+
+**Wind strength** is set per fight and can change during it: calm, breeze or gale. It
+governs speed and momentum under sail, and a gale spoils everyone's gunnery.
+
+**Shoals and grounding.** Shallow water is marked, and a ship that draws too much sticks
+there until she works herself off. The AI can be lured aground, and so can you.
 
 ## Officers
 
@@ -127,8 +166,9 @@ Today a battle is exactly one player and one enemy. The campaign needs, in build
 1. **Missions with several ships.** A list of ships with sides, goals other than "destroy her",
    legs with carried state, and the pause screen. This is the largest single piece of work.
 2. **AI for more than a duel.** Choosing targets, escorting, merchantmen that flee.
-3. **Wind strength, oars and forward guns.**
-4. **Fixed things.** Shore batteries, anchored ships, shoals and draught.
+3. **Wind strength, oars with stamina and forward guns.**
+4. **Fixed things.** Shore batteries with drawn arcs, anchored ships, shoals and grounding.
+   A background battle of paired duels for the finale.
 5. **Campaign state.** Saved progress, the stable, officers, colours and flags for each side.
 6. **Harness.** Run whole missions, and report which approaches win, so no mission has a
    single answer.
@@ -137,7 +177,7 @@ Today a battle is exactly one player and one enemy. The campaign needs, in build
 
 1. **Slice:** prologue and mission 1 as Venice, with the jury-rig pause. Proves several ships,
    legs and a goal that is not a duel.
-2. **Oars:** wind strength and galleys; mission 3; the Ottoman side of missions 1 and 3.
+2. **Oars:** wind strength and galleys; mission 3; the Ottoman side of mission 1.
 3. **Command:** the pirate pool for mission 2.
 4. **Endgame:** the raid and the finale, with the reserve squadron.
 5. **Story:** officers, text, balance.
@@ -148,7 +188,9 @@ The existing five-pirate ladder stays playable as a skirmish mode.
 
 - **Several ships on a phone.** Every model is built in code; four to eight ships with crews
   need a performance check in the first milestone.
-- **Convoy and escort AI.** Easy to make dull or exploitable; the slice exists to find out.
+- **AI in shoal water.** Luring a ship aground must feel earned, not like an AI bug.
+- **Two missions per story episode.** Story mirrors cost more than fight mirrors: episodes 1,
+  4 and 5 each need two fights built.
 - **A bad state at the start of a leg.** Retrying a leg you entered half-wrecked may be
   hopeless. Restarting the mission is the fallback; the repair caps may need raising.
 - **Tone.** Both sides need equal dignity in the writing, and the omissions listed above
