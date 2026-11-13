@@ -154,7 +154,7 @@ export const CAMP = {
   },
   watch(k) {
     const run = CAMP.run, p = G.player;
-    if (run.watches < 1) return;
+    if (run.watches < 1 || (k === 'hull' && p.hullR >= 0.7) || (k === 'sails' && p.sailR >= 0.8) || (k === 'crew' && (run.tended || run.lostMen < 3))) return;
     if (k === 'hull') p.hull = Math.max(p.hull, Math.min(p.hullMax * 0.7, p.hull + p.hullMax * 0.15));
     else if (k === 'sails') p.sails = Math.max(p.sails, Math.min(p.sailsMax * 0.8, p.sails + p.sailsMax * 0.25));
     else if (k === 'crew') { p.crew = Math.min(p.crewMax, p.crew + Math.round(run.lostMen / 3)); run.tended = true; }

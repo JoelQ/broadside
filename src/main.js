@@ -785,6 +785,13 @@ function boardingUpdate(dt) {
   }
   b.t += dt; b.cd -= dt; b.eCd -= dt;
   syncBoardView();
+  // a fireship's people light the train when they are boarded: take her quickly or get clear
+  if (e.spec.fuse && !e.out && b.t > e.spec.fuse) {
+    p.boardView = e.boardView = null; G.bd = null;
+    G.state = 'battle'; G.focus = 'player'; G.boardCd = 4; setMode('battle');
+    shipOut(e, 'blown'); retarget(true);
+    return;
+  }
   if (b.t < 2.4) return; // a beat to take in the opening volley before blades meet
   // each side cuts the other down in proportion to its own strength, so the bigger crew pulls
   // ahead faster and faster; the pace climbs so no fight drags
@@ -796,13 +803,6 @@ function boardingUpdate(dt) {
     b.fxT = 0.1;
     const who = Math.random() < 0.5 ? p : e, q = who.toWorld(_l.set(b.side * (who === p ? 1 : -1) * rand(0.1, 0.5) * who.spec.B, who.spec.D + 1.5, rand(-0.35, 0.35) * who.spec.L), _m);
     if (Math.random() < 0.4) { fx.musket(q.x, q.y, q.z); sfx.musket(); } else if (Math.random() < 0.5) sfx.clang();
-  }
-  // a fireship's people light the train when they are boarded: take her quickly or get clear
-  if (e.spec.fuse && !e.out && b.t > e.spec.fuse) {
-    p.boardView = e.boardView = null; G.bd = null;
-    G.state = 'battle'; G.focus = 'player'; G.boardCd = 4; setMode('battle');
-    shipOut(e, 'blown'); retarget(true);
-    return;
   }
   // a crew that has lost seven in ten of the men it brought to the rail gives up the deck
   if (e.crew <= Math.max(1, b.e0 * 0.3)) {

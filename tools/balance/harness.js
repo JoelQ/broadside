@@ -123,7 +123,44 @@
     };
   }
 
+  // play the leg that is on its card now, with these steps at the helm
+  function playLeg(steps, maxT) {
+    G.api.act('engage'); G.coach = null;
+    const P = G.player;
+    G.bot = routeBot(typeof steps === 'function' ? steps(G.sc.S) : steps);
+    let t = 0;
+    while (t < maxT && (G.state === 'battle' || G.state === 'boarding')) { if (G.state === 'boarding') G.api.boardSwivel(); G.tick(0.05, 1); t += 0.05; }
+    const o = G.state === 'battle' || G.state === 'boarding' ? 'timeout' : G.outcome;
+    if (G.state === 'boarding') G.api.cutGrapples();
+    G.bot = null;
+    return { o, t: Math.round(t), hull: +P.hullR.toFixed(2), crew: +P.crewR.toFixed(2) };
+  }
   window.H = {
+    // a whole mission, leg after leg, with damage carried and the watches spent where they are needed most:
+    // { side, mission, hull, fit, routes: { [leg title]: steps }, maxT }
+    cruise(cfg) {
+      const C = G.CAMP;
+      G.paused = true; G.fast = true; G.mode = 'campaign';
+      const st = (C.st = C.fresh());
+      st.side = cfg.side || null; st.stage = C.order.indexOf(cfg.mission); st.officers = ['pilot', 'carpenter', 'gunner', 'marines'].slice(0, Math.max(0, st.stage));
+      st.stable = [{ id: 'h1', hull: cfg.hull, name: 'Test', fit: {} }]; st.seed = (Math.random() * 1e9) | 0;
+      G.ship = 'h1'; G.fit = {}; C.rebuild(); C.man();
+      G.player.stock = { chain: 8, grape: 8, fire: 5 };
+      C.startMission();
+      const run = C.run, legs = [];
+      let o = 'won';
+      for (;;) {
+        const title = run.legs[run.i].title, r = playLeg(cfg.routes[title] || [{ kill: 'all', move: 'duel', ammo: 'round' }], cfg.maxT || 600);
+        legs.push({ title, ...r }); o = r.o;
+        if (o !== 'won' || run.i + 1 >= run.legs.length) break;
+        G.tick(0.05, 140); // the ending beat, then the pause
+        if (G.state !== 'story') { o = 'stuck:' + G.state; break; }
+        for (let w = 0; w < 4; w++) { const p = G.player; C.watch(p.hullR < 0.7 && p.hullR <= p.sailR ? 'hull' : p.sailR < 0.8 ? 'sails' : p.hullR < 0.7 ? 'hull' : 'crew'); }
+        C.act('next');
+      }
+      G.state = 'story'; G.outcome = null; G.player.sinking = 0; G.fast = false;
+      return { o, win: o === 'won', t: legs.reduce((a, l) => a + l.t, 0), hull: legs[legs.length - 1].hull, crew: legs[legs.length - 1].crew, legs, aground: 0, boarded: 0, foes: legs.map((l) => `${l.title}:${l.o}@${l.hull}`).join(' > '), pos: '' };
+    },
     // one campaign leg: { side, mission: 'm1', leg: 0 | pool key, hull, fit, officers, route: [steps], state: { hull, sails, crew }, stock, maxT }
     leg(cfg) {
       const C = G.CAMP;

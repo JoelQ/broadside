@@ -206,13 +206,14 @@ const breeze = {
   title: 'The breeze',
   build(c) {
     const left = (c.carry.galleys || [null, null]);
-    const ships = [{ id: 'sail', spec: shipSpec('merchantman', c.foe, c.names.heavy, 'poor'), side: 1, x: 380, z: 420, h: PI + 0.7 }];
-    left.forEach((g, i) => { if (g) ships.push({ id: 'g' + (i + 1), spec: shipSpec(i ? 'galliot' : 'galley', c.foe, c.names['galley' + (i + 1)], 'line'), side: 1, x: i ? 250 : -250, z: 260, h: PI, o: { hull: g.hull, sails: g.sails, crew: g.crew } }); });
+    const ships = [{ id: 'sail', spec: shipSpec('merchantman', c.foe, c.names.heavy, 'line'), side: 1, x: 380, z: 420, h: PI + 0.7 }];
+    // the big galley wants no part of a sailing ship that can move; the galliot, if she lived, comes back with the tall ship
+    left.forEach((g, i) => { if (g && i) ships.push({ id: 'g' + (i + 1), spec: shipSpec(i ? 'galliot' : 'galley', c.foe, c.names['galley' + (i + 1)], 'line'), side: 1, x: i ? 250 : -250, z: 260, h: PI, o: { hull: g.hull, sails: g.sails, crew: g.crew } }); });
     return {
       env: 'noon', wind: { dir: 1.2 + PI, str: 1 }, seedIslands: [1654, 2],
       player: { x: 0, z: 0, h: 0.3, speed: 5 },
       ships,
-      objective: 'The breeze has brought one of their sailing ships with it: finish what is left of them',
+      objective: 'The breeze has brought one of their sailing ships with it: finish her, and anything that comes with her',
       check: (S) => (allOut(S, ships.map((s) => s.id)) ? 'won' : null),
     };
   },
@@ -344,7 +345,7 @@ const flagDuel = (attacker) => ({
       shoals: [{ x: -260, z: 60, r: 70, depth: 3.5 }, { x: 300, z: 20, r: 80, depth: 3.5 }],
       player: { x: -40, z: -420, h: 0, speed: 6 },
       ships: [
-        { id: 'flag', spec: shipSpec('flagship', c.foe, c.names.flag, 'line'), side: 1, x: 60, z: 40, h: PI, o: { crew: 0.75, hull: 0.8 } },
+        { id: 'flag', spec: shipSpec('flagship', c.foe, c.names.flag, 'line'), side: 1, x: 60, z: 40, h: PI, o: { crew: 0.7, hull: 0.65 } },
         { id: 'koules', spec: shipSpec('koules', attacker ? c.foe : c.own, c.names.koules, 'line'), side: fortSide, x: 40, z: 250, h: PI, o: attacker ? { hull: 0.6, crew: 0.6 } : { hull: 0.35, crew: 0.4 } },
       ],
       objective: attacker ? 'Their flagship stands between you and the city. Finish her, and mind the fortress' : 'Their commander is coming in. Finish his flagship under what is left of your own guns',
@@ -363,7 +364,7 @@ const sortie = {
       player: { x: 0, z: 80, h: PI, speed: 7 },
       zones: [{ name: 'mole', x: mole[0], z: mole[1], r: 55, color: 0xff6a5a }],
       ships: [
-        ...fs.map(([x, z], i) => ({ id: 'fs' + i, spec: shipSpec('sloop', c.foe, 'Fireship', 'poor', { guns: 0, bow: { n: 1, cal: 0, arc: 0.2 }, magazine: 0.3, fuse: 7, speed: 8, stock: {} }), side: 1, x, z, h: 0, o: { crew: 0.3, goTo: mole, sail: 3 } })),
+        ...fs.map(([x, z], i) => ({ id: 'fs' + i, spec: shipSpec('sloop', c.foe, 'Fireship', 'poor', { guns: 0, bow: { n: 1, cal: 0, arc: 0.2 }, magazine: 0.3, fuse: 2, speed: 8, stock: {} }), side: 1, x, z, h: 0, o: { crew: 0.3, goTo: mole, sail: 3 } })),
         { id: 'escort', spec: shipSpec('galliot', c.foe, c.names.galley1, 'line'), side: 1, x: 60, z: -520, h: 0 },
       ],
       focus: 'fs1',

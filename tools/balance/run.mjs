@@ -23,7 +23,7 @@ await Promise.all(Array.from({ length: WORKERS }, async () => {
   while (queue.length) {
     const i = queue.pop(), c = cells[i];
     if (queue.length % 100 === 0 && queue.length) console.error(`${queue.length} to go, ${((Date.now() - t0) / 1000).toFixed(0)}s`);
-    results[i].push(c.mission ? await page.evaluate((cfg) => H.leg(cfg), JSON.parse(JSON.stringify(c))) : await page.evaluate((cfg) => H.fight(cfg), { ship: c.ship, fit: c.fit, level: c.level, plan: c.plan, stock: c.stock, maxT: c.maxT }));
+    results[i].push(c.mission ? await page.evaluate((cfg) => (cfg.routes ? H.cruise(cfg) : H.leg(cfg)), JSON.parse(JSON.stringify(c))) : await page.evaluate((cfg) => H.fight(cfg), { ship: c.ship, fit: c.fit, level: c.level, plan: c.plan, stock: c.stock, maxT: c.maxT }));
   }
 }));
 await browser.close();

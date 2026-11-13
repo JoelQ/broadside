@@ -36,7 +36,7 @@ export const LEGS = [
     spring: [{ kill: 'all', move: 'duel', ammo: 'grape', anchor: true, anchorAt: 1.3 }],
     guns, bow, board, prep,
   } },
-  { name: 'm3 The breeze', mission: 'm3', leg: 1, side: V, carry: { galleys: [{ hull: 0.7, sails: 0.8, crew: 0.7 }, null] }, routes: { guns, kite, hug, board, prep } },
+  { name: 'm3 The breeze', mission: 'm3', leg: 1, side: V, carry: { galleys: [null, { hull: 0.7, sails: 0.8, crew: 0.7 }] }, routes: { guns, kite, hug, board, prep } },
   { name: 'm4V The castles', mission: 'm4', leg: 0, side: V, routes: {
     middle: run('above'),
     west: [...inshore(-222, [-520, -360, -200, -60, 60, 200, 360, 500]), ...run('above')],

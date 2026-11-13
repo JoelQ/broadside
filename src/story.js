@@ -165,7 +165,7 @@ export const STORY = {
         'Marousa has been chalking ranges on the gun carriages. “If the wind fails,” she says, “we are a fort. Forts can win, if they are patient.”',
       ] },
       legs: [
-        { pause: ['The galleys haul off as the breeze comes: they have no wish to meet a sailing ship that can move.', 'Manolis points north-east. A tall ship, hull down, coming with the wind behind her. “They sent a friend.”'] },
+        { pause: ['The big galley hauls off as the breeze comes: she has no wish to meet a sailing ship that can move.', 'Manolis points north-east. A tall ship, hull down, coming with the wind behind her. “They sent a friend.”'] },
         {},
       ],
       end: { title: 'After the calm', text: [
@@ -180,7 +180,7 @@ export const STORY = {
         'Marousa has been chalking ranges on the gun carriages. “If the wind fails,” she says, “we are a fort. Forts can win, if they are patient.”',
       ] },
       legs: [
-        { pause: ['The galleys haul off as the breeze comes: they have no wish to meet a sailing ship that can move.', 'Manolis points north-east. A tall ship, hull down, coming with the wind behind her. “They sent a friend.”'] },
+        { pause: ['The big galley hauls off as the breeze comes: she has no wish to meet a sailing ship that can move.', 'Manolis points north-east. A tall ship, hull down, coming with the wind behind her. “They sent a friend.”'] },
         {},
       ],
       end: { title: 'After the calm', text: [
