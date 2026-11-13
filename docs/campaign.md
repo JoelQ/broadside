@@ -1,8 +1,12 @@
 # Broadside: the Candia campaign (proposal)
 
-A story campaign set in the last years of the Cretan War (1667–1669). You are an Aegean island
-captain who takes a commission with Venice or with the Ottoman fleet, and the campaign ends in the
-harbour of Candia, where your side wins the siege if you win the fight.
+A story campaign set in the Cretan War (1645–1669). You are an Aegean island captain who takes
+a commission with Venice or with the Ottoman fleet, and the campaign ends in the harbour of
+Candia, where your side wins the siege if you win the fight.
+
+The campaign follows the shape of the war and compresses its length: the fight to supply
+Crete, the blockade of the Dardanelles, the end at Candia. No years are shown on screen. (The
+real blockade was fought in the 1650s and the city fell in 1669.)
 
 Status: proposal. Numbers are starting points for the balance harness, and historical details
 need a research pass before any text is written.
@@ -36,7 +40,11 @@ need a research pass before any text is written.
 6. **Mirror the story, not always the fight.** Both sides live through the same events, but
    each gets the active seat. Where the other end of a fight would be passive, that side plays
    a different fight in the same episode.
-7. **The story is told in the gaps.** Briefing in port, a few lines in each pause at sea, a
+7. **One ship, few opponents.** You command one ship at a time, always. Prizes are sailed
+   clear by a prize crew and do not fight beside you. Fights are one against one to one
+   against three. The single exception is the harbour in the finale, where other ships fight
+   each other in pairs as background.
+8. **The story is told in the gaps.** Briefing in port, a few lines in each pause at sea, a
    closing scene. Text only, in keeping with a game that has no asset files.
 
 ## Structure
@@ -71,7 +79,7 @@ Venice's home port is Suda; the Ottoman one is Chania. Both reuse the existing h
 | 1 | **Powder for Candia** | Run the powder ship into the city through the patrol | Deal with the powder ship at her anchorage before she sails | Story |
 | 2 | **Independent command** | Clear the pirates from the Cyclades | Same | Shared |
 | 3 | **The calm** | Galleys come out at dawn in a dead calm; the wind is coming | Same, under the other flag | Fight |
-| 4 | **The relief fleet** | Silence the siege battery that closes the anchorage to the relief | Send fireships into the relief squadron at anchor | Story |
+| 4 | **The straits** | Go up the Dardanelles and destroy the flagship fitting out above the castles | Come down the Dardanelles and break the blockade at its mouth | Story |
 | 5 | **Candia** | The defence of the harbour on the day of the assault | The assault | Story |
 
 Each mission below lists three routes, to show it is not a one-answer problem. They are
@@ -107,17 +115,24 @@ In a galley you meet them oar to oar and try to finish before the wind arrives. 
 anchor on a spring, hold them off with grape and wait for the breeze. Nimble: use every
 cat's-paw of wind to keep your broadside on their bows. Oared: fight them on their own terms.
 
-**4. The relief fleet.** A French squadron has come to save the city, and this is the last
-hope of one side and the last danger to the other. It raises the stakes for the finale, and
-each side does here what it will face from the other end at Candia.
+**4. The straits.** Venice carries the war to the enemy's door by blockading the Dardanelles.
+It is the furthest the story goes from Crete, and it reverses the roles: Venice is the
+attacker far from home and the Ottomans fight in their own water. Whoever wins here decides
+what force reaches Candia, which sets up the finale.
 
-- *Venice: the battery.* An Ottoman siege battery commands the anchorage, and the relief
-  cannot land while it stands. Heavy: stand in and out-shoot it. Nimble: work into its dead
-  ground and fire the magazine with heated shot. Boarder: put a party ashore and spike the guns.
-- *Ottomans: the fireships.* The relief squadron lies at anchor behind guard ships. You have
-  hulks rigged to burn; get fire among the anchored ships. Heavy: break the guard so the
-  hulks drift in unopposed. Nimble: tow a hulk in close and cut her loose. Boarder: take a
-  guard ship, set her alight and send her in.
+The strait has its own rule: a **current** runs out to sea, strongest in mid-channel, with
+slack water and back-eddies inshore, where the shoals and the castle guns are. The wind
+usually blows the same way. Going up is slow and coming down is fast and hard to undo.
+
+- *Venice: up the straits.* A new Ottoman flagship is fitting out above the castles with one
+  guard ship. Destroy or take her, then get out. Heavy: fight up the middle and trade shots
+  with a castle. Nimble: creep up the inshore eddies among the shoals and burn her with
+  heated shot. Oared or boarder: cut her out and ride the current home.
+- *Ottomans: down the straits.* Two Venetian ships lie anchored across the mouth. Break the
+  blockade: take, sink or burn one, or force her to cut her cable and drift off station.
+  Heavy: anchor upstream of her and out-shoot her. Nimble: sweep past her bows, rake, and
+  work back up the eddies for another pass. Boarder: let the current carry you onto her.
+  Anyone: set a prize alight and let the current take it down onto an anchored ship.
 
 There is no raid mission. The prologue already shows a raid from the defender's side, one
 scenario in the pirate pool is a pirate landing on a village, and the officers can say in
@@ -154,6 +169,9 @@ merchantman (the frigate) and a flagship (the galleon).
 **Wind strength** is set per fight and can change during it: calm, breeze or gale. It
 governs speed and momentum under sail, and a gale spoils everyone's gunnery.
 
+**Current.** Used in the straits: a steady drift that every ship feels, varying across the
+channel.
+
 **Shoals and grounding.** Shallow water is marked, and a ship that draws too much sticks
 there until she works herself off. The AI can be lured aground, and so can you.
 
@@ -180,7 +198,7 @@ Today a battle is exactly one player and one enemy. The campaign needs, in build
    legs with carried state, and the pause screen. This is the largest single piece of work.
 2. **AI for more than a duel.** Choosing targets, working in pairs, coping with shoals and forts.
 3. **Wind strength, oars with stamina and forward guns.**
-4. **Fixed things.** Shore batteries with drawn arcs, anchored ships, shoals and grounding.
+4. **Fixed things.** Shore batteries with drawn arcs, anchored ships, shoals and grounding, current.
    A background battle of paired duels for the finale.
 5. **Campaign state.** Saved progress, the stable, officers, colours and flags for each side.
 6. **Harness.** Run whole missions, and report which approaches win, so no mission has a
@@ -192,7 +210,7 @@ Today a battle is exactly one player and one enemy. The campaign needs, in build
    legs and a goal that is not a duel.
 2. **Oars:** wind strength and galleys; mission 3; the Ottoman side of mission 1.
 3. **Command:** the pirate pool for mission 2.
-4. **Endgame:** the relief fleet (shore battery, fireships) and the finale.
+4. **Endgame:** the straits (current, castles) and the finale.
 5. **Story:** officers, text, balance.
 
 The existing five-pirate ladder stays playable as a skirmish mode.
