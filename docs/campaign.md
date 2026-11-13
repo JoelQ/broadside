@@ -165,7 +165,7 @@ Today a battle is exactly one player and one enemy. The campaign needs, in build
 
 1. **Missions with several ships.** A list of ships with sides, goals other than "destroy her",
    legs with carried state, and the pause screen. This is the largest single piece of work.
-2. **AI for more than a duel.** Choosing targets, escorting, merchantmen that flee.
+2. **AI for more than a duel.** Choosing targets, working in pairs, coping with shoals and forts.
 3. **Wind strength, oars with stamina and forward guns.**
 4. **Fixed things.** Shore batteries with drawn arcs, anchored ships, shoals and grounding.
    A background battle of paired duels for the finale.
