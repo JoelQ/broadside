@@ -58,6 +58,9 @@ Sea repairs are capped, so damage still matters, but a bad first leg is not the 
 mission. Failing a leg lets you retry it from the state you entered it in, or restart the mission.
 
 Port sits between missions: full repairs, fittings, shot, and the choice of which ship to take.
+That choice is fixed once you sail. For the rest of the mission you have that ship and any
+prizes you board along the way: prizes stay with you, you can shift your flag between them at
+any pause, and those that survive join your stable in port.
 Venice's home port is Suda; the Ottoman one is Chania. Both reuse the existing harbour.
 
 ## The campaign
@@ -68,7 +71,7 @@ Venice's home port is Suda; the Ottoman one is Chania. Both reuse the existing h
 | 1 | **Powder for Candia** | Run the powder ship into the city through the patrol | Deal with the powder ship at her anchorage before she sails | Story |
 | 2 | **Independent command** | Clear the pirates from the Cyclades | Same | Shared |
 | 3 | **The calm** | Galleys come out at dawn in a dead calm; the wind is coming | Same, under the other flag | Fight |
-| 4 | **The raid** | Break up a corsair landing on Tinos | Break up a landing by the Knights' galleys on an Ottoman island town | Story |
+| 4 | **The relief fleet** | Silence the siege battery that closes the anchorage to the relief | Send fireships into the relief squadron at anchor | Story |
 | 5 | **Candia** | The defence of the harbour on the day of the assault | The assault | Story |
 
 Each mission below lists three routes, to show it is not a one-answer problem. They are
@@ -76,7 +79,7 @@ examples, not the only ways through.
 
 **0. Home waters.** One fight, in your own trading brig. It is the tutorial and it reuses the
 existing coaching. Afterwards both powers offer a commission, and you choose in the story.
-Replays can skip straight to the choice.
+It is always played: it is short, and it is where the story starts.
 
 **1. Powder for Candia.** The same powder ship and the same rival captain appear in both
 stories; in each, your side wins.
@@ -93,7 +96,7 @@ stories; in each, your side wins.
 **2. Independent command.** Three fights drawn at random from a pool of about six pirate
 scenarios, with a jury-rig pause between each. The pool reuses the five existing pirate
 captains and the cheaper archetypes: two galliots working together, a duel on a lee shore in
-a gale, a pirate at anchor in a cove, a ship hiding among islets, a pirate who can be
+a gale, a pirate at anchor in a cove, a pirate landing on a village, a ship hiding among islets, a pirate who can be
 approached under false colours. This is the experiment with roguelike play, and the chapter
 where most players will fill their stable.
 
@@ -104,15 +107,25 @@ In a galley you meet them oar to oar and try to finish before the wind arrives. 
 anchor on a spring, hold them off with grape and wait for the breeze. Nimble: use every
 cat's-paw of wind to keep your broadside on their bows. Oared: fight them on their own terms.
 
-**4. The raid.** Raiders are putting boats ashore near a town. The goal is to make them give
-up the landing: sink or take their leader, burn the boats, or drive the ships off. The longer
-it takes, the worse the town fares and the smaller your reward, but there is no clock that
-fails you. Each side only ever defends, so nobody plays the raider, and the briefing admits
-that your own admirals license the same thing.
+**4. The relief fleet.** A French squadron has come to save the city, and this is the last
+hope of one side and the last danger to the other. It raises the stakes for the finale, and
+each side does here what it will face from the other end at Candia.
+
+- *Venice: the battery.* An Ottoman siege battery commands the anchorage, and the relief
+  cannot land while it stands. Heavy: stand in and out-shoot it. Nimble: work into its dead
+  ground and fire the magazine with heated shot. Boarder: put a party ashore and spike the guns.
+- *Ottomans: the fireships.* The relief squadron lies at anchor behind guard ships. You have
+  hulks rigged to burn; get fire among the anchored ships. Heavy: break the guard so the
+  hulks drift in unopposed. Nimble: tow a hulk in close and cut her loose. Boarder: take a
+  guard ship, set her alight and send her in.
+
+There is no raid mission. The prologue already shows a raid from the defender's side, one
+scenario in the pirate pool is a pirate landing on a village, and the officers can say in
+passing that both fleets license the same thing.
 
 **5. Candia.** Three fights without port on the day of the final assault, around the Koules,
-the sea fortress at the harbour mouth. Your whole stable is in reserve, and at each pause you
-may shift your flag to another of your ships.
+the sea fortress at the harbour mouth. As in every mission, you fight it with the ship you
+chose and whatever you capture on the day.
 
 - *Ottomans: the assault.* (1) The mouth: get in under the fortress guns and silence a
   battery or fire its magazine, by any means. (2) The harbour: a melee, with the rest of both
@@ -179,7 +192,7 @@ Today a battle is exactly one player and one enemy. The campaign needs, in build
    legs and a goal that is not a duel.
 2. **Oars:** wind strength and galleys; mission 3; the Ottoman side of mission 1.
 3. **Command:** the pirate pool for mission 2.
-4. **Endgame:** the raid and the finale, with the reserve squadron.
+4. **Endgame:** the relief fleet (shore battery, fireships) and the finale.
 5. **Story:** officers, text, balance.
 
 The existing five-pirate ladder stays playable as a skirmish mode.
