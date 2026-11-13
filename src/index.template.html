@@ -159,6 +159,15 @@ body.touch #coach{bottom:auto;top:130px;font-size:14px}
 .pip.friend{color:#a9d2ff} .pip.friend .h i{background:#7ab8ff} .pip.foe{color:#ffb4aa} .pip.out{color:#aaa;opacity:.7} .pip.out .h i{background:#888}
 #windName{font-size:12px;opacity:.85} #windName.bad{color:#ff9a8a;opacity:1}
 #oars{font-size:12px;margin-top:3px;pointer-events:auto;cursor:pointer} #oars .t{height:5px;background:rgba(0,0,0,.5);border-radius:3px;overflow:hidden;margin-top:2px} #oars .t i{display:block;height:100%;background:#8fd0ff}
+#screen.dim{background:rgba(5,10,18,.8);overflow-y:auto;align-items:flex-start}
+.story{max-width:660px;margin:auto;text-align:left;font-size:17px;line-height:1.45;text-shadow:0 1px 3px #000;padding:10px 4px}
+.story.wide{max-width:860px}
+.story h2{font:400 clamp(30px,5vw,46px)/1 var(--head);color:#f6e3b0;margin:4px 0 12px;letter-spacing:1px}
+.story p{margin:0 0 11px} .story .note{font-size:14.5px;opacity:.85;margin:4px 0;font-style:italic}
+.story .officer{margin:10px 0;padding:9px 12px;border:1px solid rgba(201,162,74,.6);border-radius:8px;background:rgba(8,18,30,.6);font-size:15.5px} .story .officer small{display:block;color:#ffe29a;margin-top:3px}
+.story .cols{display:grid;grid-template-columns:240px 1fr;gap:16px;margin-top:10px} .story .shipstate h3{font:400 22px var(--head);margin:0 0 6px;color:#f6e3b0}
+.story .item{display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.12)} .story .item.prize{background:rgba(201,162,74,.1)}
+@media (max-width:700px){.story .cols{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -202,7 +211,7 @@ body.touch #coach{bottom:auto;top:130px;font-size:14px}
   </div>
   <div id="help" class="panel" data-tapkey="h">
     <div class="tip"><kbd>H</kbd> keys</div>
-    <div class="all"><kbd>A</kbd><kbd>D</kbd> rudder · <kbd>W</kbd><kbd>S</kbd> sail<br><kbd>Space</kbd> fire · <kbd>Q</kbd><kbd>E</kbd> one side<br><kbd>1</kbd>–<kbd>4</kbd> shot · <kbd>B</kbd> board inside her ring<br><kbd>V</kbd> camera · <kbd>P</kbd> pause · <kbd>M</kbd> mute</div>
+    <div class="all"><kbd>A</kbd><kbd>D</kbd> rudder · <kbd>W</kbd><kbd>S</kbd> sail<br><kbd>Space</kbd> fire · <kbd>Q</kbd><kbd>E</kbd> one side<br><kbd>1</kbd>–<kbd>4</kbd> shot · <kbd>B</kbd> board inside her ring<br><kbd>V</kbd> camera · <kbd>P</kbd> pause · <kbd>M</kbd> mute<br><kbd>T</kbd> next target · <kbd>G</kbd> anchor<br><kbd>R</kbd> oars · <kbd>F</kbd> bow guns</div>
   </div>
   <div id="boardGo" class="hidden" data-tapkey="b"></div>
   <div id="touch">
@@ -211,6 +220,8 @@ body.touch #coach{bottom:auto;top:130px;font-size:14px}
     <div class="tb" data-tap="w" style="left:14px;bottom:90px">Sail +</div>
     <div class="tb" data-tap="s" style="left:84px;bottom:90px">Sail −</div>
     <div class="tb" data-tap="v" style="right:14px;bottom:90px">Cam</div>
+    <div class="tb" data-tap="t" style="right:84px;bottom:90px">Target</div>
+    <div class="tb" data-tap="g" style="right:84px;bottom:20px">Anchor</div>
     <div class="tb" data-tap=" " style="right:14px;bottom:20px;width:72px;height:64px;border-radius:14px;background:rgba(184,55,43,.7)">FIRE</div>
   </div>
 </div>
@@ -230,7 +241,7 @@ body.touch #coach{bottom:auto;top:130px;font-size:14px}
 </div>
 
 <div id="port" class="hidden">
-  <div id="portTop"><div class="eyebrow">Home port</div><div class="nm">Port Halcyon</div><div id="purse"></div></div>
+  <div id="portTop"><div class="eyebrow">Home port</div><div class="nm" id="portName">Port Halcyon</div><div id="purse"></div></div>
   <div id="spots"></div>
   <div id="shop" class="panel hidden"></div>
   <div id="portGo"><div id="nextLine"></div><button class="btn big" data-act="sail">Put to sea</button></div>

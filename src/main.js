@@ -5,6 +5,9 @@ import { Ship, AMMO, AMMO_KEYS, CAL, SAILS, TOP, noGoHalf, wrap, clamp, polar, p
 import { PLAYER_SPEC, ENEMIES, KITS, KIT_OF, kitCost, SHOPS, REPAIR } from './data.js';
 import { updateAI, newAI } from './ai.js';
 import { buildHarbor } from './harbor.js';
+import { HULLS, shipSpec, GALLEY_KIT } from './fleet.js';
+import { CAMP } from './campaign.js';
+import { steerTo } from './ai.js';
 
 const $ = (id) => document.getElementById(id);
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -53,7 +56,12 @@ window.G = G;
 
 // Any ship you have boarded and taken is yours to command. In your hands she keeps her hull
 // and her handling, under your colours and with your gunners.
+const ALL_KITS = { ...KITS, galley: GALLEY_KIT };
+const camId = (id) => typeof id === 'string' && id !== 'wren'; // campaign ships are stable entries; skirmish ships are numbers
+const sid = (id) => (id === 'wren' || isNaN(+id) ? id : +id);
+const kitOf = (id) => ALL_KITS[camId(id) ? HULLS[CAMP.entry(id).hull].kit : KIT_OF[id]];
 function hullSpec(id) {
+  if (camId(id)) { const e = CAMP.entry(id); return shipSpec(e.hull, CAMP.livery(), e.name, 'own', { stock: {} }); }
   if (id === 'wren') return PLAYER_SPEC;
   const es = ENEMIES[id];
   return { ...es, sailCol: PLAYER_SPEC.sailCol, emblem: 'cross', emblemCol: PLAYER_SPEC.emblemCol, flagCol: PLAYER_SPEC.flagCol, crewCols: PLAYER_SPEC.crewCols, disp: PLAYER_SPEC.disp, dmg: 1, melee: 1, reload: es.reload - 1, ai: PLAYER_SPEC.ai, stock: {} };
@@ -61,17 +69,17 @@ function hullSpec(id) {
 const fitOf = (id) => G.fit[id] || (G.fit[id] = {});
 function playerSpec() {
   const b = hullSpec(G.ship), lv = fitOf(G.ship);
-  const mods = { speed: 1, turn: 1, arc: 1, reload: 1, melee: 1, evade: 1, boardReach: 1, boardSpeed: 1, swivel: 1, reach: 1, dmg: 1, guns: 0, hull: 0, crew: 0, sweeps: 0 };
-  for (const it of KITS[KIT_OF[G.ship]].items) {
+  const mods = { speed: 1, turn: 1, arc: 1, reload: 1, melee: 1, evade: 1, boardReach: 1, boardSpeed: 1, swivel: 1, reach: 1, dmg: 1, oars: 1, guns: 0, hull: 0, crew: 0, sweeps: 0 };
+  for (const it of kitOf(G.ship).items) {
     const n = lv[it.id] || 0;
     for (const k in it.mul || {}) mods[k] *= it.mul[k] ** n;
     for (const k in it.add || {}) mods[k] += it.add[k] * n;
   }
-  return { ...b, mods, guns: b.guns + mods.guns, hull: b.hull + mods.hull, crew: b.crew + mods.crew, speed: b.speed * mods.speed, turn: b.turn * mods.turn, arc: b.arc * mods.arc, reach: mods.reach, sweeps: mods.sweeps };
+  return { ...b, mods, guns: b.guns + mods.guns, hull: b.hull + mods.hull, crew: b.crew + mods.crew, speed: b.speed * mods.speed, turn: b.turn * mods.turn, arc: b.arc * mods.arc, reach: mods.reach, sweeps: mods.sweeps, oars: b.oars ? b.oars * mods.oars : 0 };
 }
 function buildPlayer(fresh) {
   const old = G.player, p = new Ship(playerSpec(), true);
-  p.reloadMult = p.spec.mods.reload; p.melee = p.spec.mods.melee; p.evade = p.spec.mods.evade; p.dmgMult *= p.spec.mods.dmg;
+  p.reloadMult = p.spec.mods.reload; p.melee = (p.spec.melee || 1) * p.spec.mods.melee; p.quickShot = G.mode === 'campaign' && CAMP.has('gunner'); p.evade = p.spec.mods.evade; p.dmgMult *= p.spec.mods.dmg;
   if (old) {
     if (!fresh) { p.hull = old.hull + p.hullMax - old.hullMax; p.sails = old.sails + p.sailsMax - old.sailsMax; p.crew = old.crew + p.crewMax - old.crewMax; }
     p.stock = old.stock; p.pos.copy(old.pos); p.heading = old.heading; p.speed = old.speed; p.sailLevel = old.sailLevel; p.input = old.input;
@@ -81,8 +89,7 @@ function buildPlayer(fresh) {
   p.side = 0; p.name = p.spec.name;
   if (old && old.arcs) dropArcs(old);
   G.player = p;
-  const i = G.ships.indexOf(old);
-  if (i >= 0) G.ships[i] = p; else G.ships.unshift(p);
+  G.ships = [p, ...G.ships.filter((s) => !s.isPlayer)];
 }
 // every ship in the fight: side 0 is yours, side 1 the enemy's
 function addShip(spec, side, x, z, heading, o = {}) {
@@ -431,6 +438,7 @@ function collide(a, b) {
     if (ov <= 0) continue;
     const nx = dx / d, nz = dz / d, rel = relSpeed(a, b);
     a.pos.x -= nx * ov * 0.5; a.pos.z -= nz * ov * 0.5; b.pos.x += nx * ov * 0.5; b.pos.z += nz * ov * 0.5;
+    if (a.fire > 0 && b.fire === 0 && Math.random() < 0.02) { b.fire = 1; b.fireT = 11; } else if (b.fire > 0 && a.fire === 0 && Math.random() < 0.02) { a.fire = 1; a.fireT = 11; }
     if (a.ramCd <= 0 && rel > 5 && (G.state === 'battle' || G.state === 'boarding')) {
       a.ramCd = b.ramCd = 1.6;
       const dmg = rel * 1.3;
@@ -537,6 +545,53 @@ function drawZones() {
     m.position.set(z.x, 1.2, z.z); scene.add(m); G.zoneMeshes.push(m);
   }
 }
+// Build a campaign leg from its definition (see missions.js) and show its card.
+function startScenario(def, c) {
+  G.mode = 'campaign';
+  world.clearIslands();
+  const S = { by: {}, flag: {}, t: 0, p: G.player,
+    inZone: (n) => { const z = (sc.zones || []).find((q) => q.name === n); return !!z && Math.hypot(G.player.pos.x - z.x, G.player.pos.z - z.z) < z.r; },
+    say: (t, cls = 'big') => toast(t, cls, 4500),
+    wind: (dir, str) => world.setWind(dir, str),
+    addZone: (z) => { sc.zones.push(z); drawZones(); },
+    blow: (ship) => shipOut(ship, 'blown'),
+  };
+  const sc = { ...def, S, zones: [...(def.zones || [])], events: (def.events || []).map((e) => ({ t: e.t, fn: () => e.fn(S) })) };
+  sc.check = () => { S.t = G.battleT; return def.check(S); };
+  c.S = S;
+  beginScenario(sc);
+  world.setEnv(def.env || 'noon');
+  if (def.seedIslands) world.setIslands(def.seedIslands[0], def.seedIslands[1]);
+  for (const i of def.islands || []) world.addIsland(i);
+  world.setShoals(def.shoals || [], c.has('pilot'));
+  world.currentAt = def.current ? (x, z) => def.current(x, z) : null;
+  world.setWind(def.wind.dir, def.wind.str ?? 1, true); world.wind.steady = !!def.wind.steady; world.wind.timer = 40;
+  const p = G.player, pl = def.player;
+  p.pos.set(pl.x, 0, pl.z); p.heading = wrap(pl.h); p.speed = p.v0 = pl.speed ?? 6; p.sailLevel = TOP;
+  for (const d of def.ships) {
+    const o = d.o || {}, s = addShip(d.spec, d.side, d.x, d.z, wrap(d.h), { id: d.id, ...o });
+    if (o.anchored) { s.anchored = true; s.speed = 0; s.keepSail = true; s.sailLevel = 0; }
+    if (o.hold) s.ai.hold = true;
+    if (o.goTo) { s.ai.goTo = o.goTo; s.keepSail = true; }
+    s.v0 = s.speed; S.by[d.id] = s;
+  }
+  // a blazing ship that fouls another passes the fire on; the blast of a powder ship hurts whatever is near
+  sc.onOut = (s, how) => {
+    if (how === 'blown') for (const o of G.ships) { const d = sep(s, o); if (o !== s && !o.out && d < 70) { o.hull -= (s.spec.fixed ? 60 : 110) * (1 - d / 70); if (o.isPlayer) toast('Caught in the blast!', 'bad'); } }
+    if (def.onOut) def.onOut(s, how, S);
+    if (c.onOut) c.onOut(s, how);
+  };
+  sc.onEnd = (o) => c.onEnd(o);
+  aiApi.onCut = (s) => { S.flag.cut = true; if (s.side !== p.side) toast(`${s.name} cuts her cable!`, 'big', 3500); };
+  setTarget(def.focus ? S.by[def.focus] : nearest(p, foesOf(p)));
+  G.state = 'intro'; G.focus = 'enemy';
+  showLegCard(c.card(def));
+}
+function showLegCard(h) {
+  setMode(null); $('bars').classList.add('on');
+  showScreen(`<div class="lower"><div class="eyebrow">${h.eyebrow}</div><h1>${h.title}</h1><div class="line">${h.line}</div>
+    <div class="hook">${h.hook || ''}</div><button class="btn big" data-act="engage">${h.go || 'Beat to quarters'}</button></div>`, 'clear low');
+}
 function startIntro() {
   const es = ENEMIES[G.level];
   G.mode = 'skirmish';
@@ -560,7 +615,8 @@ function startIntro() {
 }
 function beginBattle() {
   G.state = 'battle'; G.focus = 'player'; G.cam.yaw = 0; G.battleT = 0; G.fired = G.raked = false;
-  for (const s of G.ships) if (!s.anchored && !s.spec.fixed && !s.keepSail) s.sailLevel = TOP;
+  for (const s of G.ships) { if (!s.anchored && !s.spec.fixed && !s.keepSail) s.sailLevel = TOP; if (G.mode === 'campaign' && s.v0 != null) s.speed = s.v0; }
+  $('bars').classList.remove('on');
   hideScreen(); setMode('battle');
   retarget();
   noGo.geometry.dispose(); noGo.geometry = noGoGeo(noGoHalf(G.player.spec));
@@ -611,6 +667,10 @@ function runAI(dt) {
   const p = G.player;
   for (const s of G.ships) {
     if (s === p || !s.ai || !s.active) continue;
+    if (s.ai.hold) { // under false colours she takes you for a friend, until you show otherwise
+      if (G.fired || sep(p, s) < s.spec.L * 1.1 || s.hull < s.hullMax) { s.ai.hold = false; if (!G.fast) toast(`${s.name} knows you now!`, 'bad'); } else { s.input.turn = 0; s.sailLevel = 1; continue; }
+    }
+    if (s.ai.goTo) { steerTo(s, s.ai.goTo[0], s.ai.goTo[1], world); continue; }
     if ((s.ai.pick = (s.ai.pick || 0) - dt) <= 0 || !s.target || !s.target.active) { s.target = pickTarget(s); s.ai.pick = 2.5; }
     if (s.target) updateAI(s.ai, s, s.target, world, dt, aiApi);
     else { s.input.turn = 0; if (!s.spec.fixed) s.sailLevel = 1; }
@@ -642,6 +702,8 @@ function battleUpdate(dt) {
   G.canBoard = alongside && e.speed < BOARD_SLOW * p.spec.mods.boardSpeed && (e.active || G.sc.boardWrecks);
   if (p.sailLevel > 0 && p.speed < 2.5 && world.wind.str > 0.3 && !p.anchored && p.aground <= 0 && !p.oarSpeed(world) && Math.abs(wrap(p.heading - world.wind.dir)) > Math.PI - noGoHalf(p.spec) + 0.05) toastOnce('irons', 10, 'In irons — turn away from the wind’s eye!', 'bad', 3000);
   if (world.wind.str > 1.3 && p.sailLevel === TOP) toastOnce('gale', 12, 'Full sail in a gale is tearing the canvas — shorten sail!', 'bad', 3000);
+  if (world.wind.next != null && !G.windCalled && G.mode === 'campaign' && CAMP.has('pilot') && Math.abs(world.wind.next) > 0.25) { G.windCalled = true; toast(`Pilot: “Wind’s about to shift, ${world.wind.next > 0 ? 'veering' : 'backing'}.”`, '', 3500); }
+  if (world.wind.next == null) G.windCalled = false;
   fates();
   if (p.hull <= 0) return endBattle('lost');
   const r = G.sc.check && G.sc.check(dt);
@@ -1071,11 +1133,15 @@ const KEYS_HTML = `<div class="keys">
   <div><kbd>A</kbd><kbd>D</kbd> rudder</div><div><kbd>W</kbd><kbd>S</kbd> more / less sail</div>
   <div><kbd>Space</kbd> fire the side that bears</div><div><kbd>Q</kbd><kbd>E</kbd> fire port / starboard</div>
   <div><kbd>1</kbd>–<kbd>4</kbd> round · chain · grape · heated</div><div><kbd>B</kbd> board when alongside</div>
-  <div><kbd>V</kbd> camera</div><div><kbd>P</kbd> pause · <kbd>M</kbd> mute</div></div>`;
+  <div><kbd>V</kbd> camera</div><div><kbd>P</kbd> pause · <kbd>M</kbd> mute</div>
+  <div><kbd>T</kbd> next target</div><div><kbd>G</kbd> anchor on a spring</div>
+  <div><kbd>R</kbd> oars: rest · row · sprint</div><div><kbd>F</kbd> fire the bow guns</div></div>`;
 function showTitle() {
   G.state = 'title'; setMode(null);
-  showScreen(`<div id="titleWrap"><h1>Broadside</h1><div class="tag">Five pirate captains. One brig. Port Halcyon is counting on you.</div>
-    <button class="btn big" data-act="sail">Weigh anchor</button></div>`, 'clear');
+  const saved = CAMP.saved();
+  showScreen(`<div id="titleWrap"><h1>Broadside</h1><div class="tag">The war for Candia, 1645–1669. An island captain, two flags to choose from.</div>
+    <div class="rowc">${saved ? `<button class="btn big" data-act="camp:continue">Continue the campaign</button><button class="btn" data-act="camp:new">New campaign</button>` : `<button class="btn big" data-act="camp:new">Begin the campaign</button>`}
+    <button class="btn" data-act="skirmish">Skirmish: five pirates</button></div>${saved ? `<div class="tag" style="font-size:15px;margin-top:14px">${saved}</div>` : ''}</div>`, 'clear');
 }
 function showIntro(es) {
   setMode(null); $('bars').classList.add('on');
@@ -1130,7 +1196,7 @@ function enterHarbor() {
   moor();
   // every ship you own but are not sailing rides at anchor in the bay
   for (const t of G.trophyShips) scene.remove(t.group);
-  G.trophyShips = ['wren', ...G.trophies].filter((id) => id !== G.ship).map((id, i) => {
+  G.trophyShips = (G.mode === 'campaign' ? CAMP.stableIds() : ['wren', ...G.trophies]).filter((id) => id !== G.ship).map((id, i) => {
     const t = new Ship(hullSpec(id), false), m = harbor.moorings[i % harbor.moorings.length];
     t.id = id; t.crew = 14; t.sailLevel = 0;
     t.pos.set(m[0], 0, m[1]); t.heading = m[2];
@@ -1139,10 +1205,12 @@ function enterHarbor() {
   });
 }
 const ROLE = { wren: 'Your old brig. Does everything fairly well.', 0: 'Darts and turns on a coin, and sails closer to the wind than anything afloat. Light guns with a wide sweep; a thin hull.', 1: 'A sound, balanced brig.', 2: 'Room for a huge crew: made for boarding. Light quick-firing guns, thin hull, points well to windward.', 3: 'Heavy guns that outreach everything smaller, slow to load. Ponderous at the helm, and short of hands.', 4: 'A fortress.' };
+const roleOf = (id) => (camId(id) ? HULLS[CAMP.entry(id).hull].role : ROLE[id]);
 function takeCommand(id) {
-  G.ship = id === 'wren' ? 'wren' : +id;
+  G.ship = sid(id);
   buildPlayer(true); moor(); enterHarbor(); G.shop = null;
   buildSpots(); renderPort(); setupHudNames(); sfx.horn(true);
+  if (G.mode === 'campaign') { CAMP.st.ship = G.ship; CAMP.save(); }
   toast(`You take command of the ${G.player.spec.name}`, 'big', 3000);
 }
 function buildSpots() {
@@ -1152,6 +1220,9 @@ function buildSpots() {
 function showPort() {
   G.state = 'port'; G.focus = 'player'; G.shop = null; G.cam.yaw = 0;
   enterHarbor(); hideScreen(); setMode('port'); setupHudNames();
+  const cam = G.mode === 'campaign';
+  $('portName').textContent = cam ? CAMP.portName() : 'Port Halcyon';
+  if (cam) { const p = G.player; p.hull = p.hullMax; p.sails = p.sailsMax; p.crew = p.crewMax; p.fire = 0; }
   buildSpots();
   renderPort();
 }
@@ -1160,11 +1231,12 @@ function renderPort() {
   const p = G.player, g = G.gold, nx = ENEMIES[G.level];
   setBars('p', p);
   $('purse').textContent = `${g} g`;
-  $('nextLine').innerHTML = `Next: <b>${nx.captain}</b><br>${nx.cls} <i>${nx.name}</i>`;
+  const cam = G.mode === 'campaign';
+  $('nextLine').innerHTML = cam ? CAMP.nextLine() : `Next: <b>${nx.captain}</b><br>${nx.cls} <i>${nx.name}</i>`;
   const need = { hull: p.hullMax - p.hull, sails: p.sailsMax - p.sails, crew: Math.round(p.crewMax - p.crew) };
   document.querySelectorAll('#spots .spot').forEach((el) => {
     const sh = SHOPS[el.dataset.spot] || {};
-    el.classList.toggle('need', !!sh.repair && need[sh.repair] >= 1);
+    el.classList.toggle('need', !cam && !!sh.repair && need[sh.repair] >= 1);
     el.classList.toggle('sel', G.shop === el.dataset.spot);
   });
   const box = $('shop');
@@ -1172,27 +1244,28 @@ function renderPort() {
   if (!G.shop) return;
   if (G.shop.startsWith('ship:')) {
     // another ship of yours: compare her with the one you are sailing, bar for bar
-    const id = G.shop.slice(5), h = hullSpec(id === 'wren' ? 'wren' : +id), cur = hullSpec(G.ship);
-    const val = { hull: (x) => x.hull, guns: (x) => x.guns, reach: (x) => 250 * CAL[x.cal].range, rate: (x) => 60 / (x.reload * CAL[x.cal].reload), crew: (x) => x.crew, speed: (x) => x.speed, turn: (x) => x.turn };
+    const id = sid(G.shop.slice(5)), h = hullSpec(id), cur = hullSpec(G.ship);
+    const val = { hull: (x) => x.hull, guns: (x) => x.guns + (x.bow ? x.bow.n / 2 : 0), reach: (x) => 250 * CAL[x.bow && x.bow.main ? x.bow.cal : x.cal].range, rate: (x) => 60 / (x.reload * CAL[x.cal].reload), crew: (x) => x.crew, speed: (x) => x.speed, turn: (x) => x.turn };
     const row = (label, k, max, txt) => `<div class="cmp"><span>${label}</span><div class="t"><i style="width:${(val[k](h) / max) * 100}%"></i><u style="left:${(val[k](cur) / max) * 100}%"></u></div><b>${txt || ''}</b></div>`;
-    box.innerHTML = `<h3>${h.name}<button class="x" data-act="closeshop">✕</button></h3><div class="role">${h.cls} · <b>${KITS[KIT_OF[id]].name}</b>. ${ROLE[id]}</div>
-      ${row('Hull', 'hull', 660, h.hull)}${row('Guns', 'guns', 13, h.guns * 2)}${row('Reach', 'reach', 310, CAL[h.cal].name)}${row('Loading', 'rate', 14)}${row('Crew', 'crew', 210, h.crew)}${row('Speed', 'speed', 16)}${row('Helm', 'turn', 0.8)}
+    box.innerHTML = `<h3>${h.name}<button class="x" data-act="closeshop">✕</button></h3><div class="role">${h.cls} · <b>${kitOf(id).name}</b>. ${roleOf(id)}</div>
+      ${row('Hull', 'hull', 900, h.hull)}${row('Guns', 'guns', 18, h.guns * 2 + (h.bow ? h.bow.n : 0))}${row('Reach', 'reach', 310, CAL[h.bow && h.bow.main ? h.bow.cal : h.cal].name)}${row('Loading', 'rate', 14)}${row('Crew', 'crew', 220, h.crew)}${row('Speed', 'speed', 16)}${row('Helm', 'turn', 0.8)}
+      <div class="role">Draws ${h.D.toFixed(1)}${h.oars ? ' · oars' : ''}</div>
       <div class="role"><u class="mk"></u> marks the ${cur.name}. Fittings stay with each ship; your shot comes with you.</div>
       <div class="rowc" style="margin-top:8px"><button class="btn" data-act="cmd:${id}">Take command</button></div>`;
     return;
   }
   const sh = SHOPS[G.shop], rows = [];
-  if (sh.repair) {
+  if (sh.repair && !cam) {
     const k = sh.repair, n = need[k], full = Math.ceil(n * COST(k));
     rows.push(`<div class="item"><div class="d">${REPAIR[k][0]}<small>${Math.floor(p[k])} / ${p[k + 'Max']}</small></div>
       <button class="btn sm" data-act="rep:${k}" ${n < 1 || g < COST(k) ? 'disabled' : ''}>${n < 1 ? 'Full' : g >= full ? full + ' g' : 'Spend ' + g + ' g'}</button></div>`);
   }
-  for (const it of KITS[KIT_OF[G.ship]].items.filter((x) => x.at === G.shop)) {
+  for (const it of kitOf(G.ship).items.filter((x) => x.at === G.shop)) {
     const lv = fitOf(G.ship)[it.id] || 0, c = kitCost(lv);
     rows.push(`<div class="item"><div class="d">${it.name} <span class="lv">${[0, 1].map((i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('')}</span><small>${it.desc}</small></div>
       <button class="btn sm" data-act="up:${it.id}" ${lv >= 2 || g < c ? 'disabled' : ''}>${lv >= 2 ? 'Fitted' : c + ' g'}</button></div>`);
   }
-  if (!rows.length) rows.push(`<div class="role">Nothing here suits a ${KITS[KIT_OF[G.ship]].name.toLowerCase()} like the ${p.spec.name}.</div>`);
+  if (!rows.length) rows.push(`<div class="role">${cam && sh.repair ? 'Repairs are on the fleet’s account. ' : ''}Nothing here suits a ${kitOf(G.ship).name.toLowerCase()} like the ${p.spec.name}.</div>`);
   for (const [k, n, c] of sh.ammo || []) {
     rows.push(`<div class="item"><svg viewBox="0 0 26 26">${ICON[k]}</svg><div class="d">${AMMO[k].long} ×${n}<small>Aboard: ${p.stock[k]}</small></div>
       <button class="btn sm" data-act="ammo:${k}:${n}:${c}" ${g < c ? 'disabled' : ''}>${c} g</button></div>`);
@@ -1208,6 +1281,7 @@ function portAction(a) {
   } else if (kind === 'ammo') { if (G.gold < +c) return; G.gold -= +c; p.stock[k] += +n; }
   else if (kind === 'up') { const f = fitOf(G.ship), cost = kitCost(f[k] || 0); if ((f[k] || 0) >= 2 || G.gold < cost) return; G.gold -= cost; f[k] = (f[k] || 0) + 1; buildPlayer(); moor(); setupHudNames(); }
   sfx.coin(); renderPort();
+  if (G.mode === 'campaign') CAMP.save();
 }
 function updatePortUI() {
   const n = harbor.spots.length;
@@ -1223,6 +1297,7 @@ function restart(full) {
   G.paused = false;
   const p = G.player;
   if (full) {
+    G.mode = 'skirmish';
     G.level = 0; G.gold = 0; G.earned = 0; G.fit = {}; G.stats = freshStats(); G.trophies = []; G.ship = 'wren';
     for (const t of G.trophyShips) scene.remove(t.group);
     G.trophyShips = [];
@@ -1232,7 +1307,10 @@ function restart(full) {
 }
 function act(a) {
   sfx.init(); sfx.ui();
-  if (a === 'sail') startIntro();
+  if (a.startsWith('camp:')) return CAMP.act(a.slice(5));
+  if (G.mode === 'campaign' && (a === 'sail' || a === 'restart' || a === 'retry')) return CAMP.act(a === 'sail' ? 'brief' : 'abandon');
+  if (a === 'skirmish') { G.mode = 'skirmish'; restart(true); }
+  else if (a === 'sail') startIntro();
   else if (a === 'engage') beginBattle();
   else if (a === 'port') { G.level++; showPort(); snapCamera(); }
   else if (a === 'final') showFinal();
@@ -1262,7 +1340,7 @@ function anchorKey() {
 function togglePause() {
   if (G.state !== 'battle' && G.state !== 'boarding' && !G.paused) return;
   G.paused = !G.paused;
-  if (G.paused) showScreen(`<div class="banner"><h1>Paused</h1>${KEYS_HTML}<div class="rowc"><button class="btn big" data-act="resume">Resume</button><button class="btn sm" data-act="restart">Abandon voyage</button></div></div>`);
+  if (G.paused) showScreen(`<div class="banner"><h1>Paused</h1>${KEYS_HTML}<div class="rowc"><button class="btn big" data-act="resume">Resume</button><button class="btn sm" data-act="restart">${G.mode === 'campaign' ? 'Give up this fight' : 'Abandon voyage'}</button></div></div>`);
   else hideScreen();
 }
 
@@ -1334,6 +1412,7 @@ canvas.addEventListener('wheel', (e) => { e.preventDefault(); G.cam.dist = clamp
 canvas.addEventListener('dblclick', () => (G.cam.yaw = 0));
 
 // ---------- main loop ----------
+const hush0 = (now) => now === 'intro' && G.mode === 'campaign';
 function update(dt) {
   G.t += dt;
   const st = G.state;
@@ -1342,19 +1421,20 @@ function update(dt) {
   else if (st === 'ending') { if ((G.endT -= dt) <= 0) showResult(); }
   const p = G.player, e = G.enemy, now = G.state;
   const home = now === 'title' || now === 'port' || now === 'won' || now === 'story';
-  if (now === 'intro') { p.input.turn = 0.12; p.sailLevel = 2; if (e && G.mode === 'skirmish') { e.input.turn = -0.15; e.sailLevel = 2; } }
+  if (now === 'intro' && !hush0(now)) { p.input.turn = 0.12; p.sailLevel = 2; if (e && G.mode === 'skirmish') { e.input.turn = -0.15; e.sailLevel = 2; } }
   if (now === 'ending' || now === 'result' || now === 'over') {
     for (const s of G.ships) s.input.turn = 0;
     if (G.outcome === 'captured' || G.outcome === 'overrun' || G.outcome === 'struck') { if (e) e.sailLevel = 0; p.sailLevel = 0; }
   }
   const bf = now === 'boarding' && G.bd ? G.bd.foe : null;
-  p.update(dt, world, bf || home);
+  const hush = now === 'intro' && G.mode === 'campaign'; // a leg's card: nothing moves until you engage
+  p.update(dt, world, bf || home || hush);
   if (home) { for (const t of G.trophyShips) t.update(dt, world, true); if (!G.fast) harbor.update(dt); }
   else {
     const ss = G.ships, live = now === 'battle' || now === 'ending' || now === 'boarding';
     for (const s of ss) {
       if (s === p) continue;
-      s.update(dt, world, s === bf || now === 'intro' && s.anchored);
+      s.update(dt, world, s === bf || hush);
       collideIslands(s); shipEffects(s, dt); flushTally(s, dt);
     }
     if (live) for (let i = 0; i < ss.length; i++) for (let j = i + 1; j < ss.length; j++) if (!(bf && (ss[i] === p || ss[i] === bf) && (ss[j] === p || ss[j] === bf))) collide(ss[i], ss[j]);
@@ -1385,7 +1465,8 @@ G.step = (dt, n = 1) => { for (let i = 0; i < n; i++) update(dt); renderer.rende
 G.newAI = newAI;
 G.tick = (dt, n = 1) => { for (let i = 0; i < n; i++) update(dt); };
 G.world = world; G.view = { renderer, scene, camera };
-G.api = { aiApi, addShip, beginScenario, beginBattle, shipOut, setTarget, foesOf, sep, relSpeed, hideScreen, showScreen, setMode, enterHarbor, snapCamera, buildPlayer, moor, playerSpec, renderPort: () => renderPort(), sfx, fx, floater, store, harbor, cutGrapples, hullSpec, updateAI, reach, inArc, hasGauge, strength: (s) => strength(s), rebuild: () => { scene.remove(G.player.group); G.player = null; buildPlayer(true); }, fire, act, tap, keys, startBoarding, boardSwivel, endBattle, toast, showPort, prize };
+G.api = { aiApi, nearest, dropArcs, startScenario, showLegCard, showTitle: () => showTitle(), showPort: () => showPort(), clearShips, world, toast, strengthOf: (x) => strength(x), scene, restartSkirmish: () => restart(true),  addShip, beginScenario, beginBattle, shipOut, setTarget, foesOf, sep, relSpeed, hideScreen, showScreen, setMode, enterHarbor, snapCamera, buildPlayer, moor, playerSpec, renderPort: () => renderPort(), sfx, fx, floater, store, harbor, cutGrapples, hullSpec, updateAI, reach, inArc, hasGauge, strength: (s) => strength(s), rebuild: () => { if (G.player.arcs) dropArcs(G.player); scene.remove(G.player.group); G.player = null; buildPlayer(true); }, fire, act, tap, keys, startBoarding, boardSwivel, endBattle, toast, showPort, prize };
+CAMP.init(G, G.api); G.CAMP = CAMP;
 showTitle();
 snapCamera();
 requestAnimationFrame(frame);

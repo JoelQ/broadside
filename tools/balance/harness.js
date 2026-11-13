@@ -58,7 +58,108 @@
     };
   }
 
+  // ---------- campaign legs ----------
+  // A route is a list of steps, done in order:
+  //   { go: [x, z] | 'zone:name', r }                 sail there (firing at whatever bears on the way)
+  //   { kill: id | 'all', move, ammo, board, anchor }  fight that ship until she is out
+  // move: duel | kite | hug | close | bow.  anchor: true drops an anchor on a spring once in range.
+  const fake = (x, z) => ({ pos: { x, z }, fwdX: 0, fwdZ: 0, speed: 0, crewR: 1, sailR: 1, fire: 0, exposed: 0, crew: 1, melee: 1, hullR: 1, active: false, isPlayer: false, spec: { L: 1, B: 1 }, stock: {} });
+  function routeBot(steps) {
+    const ai = G.newAI(), st = { i: 0, swap: 0 };
+    return (me, _e, dt) => {
+      const S = G.sc.S, foes = G.api.foesOf(me);
+      let step = steps[Math.min(st.i, steps.length - 1)];
+      const done = () => { st.i++; step = steps[Math.min(st.i, steps.length - 1)]; };
+      // advance past finished steps
+      for (let guard = 0; guard < 6 && st.i < steps.length; guard++) {
+        if (step.go) {
+          const z = typeof step.go === 'string' ? (G.sc.zones || []).find((q) => q.name === step.go.slice(5)) : { x: step.go[0], z: step.go[1] };
+          if (!z) { if (step.wait) break; done(); continue; }
+          if (Math.hypot(me.pos.x - z.x, me.pos.z - z.z) < (step.r || 45)) { done(); continue; }
+        } else if (step.kill) {
+          const t = step.kill === 'all' ? foes.find((o) => !o.spec.fixed) || foes[0] : S.by[step.kill];
+          if (!t || t.out) { done(); continue; }
+        }
+        break;
+      }
+      if (st.i >= steps.length) step = { kill: 'all', move: 'duel', ammo: 'round', board: 'never' };
+      st.swap -= dt;
+      if (me.spec.oars && step.oar != null) me.oar = step.oar;
+      if (step.go) {
+        const z = typeof step.go === 'string' ? (G.sc.zones || []).find((q) => q.name === step.go.slice(5)) : { x: step.go[0], z: step.go[1] };
+        if (me.anchored && me.weighT <= 0) me.weighT = 0.1;
+        me.spec.ai = { range: 1, plan: 'none', manualAmmo: true, boarder: false, battleSail: false };
+        G.api.updateAI(ai, me, fake(z.x, z.z), G.world, dt, G.api.aiApi);
+        if (step.sail != null) me.sailLevel = step.sail;
+        for (const s of me.sides) if (foes.some((o) => G.api.inArc(me, s, o, 1))) G.api.fire(me, s);
+        return;
+      }
+      const foe = step.kill === 'all' ? G.api.nearest(me, foes.filter((o) => !o.spec.fixed)) || G.api.nearest(me, foes) : S.by[step.kill];
+      if (!foe) return;
+      G.api.setTarget(foe);
+      const d = G.api.reach(me, foe), sk = me.stock, a = step.ammo || 'round';
+      let boardMode = step.board === 'rush' || (step.board === 'odds' && G.api.strength(me) / (G.api.strength(foe) || 1) >= (step.odds || 1.25));
+      if (foe.spec.fixed && step.board !== 'rush') boardMode = step.board === 'odds' && G.api.strength(me) / (G.api.strength(foe) || 1) >= (step.odds || 1.25);
+      let want = 'round';
+      if ((a === 'chain' || a === 'combo') && sk.chain > 0 && foe.sailR > 0.45 && !foe.anchored && !foe.spec.fixed && d < me.range('chain') * 1.1) want = 'chain';
+      else if ((a === 'fire' || a === 'combo') && sk.fire > 0 && d < me.range('fire') * 1.1) want = 'fire';
+      else if ((a === 'grape' || a === 'combo') && sk.grape > 0 && foe.exposed > 2 && d < me.range('grape') * 1.05) want = 'grape';
+      if (boardMode) {
+        if (foe.speed > 6.5 && sk.chain > 0 && d < me.range('chain') * 1.1) want = 'chain';
+        else if (sk.grape > 0 && d < me.range('grape') * 1.2) want = 'grape';
+      }
+      if (want !== me.ammo && st.swap <= 0) { me.setAmmo(want); st.swap = 2.5; }
+      const r = me.range('round');
+      let move = boardMode ? (foe.speed > 6.5 && sk.chain > 0 ? 'duel' : 'close') : step.move || 'duel';
+      if (step.anchor && !me.anchored && d < r * (step.anchorAt || 0.8) && me.speed < 6) { me.anchored = true; me.weighT = 0; }
+      if (step.anchor && !me.anchored && d < r * (step.anchorAt || 0.8)) me.sailLevel = 0;
+      me.spec.ai = { range: step.range || (move === 'kite' ? r * 0.85 : move === 'close' ? 20 : move === 'bow' ? r * 0.7 : r * 0.5), plan: 'none', manualAmmo: true, boarder: move === 'close', battleSail: true, bowOn: move === 'bow' };
+      const sail = me.sailLevel;
+      G.api.updateAI(ai, me, foe, G.world, dt, G.api.aiApi);
+      if (step.anchor && !me.anchored && d < r * (step.anchorAt || 0.8)) me.sailLevel = Math.min(sail, 1);
+      if (move === 'close') ai.wantBoard = true;
+      for (const s of me.sides) if (foes.some((o) => o !== foe && G.api.inArc(me, s, o, 1))) G.api.fire(me, s);
+      if (boardMode && G.canBoard) G.api.startBoarding('player', foe);
+    };
+  }
+
   window.H = {
+    // one campaign leg: { side, mission: 'm1', leg: 0 | pool key, hull, fit, officers, route: [steps], state: { hull, sails, crew }, stock, maxT }
+    leg(cfg) {
+      const C = G.CAMP;
+      G.paused = true; G.fast = true; G.mode = 'campaign';
+      const st = (C.st = C.fresh());
+      st.side = cfg.side || null; st.stage = C.order.indexOf(cfg.mission); st.officers = cfg.officers || ['pilot', 'carpenter', 'gunner', 'marines'].slice(0, Math.max(0, st.stage));
+      st.stable = [{ id: 'h1', hull: cfg.hull, name: 'Test', fit: {} }]; st.seed = (Math.random() * 1e9) | 0;
+      const kit = { runner: FULL.runner, line: FULL.line, boarder: FULL.boarder, gun: FULL.gun, galley: { marines: 2, hooks: 2, stroke: 2, oak: 2 } };
+      G.ship = 'h1'; G.fit = cfg.fit ? { h1: kit[{ sloop: 'runner', brig: 'line', xebec: 'boarder', merchantman: 'gun', flagship: 'gun', galley: 'galley', galliot: 'galley' }[cfg.hull]] } : {};
+      C.rebuild();
+      const P0 = G.player; P0.stock = { chain: 8, grape: 8, fire: 5, ...(cfg.stock || {}) };
+      C.startMission();
+      const run = C.run;
+      if (typeof cfg.leg === 'string') { run.legs = [C.pool[cfg.leg]]; run.i = 0; }
+      else run.i = cfg.leg || 0;
+      if (cfg.carry) run.carry = run.c.carry = cfg.carry;
+      if (cfg.state) { const p = G.player; if (cfg.state.hull) p.hull = p.hullMax * cfg.state.hull; if (cfg.state.sails) p.sails = p.sailsMax * cfg.state.sails; if (cfg.state.crew) p.crew = Math.round(p.crewMax * cfg.state.crew); }
+      if (typeof cfg.leg === 'string' || run.i) C.startLeg();
+      G.api.act('engage'); G.coach = null;
+      const P = G.player, steps = typeof cfg.route === 'function' ? cfg.route(G.sc.S) : cfg.route;
+      G.bot = routeBot(steps);
+      const dt = 0.05, maxT = cfg.maxT || 600;
+      let t = 0, aground = 0, boarded = 0;
+      while (t < maxT && (G.state === 'battle' || G.state === 'boarding')) {
+        if (G.state === 'boarding') { boarded = 1; G.api.boardSwivel(); }
+        if (P.aground > 0) aground += dt;
+        G.tick(dt, 1); t += dt;
+      }
+      const o = G.state === 'battle' || G.state === 'boarding' ? 'timeout' : G.outcome;
+      const res = { o, win: o === 'won', t: Math.round(t), hull: +(Math.max(0, P.hull) / P.hullMax).toFixed(2), crew: +(P.crew / P.crewMax).toFixed(2), aground: Math.round(aground), boarded,
+        foes: G.ships.filter((s) => s.side === 1).map((s) => s.out || (s.aground > 0 ? 'aground' : 'up')).join(','), prizes: run.prizes.length, pos: [Math.round(P.pos.x), Math.round(P.pos.z)] };
+      if (G.state === 'boarding') G.api.cutGrapples();
+      G.bot = null; G.state = 'story'; G.outcome = null; P.sinking = 0; G.fast = false;
+      return res;
+    },
+
     fight(cfg) {
       G.paused = true; G.fast = true;
       G.trophies = cfg.ship === 'wren' ? [] : [cfg.ship]; G.ship = cfg.ship;

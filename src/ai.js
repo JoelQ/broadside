@@ -135,4 +135,13 @@ function gunnery(ai, me, foe, dist, dx, dz, dt, api) {
   }
 }
 
+// Hold a course for a point and nothing else: fireships, prizes, anything with somewhere to be.
+export function steerTo(me, x, z, world) {
+  let desired = Math.atan2(x - me.pos.x, z - me.pos.z);
+  const up = wrap(desired - (world.wind.dir + Math.PI));
+  if (Math.abs(up) < 0.68 && !(me.spec.oars && me.oar)) desired = world.wind.dir + Math.PI + (up >= 0 ? 1 : -1) * 0.78;
+  me.input.turn = clamp(wrap(desired - me.heading) * 2.4, -1, 1);
+  me.sailLevel = 3;
+}
+
 export const newAI = () => ({ think: 0, side: 1, wantBoard: false, fireDelay: 2, grapple: 0 });

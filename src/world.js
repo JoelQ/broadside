@@ -261,7 +261,7 @@ export class World {
     return h * this.amp;
   }
 
-  clearIslands() { this.islandGroup.clear(); this.islands = []; this.setShoals([]); this.currentAt = null; this.setWind(undefined, 1, true); this.wind.steady = false; }
+  clearIslands() { this.islandGroup.clear(); this.islands = []; this.setShoals([]); this.currentAt = null; this.setWind(undefined, 1, true); this.wind.steady = false; this.wind.next = null; }
   // wind strength: 0 is a dead calm, 1 a working breeze, 1.6 a gale
   setWind(dir, str, now) {
     const w = this.wind;
@@ -316,7 +316,9 @@ export class World {
     this.u.uTime.value = this.time;
     const w = this.wind;
     w.timer -= dt;
-    if (w.timer <= 0) { w.timer = 35 + Math.random() * 40; if (!w.steady) w.target = w.dir + (Math.random() - 0.5) * 1.3; }
+    // the next shift is decided a little before it arrives, so a good pilot can call it
+    if (w.timer <= 12 && w.next == null && !w.steady) w.next = (Math.random() - 0.5) * 1.3;
+    if (w.timer <= 0) { w.timer = 35 + Math.random() * 40; if (w.next != null) w.target = w.dir + w.next; w.next = null; }
     w.dir += (w.target - w.dir) * Math.min(1, dt * 0.08);
     // in a calm the air comes in cat's-paws: brief puffs a light ship can use
     w.strTarget = w.base < 0.3 ? w.base + Math.max(0, Math.sin(this.time * 0.37) * Math.sin(this.time * 0.11 + 1)) * 0.3 : w.base;
