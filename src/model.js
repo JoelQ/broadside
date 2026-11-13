@@ -59,6 +59,9 @@ function sailTexture(spec, emblem, tier) {
   } else if (emblem === 'stripes') {
     x.fillStyle = spec.emblemCol; for (let i = 0; i < 3; i++) x.fillRect(0, 14 + i * 40, 128, 16);
   }
+  else if (emblem === 'crescent') { x.fillStyle = ec; x.beginPath(); x.arc(64, 60, 26, 0, 7); x.fill(); x.fillStyle = spec.sailCol; x.beginPath(); x.arc(74, 60, 22, 0, 7); x.fill(); }
+  else if (emblem === 'lion') { x.fillStyle = ec; lion(x, 64, 62, 1.5); }
+  else if (emblem === 'band') { x.fillStyle = ec; x.fillRect(0, 50, 128, 26); }
   if (tier > 0) {
     x.globalCompositeOperation = 'destination-out';
     const n = tier === 1 ? 6 : 15;
@@ -70,12 +73,25 @@ function sailTexture(spec, emblem, tier) {
   tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
   return tex;
 }
-function flagTexture(spec) {
+// the winged lion, near enough: body, head, wing, tail and a book under one paw
+function lion(x, cx, cy, k) {
+  x.save(); x.translate(cx, cy); x.scale(k, k);
+  x.fillRect(-16, -6, 30, 11); x.beginPath(); x.arc(-18, -8, 8, 0, 7); x.fill();
+  for (const lx of [-15, -7, 5, 11]) x.fillRect(lx, 4, 4, 10);
+  x.beginPath(); x.moveTo(-8, -6); x.lineTo(8, -24); x.lineTo(12, -6); x.fill();
+  x.fillRect(13, -12, 3, 9); x.fillRect(13, -14, 9, 3); x.fillRect(-26, 10, 9, 6);
+  x.restore();
+}
+export function flagTexture(spec) {
   const cv = document.createElement('canvas'); cv.width = 96; cv.height = 56;
   const x = cv.getContext('2d');
   x.fillStyle = css(spec.flagCol); x.fillRect(0, 0, 96, 56);
   x.fillStyle = x.strokeStyle = '#ece6d4';
   if (spec.emblem === 'cross') { x.fillRect(30, 0, 10, 56); x.fillRect(0, 23, 96, 10); }
+  else if (spec.emblem === 'crescent') { x.beginPath(); x.arc(44, 28, 15, 0, 7); x.fill(); x.fillStyle = css(spec.flagCol); x.beginPath(); x.arc(50, 28, 12.5, 0, 7); x.fill(); }
+  else if (spec.emblem === 'lion') { x.fillStyle = '#e8c15a'; x.fillRect(0, 0, 96, 5); x.fillRect(0, 51, 96, 5); lion(x, 46, 30, 0.8); }
+  else if (spec.emblem === 'band' || spec.emblem === 'stripes') { x.fillRect(0, 22, 96, 12); }
+  else if (spec.emblem === 'plain') { /* a bare field */ }
   else {
     x.beginPath(); x.arc(48, 22, 11, 0, 7); x.fill(); x.fillRect(42, 28, 12, 9);
     x.lineWidth = 4; x.lineCap = 'round'; x.beginPath(); x.moveTo(30, 34); x.lineTo(66, 50); x.moveTo(66, 34); x.lineTo(30, 50); x.stroke();
@@ -357,6 +373,33 @@ export function buildShipModel(spec) {
     }
   }
 
+  // a galley's battery fires ahead, over the beak
+  if (spec.bow) {
+    muzzles.bow = [];
+    const n = spec.bow.n, t = 0.84, w = halfWidth(spec, t) * 0.8, y = deckY(t) + 1.0, z = (t - 0.5) * L, c = [0.85, 1, 1.18][spec.bow.cal ?? 1], gap = n > 1 ? Math.min(1.3, (2 * w) / (n - 1)) : 0;
+    S.box(w * 2 + 1.2, 0.5, 2.6, CAP, 0, y - 0.5, z - 0.6);
+    for (let i = 0; i < n; i++) {
+      const x = (i - (n - 1) / 2) * gap;
+      S.bar([x, y, z - 1.7], [x, y, z + 1.0], 0.3 * c, IRON, 7, 0.2 * c);
+      muzzles.bow.push(new THREE.Vector3(x, y, z + 1.2));
+    }
+  }
+  // oars: one bank a side, each a single mesh that is sheared to sweep and lift
+  let oars = null;
+  if (spec.oars) {
+    oars = [];
+    const n = Math.max(6, Math.round(L / 2.4));
+    for (const sx of [1, -1]) {
+      const b = new Batch();
+      for (let i = 0; i < n; i++) {
+        const t = 0.2 + (0.56 * (i + 0.5)) / n, z = (t - 0.5) * L, w = halfWidth(spec, t);
+        b.bar([sx * (w - 0.4), deckY(t) + 0.5, z], [sx * (w + B * 0.95), 0.1, z], 0.09, 0xb89a68, 4, 0.14);
+      }
+      const m = b.mesh(); m.matrixAutoUpdate = false; m.userData.sx = sx;
+      group.add(m); oars.push(m);
+    }
+  }
+
   // deck furniture along the centreline: hatch gratings, capstan, a boat on the big ships, the wheel
   const stops = [0.5 * L * 0.7, ...mastZ.map((m) => m * L), -L * 0.32];
   let boat = L >= 40;
@@ -382,5 +425,5 @@ export function buildShipModel(spec) {
 
   group.add(S.mesh());
   if (!glow.empty) group.add(glow.mesh(GLOW));
-  return { group, yards, sails, booms, flag, muzzles, mats, decks, mastH: L * 0.92 * (spec.rigScale || 1) + spec.D };
+  return { group, yards, sails, booms, flag, muzzles, mats, decks, oars, mastH: L * 0.92 * (spec.rigScale || 1) + spec.D };
 }

@@ -46,7 +46,7 @@
           me.sailLevel = me.speed > foe.speed + 3 ? 1 : 2;
         }
         me.input.turn = clamp(wrap(hd - me.heading) * 2.5, -1, 1);
-        for (const s of ['port', 'stbd']) if (G.api.inArc(me, s, foe, 1)) G.api.fire(me, s);
+        for (const s of me.sides) if (G.api.inArc(me, s, foe, 1)) G.api.fire(me, s);
       } else {
         const r = me.range('round');
         me.spec.ai = { range: move === 'kite' ? r * 0.85 : move === 'close' ? 20 : r * 0.5, plan: 'none', manualAmmo: true, boarder: move === 'close', battleSail: true };
@@ -65,7 +65,7 @@
       G.fit = cfg.fit ? { [cfg.ship]: cfg.fit === 'full' ? FULL[KIT[cfg.ship]] : cfg.fit } : {};
       G.level = cfg.level;
       G.api.rebuild(); G.api.act('sail'); G.api.act('engage'); G.coach = null;
-      const P = G.player, E = G.enemy;
+      const P = G.player, E = G.sc.foe;
       P.stock = { chain: 8, grape: 8, fire: 5, ...(cfg.stock || {}) };
       G.bot = captain(cfg.plan);
       const dt = 0.05, maxT = cfg.maxT || 420;
@@ -73,7 +73,7 @@
       while (t < maxT && (G.state === 'battle' || G.state === 'boarding')) {
         if (G.state === 'boarding') { if (!boardedBy) boardedBy = G.bd.by; G.api.boardSwivel(); }
         else {
-          if (['port', 'stbd'].some((s) => G.api.inArc(E, s, P, 1))) exposed += dt;
+          if (E.sides.some((s) => G.api.inArc(E, s, P, 1))) exposed += dt;
         }
         G.tick(dt, 1); t += dt;
       }

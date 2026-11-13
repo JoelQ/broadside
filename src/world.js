@@ -168,7 +168,9 @@ export class World {
     this.scene = scene;
     this.time = 0;
     this.amp = 1;
-    this.wind = { dir: 0.6, target: 0.6, timer: 40 };
+    this.wind = { dir: 0.6, target: 0.6, timer: 40, str: 1, strTarget: 1, base: 1, steady: false };
+    this.shoals = []; this.currentAt = null; this.envName = 'noon';
+    this.shoalGroup = new THREE.Group(); scene.add(this.shoalGroup);
     this.islands = [];
     this.islandGroup = new THREE.Group();
     scene.add(this.islandGroup);
@@ -220,7 +222,7 @@ export class World {
   }
 
   updateStreaks(dt, focus) {
-    const wx = Math.sin(this.wind.dir), wz = Math.cos(this.wind.dir), sp = 34;
+    const wx = Math.sin(this.wind.dir), wz = Math.cos(this.wind.dir), sp = 34 * Math.max(0.08, this.wind.str);
     const pos = this.streakMesh.geometry.attributes.position, col = this.streakMesh.geometry.attributes.color;
     this.streaks.forEach((s, i) => {
       s.life -= dt;
@@ -249,7 +251,7 @@ export class World {
     this.hemi.intensity = e.hemi;
     this.sun.color.set(e.sunCol); this.sun.intensity = e.dir;
     this.scene.fog.color.set(e.horizon); this.scene.fog.near = e.fog[0]; this.scene.fog.far = e.fog[1];
-    this.env = e;
+    this.env = e; this.envName = name; this.baseAmp = e.amp;
   }
 
   height(x, z) {
@@ -259,7 +261,40 @@ export class World {
     return h * this.amp;
   }
 
-  clearIslands() { this.islandGroup.clear(); this.islands = []; }
+  clearIslands() { this.islandGroup.clear(); this.islands = []; this.setShoals([]); this.currentAt = null; this.setWind(undefined, 1, true); this.wind.steady = false; }
+  // wind strength: 0 is a dead calm, 1 a working breeze, 1.6 a gale
+  setWind(dir, str, now) {
+    const w = this.wind;
+    if (dir !== undefined) { w.target = dir; if (now) w.dir = dir; }
+    if (str !== undefined) { w.strTarget = w.base = str; if (now) w.str = str; }
+  }
+  windName() { const s = this.wind.str; return s < 0.3 ? 'Calm' : s < 0.65 ? 'Light airs' : s <= 1.25 ? 'Breeze' : 'Gale'; }
+  // islands placed by hand: [{x, z, r, h?, seed?}]
+  addIsland(o) {
+    const rnd = mulberry(o.seed || Math.round(o.x * 7 + o.z * 13 + o.r)), isl = { x: o.x, z: o.z, r: o.r * 0.8, h: o.h || o.r * 0.45 };
+    this.islands.push(isl);
+    this.islandGroup.add(makeIsland(o.r, isl.h, rnd, o.x, o.z, o.opts || {}));
+    return isl;
+  }
+  // shoals: [{x, z, r, depth}]. A ship drawing more than `depth` sticks there.
+  setShoals(list, marked) {
+    for (const m of this.shoalGroup.children) { m.geometry.dispose(); }
+    this.shoalGroup.clear(); this.shoals = list;
+    for (const s of list) {
+      const g = new THREE.CircleGeometry(s.r, 28); g.rotateX(-Math.PI / 2);
+      const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: 0x8fe0cf, transparent: true, opacity: marked ? 0.3 : 0.16, depthWrite: false, depthTest: false, fog: false }));
+      m.position.set(s.x, 0.9, s.z); m.renderOrder = 1; this.shoalGroup.add(m);
+      if (marked) {
+        const rg = new THREE.RingGeometry(s.r - 1.2, s.r, 40); rg.rotateX(-Math.PI / 2);
+        const r = new THREE.Mesh(rg, new THREE.MeshBasicMaterial({ color: 0xf3e6b0, transparent: true, opacity: 0.6, depthWrite: false, depthTest: false, fog: false }));
+        r.position.set(s.x, 1, s.z); r.renderOrder = 1; this.shoalGroup.add(r);
+      }
+    }
+  }
+  shoalAt(x, z, draught) {
+    for (const s of this.shoals) if (draught > s.depth && Math.hypot(x - s.x, z - s.z) < s.r) return s;
+    return null;
+  }
 
   setIslands(seed, count) {
     this.islandGroup.clear();
@@ -281,8 +316,12 @@ export class World {
     this.u.uTime.value = this.time;
     const w = this.wind;
     w.timer -= dt;
-    if (w.timer <= 0) { w.timer = 35 + Math.random() * 40; w.target = w.dir + (Math.random() - 0.5) * 1.3; }
+    if (w.timer <= 0) { w.timer = 35 + Math.random() * 40; if (!w.steady) w.target = w.dir + (Math.random() - 0.5) * 1.3; }
     w.dir += (w.target - w.dir) * Math.min(1, dt * 0.08);
+    // in a calm the air comes in cat's-paws: brief puffs a light ship can use
+    w.strTarget = w.base < 0.3 ? w.base + Math.max(0, Math.sin(this.time * 0.37) * Math.sin(this.time * 0.11 + 1)) * 0.3 : w.base;
+    w.str += (w.strTarget - w.str) * Math.min(1, dt * 0.25);
+    this.amp = this.u.uAmp.value = this.baseAmp * (0.25 + 0.75 * Math.min(1, w.str)) * (w.str > 1.25 ? 1.5 : 1);
     const s = 1400 / 220;
     const cx = Math.round(camPos.x / s) * s, cz = Math.round(camPos.z / s) * s;
     this.near.position.set(cx, 0, cz);
