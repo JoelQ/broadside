@@ -14,7 +14,7 @@ export function updateAI(ai, me, foe, world, dt, api) {
     ai.think = 1.2 + Math.random();
     const adv = api.strength(me) / Math.max(1, api.strength(foe)); // fighting strength, not headcount
     // only your deck is ever fought over: ships under AI on both sides settle it with guns
-    ai.wantBoard = ((P.boarder && adv > 1.05) || (adv > 2.2 && foe.crewR < 0.5 && dist < 150)) && me.crew > 12 && foe.isPlayer && !me.spec.fixed && !me.anchored;
+    ai.wantBoard = ((P.boarder && adv > (P.boardAt || 1.05)) || (adv > 2.2 && foe.crewR < 0.5 && dist < 150)) && me.crew > 12 && foe.isPlayer && !me.spec.fixed && !me.anchored;
     // ammo doctrine
     let a = 'round';
     const st = me.stock;
@@ -74,6 +74,14 @@ export function updateAI(ai, me, foe, world, dt, api) {
     if (dist < 50) ai.away = 6;
     ai.away = (ai.away || 0) - dt;
     desired = ai.away > 0 && dist < 150 ? bearing + Math.PI - ai.side * 0.9 : bearing;
+    ai.rest = false;
+    if (foe.speed < 4 && !foe.spec.fixed && ai.away <= 0) {
+      // prey that cannot move: take station off her bow or stern, where her broadsides do not bear, and pound her
+      const end = dx * foe.fwdX + dz * foe.fwdZ < 0 ? 1 : -1, R = Math.min(P.range, me.range() * 0.8);
+      const offAxis = Math.abs(wrap(Math.atan2(-dx, -dz) - (foe.heading + (end > 0 ? 0 : Math.PI))));
+      if (offAxis > 0.45) desired = Math.atan2(foe.pos.x + foe.fwdX * end * R - me.pos.x, foe.pos.z + foe.fwdZ * end * R - me.pos.z);
+      else ai.rest = dist < R * 0.85;
+    }
   } else {
     // broadside geometry: put the foe on the chosen beam, spiralling in or out to hold range
     let off = Math.PI / 2;
@@ -85,7 +93,7 @@ export function updateAI(ai, me, foe, world, dt, api) {
 
   // don't stall in irons: fall off to a close-hauled tack
   const str = world.wind.str ?? 1;
-  if (me.spec.oars) me.oar = me.stamina < 0.08 ? 0 : (closing || bowOn || dist > range * 1.4) && me.stamina > (me.oar === 2 ? 0.05 : 0.3) ? 2 : 1;
+  if (me.spec.oars) me.oar = me.stamina < 0.08 || ai.rest ? 0 : (closing || bowOn || dist > range * 1.4) && me.stamina > (me.oar === 2 ? 0.05 : 0.3) ? 2 : 1;
   const up = wrap(desired - upwind);
   if (Math.abs(up) < 0.68 && str > 0.3 && !me.anchored && !(me.spec.oars && me.oar)) desired = upwind + (up >= 0 ? 1 : -1) * 0.78;
   if (str > 1.3) sail = Math.min(sail, 2);

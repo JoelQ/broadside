@@ -21,12 +21,12 @@ export const LEGS = [
   { name: 'm1V The picket', mission: 'm1', leg: 0, side: V, routes: { guns, run: run('north'), board } },
   { name: 'm1V The patrol', mission: 'm1', leg: 1, side: V, routes: {
     guns, kite, run: run('harbour'),
-    shoals: [{ go: [330, 60], r: 50 }, { go: [420, 270], r: 50 }, { go: [330, 450], r: 50 }, ...run('harbour')],
+    shoals: [{ go: [520, 20], r: 50 }, { go: [660, 300], r: 50 }, { go: [540, 540], r: 50 }, ...run('harbour')],
     boardBrig: [{ kill: 'brig', move: 'duel', ammo: 'combo', board: 'rush' }],
   } },
   { name: 'm1O The guard ship', mission: 'm1', leg: 0, side: O, routes: { guns, run: run('north'), board } },
   { name: 'm1O The anchorage', mission: 'm1', leg: 1, side: O, routes: {
-    batter: [{ kill: 'battery', move: 'kite', ammo: 'round' }, { kill: 'powder', move: 'duel', ammo: 'round' }],
+    batter: [{ go: [-190, -40], r: 40, sail: 2 }, { kill: 'battery', move: 'duel', ammo: 'round', anchor: true, anchorAt: 1.2 }, { go: [-60, 60], r: 40, sail: 2 }, { kill: 'powder', move: 'duel', ammo: 'round', anchor: true, anchorAt: 0.9 }],
     direct: [{ kill: 'powder', move: 'duel', ammo: 'round' }],
     eastBurn: [{ go: [230, 40], r: 50 }, { go: [150, 170], r: 40 }, { kill: 'powder', move: 'kite', ammo: 'fire', range: 110 }],
     eastBoard: [{ go: [230, 40], r: 50 }, { go: [150, 170], r: 40 }, { kill: 'powder', move: 'duel', ammo: 'grape', board: 'rush' }],
@@ -41,7 +41,7 @@ export const LEGS = [
     middle: run('above'),
     west: [...inshore(-222, [-520, -360, -200, -60, 60, 200, 360, 500]), ...run('above')],
     east: [...inshore(222, [-520, -360, -200, -40, 90, 200, 360, 500]), ...run('above')],
-    silence: [{ kill: 'west', move: 'kite', ammo: 'round' }, ...run('above')],
+    silence: [{ go: [-40, -200], r: 40, sail: 2 }, { kill: 'west', move: 'duel', ammo: 'round', anchor: true, anchorAt: 1.2 }, ...run('above')],
   } },
   { name: 'm4V The flagship', mission: 'm4', leg: 1, side: V, routes: {
     guns: [{ kill: 'flag', move: 'duel', ammo: 'round' }, { go: 'zone:out', r: 40, wait: true }],
@@ -60,7 +60,7 @@ export const LEGS = [
     boardHeavy: [{ kill: 'heavy', move: 'duel', ammo: 'grape', board: 'rush' }],
   } },
   { name: 'm5O The mole', mission: 'm5', leg: 0, side: O, routes: {
-    batter: [{ kill: 'battery', move: 'kite', ammo: 'round' }],
+    batter: [{ go: [-330, 20], r: 40, sail: 2 }, { kill: 'battery', move: 'duel', ammo: 'round', anchor: true, anchorAt: 1.2 }],
     westBurn: [{ go: [-430, 120], r: 50 }, { go: [-380, 250], r: 40 }, { kill: 'battery', move: 'kite', ammo: 'fire', range: 120 }],
     westStorm: [{ go: [-430, 120], r: 50 }, { go: [-330, 255], r: 40 }, { kill: 'battery', move: 'duel', ammo: 'grape', board: 'rush' }],
     storm: [{ kill: 'battery', move: 'duel', ammo: 'grape', board: 'rush' }],

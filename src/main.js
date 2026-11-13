@@ -1210,7 +1210,7 @@ function takeCommand(id) {
   G.ship = sid(id);
   buildPlayer(true); moor(); enterHarbor(); G.shop = null;
   buildSpots(); renderPort(); setupHudNames(); sfx.horn(true);
-  if (G.mode === 'campaign') { CAMP.st.ship = G.ship; CAMP.save(); }
+  if (G.mode === 'campaign') { CAMP.st.ship = G.ship; CAMP.man(); renderPort(); CAMP.save(); }
   toast(`You take command of the ${G.player.spec.name}`, 'big', 3000);
 }
 function buildSpots() {
@@ -1222,7 +1222,7 @@ function showPort() {
   enterHarbor(); hideScreen(); setMode('port'); setupHudNames();
   const cam = G.mode === 'campaign';
   $('portName').textContent = cam ? CAMP.portName() : 'Port Halcyon';
-  if (cam) { const p = G.player; p.hull = p.hullMax; p.sails = p.sailsMax; p.crew = p.crewMax; p.fire = 0; }
+  if (cam) { const p = G.player; p.hull = p.hullMax; p.sails = p.sailsMax; p.crew = CAMP.crewFor(p.spec); p.fire = 0; }
   buildSpots();
   renderPort();
 }
@@ -1249,7 +1249,7 @@ function renderPort() {
     const row = (label, k, max, txt) => `<div class="cmp"><span>${label}</span><div class="t"><i style="width:${(val[k](h) / max) * 100}%"></i><u style="left:${(val[k](cur) / max) * 100}%"></u></div><b>${txt || ''}</b></div>`;
     box.innerHTML = `<h3>${h.name}<button class="x" data-act="closeshop">✕</button></h3><div class="role">${h.cls} · <b>${kitOf(id).name}</b>. ${roleOf(id)}</div>
       ${row('Hull', 'hull', 900, h.hull)}${row('Guns', 'guns', 18, h.guns * 2 + (h.bow ? h.bow.n : 0))}${row('Reach', 'reach', 310, CAL[h.bow && h.bow.main ? h.bow.cal : h.cal].name)}${row('Loading', 'rate', 14)}${row('Crew', 'crew', 220, h.crew)}${row('Speed', 'speed', 16)}${row('Helm', 'turn', 0.8)}
-      <div class="role">Draws ${h.D.toFixed(1)}${h.oars ? ' · oars' : ''}</div>
+      <div class="role">Draws ${h.D.toFixed(1)}${h.oars ? ' · oars' : ''}${cam && CAMP.crewFor(h) < h.crew ? ` · <b>short-handed</b>: you can man her with ${CAMP.crewFor(h)} of ${h.crew}` : ''}</div>
       <div class="role"><u class="mk"></u> marks the ${cur.name}. Fittings stay with each ship; your shot comes with you.</div>
       <div class="rowc" style="margin-top:8px"><button class="btn" data-act="cmd:${id}">Take command</button></div>`;
     return;
@@ -1279,7 +1279,7 @@ function portAction(a) {
     p[k] = Math.min(max, p[k] + (k === 'crew' ? Math.floor(amt) : amt)); G.gold -= cost;
     if (max - p[k] < 0.5) p[k] = max;
   } else if (kind === 'ammo') { if (G.gold < +c) return; G.gold -= +c; p.stock[k] += +n; }
-  else if (kind === 'up') { const f = fitOf(G.ship), cost = kitCost(f[k] || 0); if ((f[k] || 0) >= 2 || G.gold < cost) return; G.gold -= cost; f[k] = (f[k] || 0) + 1; buildPlayer(); moor(); setupHudNames(); }
+  else if (kind === 'up') { const f = fitOf(G.ship), cost = kitCost(f[k] || 0); if ((f[k] || 0) >= 2 || G.gold < cost) return; G.gold -= cost; f[k] = (f[k] || 0) + 1; buildPlayer(); moor(); setupHudNames(); if (G.mode === 'campaign') G.player.crew = CAMP.crewFor(G.player.spec); }
   sfx.coin(); renderPort();
   if (G.mode === 'campaign') CAMP.save();
 }

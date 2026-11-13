@@ -133,7 +133,7 @@
       st.stable = [{ id: 'h1', hull: cfg.hull, name: 'Test', fit: {} }]; st.seed = (Math.random() * 1e9) | 0;
       const kit = { runner: FULL.runner, line: FULL.line, boarder: FULL.boarder, gun: FULL.gun, galley: { marines: 2, hooks: 2, stroke: 2, oak: 2 } };
       G.ship = 'h1'; G.fit = cfg.fit ? { h1: kit[{ sloop: 'runner', brig: 'line', xebec: 'boarder', merchantman: 'gun', flagship: 'gun', galley: 'galley', galliot: 'galley' }[cfg.hull]] } : {};
-      C.rebuild();
+      C.rebuild(); C.man();
       const P0 = G.player; P0.stock = { chain: 8, grape: 8, fire: 5, ...(cfg.stock || {}) };
       C.startMission();
       const run = C.run;
@@ -146,15 +146,16 @@
       const P = G.player, steps = typeof cfg.route === 'function' ? cfg.route(G.sc.S) : cfg.route;
       G.bot = routeBot(steps);
       const dt = 0.05, maxT = cfg.maxT || 600;
-      let t = 0, aground = 0, boarded = 0;
+      let t = 0, aground = 0, boarded = 0; const trace = [];
       while (t < maxT && (G.state === 'battle' || G.state === 'boarding')) {
         if (G.state === 'boarding') { boarded = 1; G.api.boardSwivel(); }
         if (P.aground > 0) aground += dt;
+        if (cfg.trace && Math.round(t / dt) % Math.round(cfg.trace / dt) === 0) trace.push(`${String(Math.round(t)).padStart(3)}s me ${Math.round(P.pos.x)},${Math.round(P.pos.z)} h${Math.round(P.hullR * 100)} c${Math.round(P.crew)} v${P.speed.toFixed(0)}${P.anchored ? ' anch' : ''}${P.aground > 0 ? ' AGROUND' : ''} ${P.ammo} | ` + G.ships.filter((x) => x !== P).map((x) => `${x.id}:${Math.round(x.pos.x)},${Math.round(x.pos.z)} h${Math.round(x.hullR * 100)} c${Math.round(x.crew)} v${x.speed.toFixed(0)}${x.out ? ' ' + x.out : ''}${x.aground > 0 ? ' AGROUND' : ''}${x.anchored ? ' anch' : ''}${x.fire ? ' fire' + x.fire : ''}`).join(' | ') + (G.state === 'boarding' ? ' BOARDING' : ''));
         G.tick(dt, 1); t += dt;
       }
       const o = G.state === 'battle' || G.state === 'boarding' ? 'timeout' : G.outcome;
       const res = { o, win: o === 'won', t: Math.round(t), hull: +(Math.max(0, P.hull) / P.hullMax).toFixed(2), crew: +(P.crew / P.crewMax).toFixed(2), aground: Math.round(aground), boarded,
-        foes: G.ships.filter((s) => s.side === 1).map((s) => s.out || (s.aground > 0 ? 'aground' : 'up')).join(','), prizes: run.prizes.length, pos: [Math.round(P.pos.x), Math.round(P.pos.z)] };
+        foes: G.ships.filter((s) => s.side === 1).map((s) => s.out || (s.aground > 0 ? 'aground' : 'up')).join(','), prizes: run.prizes.length, trace, pos: [Math.round(P.pos.x), Math.round(P.pos.z)] };
       if (G.state === 'boarding') G.api.cutGrapples();
       G.bot = null; G.state = 'story'; G.outcome = null; P.sinking = 0; G.fast = false;
       return res;

@@ -28,7 +28,7 @@ const home = {
 };
 
 // ---------- 1. Powder for Candia ----------
-const candiaCoast = (z) => [-330, -110, 110, 330].map((x, i) => ({ x, z: z + (i % 2) * 30, r: 135 }));
+const candiaCoast = (z) => [-30, 190, 410, 630].map((x, i) => ({ x, z: z + (i % 2) * 30, r: 135 }));
 const runPicket = {
   title: 'The picket',
   build(c) {
@@ -48,12 +48,12 @@ const runPatrol = {
   build(c) {
     return {
       env: 'golden', wind: { dir: PI / 2 - 0.5, str: 1 }, islands: candiaCoast(800),
-      shoals: [{ x: 330, z: 90, r: 95, depth: 2.8 }, { x: 430, z: 270, r: 100, depth: 2.8 }, { x: 330, z: 450, r: 85, depth: 2.8 }, { x: -340, z: 300, r: 115, depth: 3.5 }],
+      shoals: [{ x: 500, z: 50, r: 160, depth: 2.8 }, { x: 610, z: 300, r: 215, depth: 2.8 }, { x: 520, z: 540, r: 150, depth: 2.8 }, { x: -340, z: 300, r: 115, depth: 3.5 }],
       player: { x: 0, z: -620, h: 0, speed: 8 },
-      zones: [{ name: 'harbour', x: 0, z: 610, r: 75 }],
+      zones: [{ name: 'harbour', x: 300, z: 640, r: 75 }],
       ships: [
-        { id: 'heavy', spec: shipSpec('merchantman', c.foe, c.names.heavy, 'line', { ai: { reckless: 0.75 } }), side: 1, x: -110, z: 140, h: PI / 2 },
-        { id: 'brig', spec: shipSpec('brig', c.foe, c.names.brig, 'line', { ai: { reckless: 0.75 } }), side: 1, x: 150, z: 260, h: -PI / 2 },
+        { id: 'heavy', spec: shipSpec('merchantman', c.foe, c.names.heavy, 'line', { ai: { reckless: 0.8, range: 130 } }), side: 1, x: -60, z: 150, h: PI / 2 },
+        { id: 'brig', spec: shipSpec('brig', c.foe, c.names.brig, 'line', { ai: { reckless: 0.8, range: 90 } }), side: 1, x: 190, z: 260, h: -PI / 2 },
       ],
       objective: 'Bring the powder into Candia: reach the harbour, beat the patrol, or take one of them and sail in under her colours',
       tip: 'The pale water is shoal. A ship that draws less than you floats over it; one that draws more sticks.',
@@ -190,7 +190,7 @@ const calm = {
       player: { x: 0, z: 0, h: 0, speed: 0 },
       ships: [
         { id: 'g1', spec: shipSpec('galley', c.foe, c.names.galley1, 'line'), side: 1, x: -260, z: 430, h: PI - 0.5 },
-        { id: 'g2', spec: shipSpec('galley', c.foe, c.names.galley2, 'line'), side: 1, x: 280, z: 400, h: PI + 0.5 },
+        { id: 'g2', spec: shipSpec('galliot', c.foe, c.names.galley2, 'line'), side: 1, x: 280, z: 400, h: PI + 0.5 },
       ],
       objective: () => (c.S && c.S.t > 100 ? 'Wind is coming: hold on, or finish the galleys' : 'No wind, and two galleys coming out under oars: live through the calm'),
       tip: 'Without wind a sailing ship barely steers. G drops an anchor on a spring, so A and D can haul your broadside round.',
@@ -207,7 +207,7 @@ const breeze = {
   build(c) {
     const left = (c.carry.galleys || [null, null]);
     const ships = [{ id: 'sail', spec: shipSpec('merchantman', c.foe, c.names.heavy, 'line'), side: 1, x: 380, z: 420, h: PI + 0.7 }];
-    left.forEach((g, i) => { if (g) ships.push({ id: 'g' + (i + 1), spec: shipSpec('galley', c.foe, c.names['galley' + (i + 1)], 'line'), side: 1, x: i ? 250 : -250, z: 260, h: PI, o: { hull: g.hull, sails: g.sails, crew: g.crew } }); });
+    left.forEach((g, i) => { if (g) ships.push({ id: 'g' + (i + 1), spec: shipSpec(i ? 'galliot' : 'galley', c.foe, c.names['galley' + (i + 1)], 'line'), side: 1, x: i ? 250 : -250, z: 260, h: PI, o: { hull: g.hull, sails: g.sails, crew: g.crew } }); });
     return {
       env: 'noon', wind: { dir: 1.2 + PI, str: 1 }, seedIslands: [1654, 2],
       player: { x: 0, z: 0, h: 0.3, speed: 5 },
@@ -222,9 +222,9 @@ const breeze = {
 // The channel runs north-south. The current sets south, out to sea, strongest in the middle; inshore
 // there is slack water, a back-eddy and shoals. The wind blows down the channel too.
 const straitShores = () => [-690, -460, -230, 0, 230, 460, 690].flatMap((z) => [{ x: -400, z, r: 150 }, { x: 400, z, r: 150 }]);
-const straitCurrent = (x) => { const a = Math.abs(x); return [0, a < 190 ? -4.6 * (1 - (a / 190) ** 2) - 0.4 : a < 270 ? 1.1 : 0]; };
+const straitCurrent = (x) => { const a = Math.abs(x); return [0, a < 190 ? -3 * (1 - (a / 190) ** 2) - 0.3 : a < 270 ? 1.1 : 0]; };
 const straitShoals = (zs) => zs.flatMap((z) => [{ x: -232, z, r: 42, depth: 2.8 }, { x: 232, z: z + 60, r: 42, depth: 2.8 }]);
-const strait = () => ({ islands: straitShores(), current: straitCurrent, wind: { dir: PI - 0.5, str: 1, steady: true } });
+const strait = () => ({ islands: straitShores(), current: straitCurrent, wind: { dir: PI - 1.1, str: 1, steady: true } });
 const castles = {
   title: 'The castles',
   build(c) {
@@ -251,12 +251,12 @@ const fittingOut = {
       player: { x: 60, z: -520, h: 0.5, speed: 6 },
       zones: [],
       ships: [
-        { id: 'flag', spec: shipSpec('flagship', c.foe, c.names.flag, 'poor', { ai: { cuts: 0.3 } }), side: 1, x: -70, z: 300, h: PI / 2, o: { crew: 0.4, sails: 0.3, anchored: true } },
+        { id: 'flag', spec: shipSpec('flagship', c.foe, c.names.flag, 'poor', { guns: 9, ai: { cuts: 0.3 } }), side: 1, x: -70, z: 300, h: PI / 2, o: { crew: 0.4, sails: 0.3, anchored: true } },
         { id: 'guard', spec: shipSpec('brig', c.foe, c.names.brig, 'line'), side: 1, x: 90, z: 120, h: PI },
       ],
       focus: 'flag',
       objective: () => (c.S && c.S.by.flag.out ? 'She is finished. Now get out: ride the current south' : 'Destroy or take the flagship fitting out above the castles'),
-      tip: 'She is half-manned and half-rigged, but her guns are aboard.',
+      tip: 'She is half-manned and half-rigged, with half her guns still on the quay. At anchor she can only haul herself round slowly.',
       check: (S) => {
         const f = S.by.flag;
         if (f.out === 'captured') return 'won';
@@ -308,7 +308,7 @@ const assaultMouth = {
       player: { x: -60, z: -560, h: 0.1, speed: 7 },
       ships: [
         { id: 'koules', spec: shipSpec('koules', c.foe, c.names.koules, 'line'), side: 1, x: 40, z: 250, h: PI },
-        { id: 'battery', spec: shipSpec('battery', c.foe, 'The mole battery', 'line', { magazine: 0.07 }), side: 1, x: -205, z: 262, h: PI + 0.75 },
+        { id: 'battery', spec: shipSpec('battery', c.foe, 'The mole battery', 'line', { magazine: 0.07, crew: 75 }), side: 1, x: -205, z: 262, h: PI + 0.75 },
         { id: 'guard', spec: shipSpec('galliot', c.foe, c.names.picket, 'line'), side: 1, x: -120, z: 60, h: PI },
       ],
       focus: 'battery',
@@ -326,7 +326,7 @@ const melee = {
       env: 'dusk', wind: { dir: PI / 2 + 0.2, str: 1 }, seedIslands: [1669, 2],
       player: { x: 0, z: -260, h: 0, speed: 6 },
       ships: [
-        ...f.map(([h, x, z], i) => ({ id: 'f' + i, spec: shipSpec(h, c.own, c.names.friends[i], 'line'), side: 0, x, z, h: 0 })),
+        ...f.map(([h, x, z], i) => ({ id: 'f' + i, spec: shipSpec(h, c.own, c.names.friends[i], 'poor'), side: 0, x, z, h: 0 })),
         ...e.map(([h, x, z], i) => ({ id: 'e' + i, spec: shipSpec(h, c.foe, c.names.foes[i], 'line'), side: 1, x, z, h: PI })),
       ],
       objective: () => { const S = c.S; if (!S) return ''; const n = ['e0', 'e1', 'e2'].filter((id) => !S.by[id].out).length, m = ['f0', 'f1', 'f2'].filter((id) => !S.by[id].out).length; return `Both fleets are paired off around you. Choose where to weigh in — theirs still fighting: ${n} · ours: ${m}`; },
@@ -344,7 +344,7 @@ const flagDuel = (attacker) => ({
       shoals: [{ x: -260, z: 60, r: 70, depth: 3.5 }, { x: 300, z: 20, r: 80, depth: 3.5 }],
       player: { x: -40, z: -420, h: 0, speed: 6 },
       ships: [
-        { id: 'flag', spec: shipSpec('flagship', c.foe, c.names.flag, 'crack', { noStrike: true }), side: 1, x: 60, z: 40, h: PI },
+        { id: 'flag', spec: shipSpec('flagship', c.foe, c.names.flag, 'line', { noStrike: true }), side: 1, x: 60, z: 40, h: PI, o: { crew: 0.75 } },
         { id: 'koules', spec: shipSpec('koules', attacker ? c.foe : c.own, c.names.koules, 'line'), side: fortSide, x: 40, z: 250, h: PI, o: attacker ? { hull: 0.6, crew: 0.6 } : { hull: 0.35, crew: 0.4 } },
       ],
       objective: attacker ? 'Their flagship stands between you and the city. Finish her, and mind the fortress' : 'Their commander is coming in. Finish his flagship under what is left of your own guns',

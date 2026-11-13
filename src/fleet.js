@@ -36,23 +36,23 @@ export const HULLS = {
   galley: {
     cls: 'Galley', kit: 'galley', value: 620, L: 42, B: 6.6, D: 1.8, masts: 2, sailsPerMast: 2, castle: false, rigScale: 0.66, rig: 'lateen',
     hull: 230, sails: 80, crew: 170, melee: 0.75, guns: 3, speed: 10.5, turn: 0.5, reload: 7.5, cal: 0, arc: 0.5, point: 0.15,
-    bow: { n: 3, cal: 2, arc: 0.22, main: true }, oars: 10.5,
+    bow: { n: 3, cal: 2, arc: 0.22, main: true }, oars: 10.5, rowers: 100,
     role: 'Heavy guns that fire ahead, weak sides, a great crew. Under oars she owes the wind nothing, until the oarsmen tire. Only a gale troubles her.',
-    ai: { range: 150, plan: 'round', boarder: true, battleSail: false, bowOn: true },
+    ai: { range: 150, plan: 'round', boarder: true, boardAt: 1.5, battleSail: false, bowOn: true },
   },
   galliot: {
     cls: 'Galliot', kit: 'galley', value: 300, L: 27, B: 4.8, D: 1.4, masts: 1, sailsPerMast: 2, castle: false, rigScale: 0.8, rig: 'lateen',
     hull: 125, sails: 60, crew: 85, melee: 0.8, guns: 2, speed: 11, turn: 0.7, reload: 7, cal: 0, arc: 0.55, point: 0.15,
-    bow: { n: 1, cal: 1, arc: 0.24, main: true }, oars: 11.5,
+    bow: { n: 1, cal: 1, arc: 0.24, main: true }, oars: 11.5, rowers: 50,
     role: 'A small, quick galley: one good gun in the bow and a crowd of men behind it.',
-    ai: { range: 110, plan: 'round', boarder: true, battleSail: false, bowOn: true },
+    ai: { range: 110, plan: 'round', boarder: true, boardAt: 1.3, battleSail: false, bowOn: true },
   },
 };
 
 // Shore works. B is the footprint, D the height of the gun platform; the battery fires along the heading.
 export const FORTS = {
-  battery: { cls: 'Shore battery', fixed: true, L: 14, B: 14, D: 6, hull: 380, sails: 1, crew: 40, melee: 0.9, guns: 0, speed: 0, turn: 0, reload: 9, cal: 1, bow: { n: 4, cal: 1, arc: 0.75 }, disp: 0.03, stock: { fire: 6 }, ai: { range: 200, plan: 'round' } },
-  castle: { cls: 'Castle', fixed: true, L: 24, B: 24, D: 9, hull: 800, sails: 1, crew: 90, melee: 1, guns: 0, speed: 0, turn: 0, reload: 10, cal: 2, bow: { n: 6, cal: 2, arc: 0.7 }, disp: 0.03, stock: { fire: 8 }, ai: { range: 260, plan: 'round' } },
+  battery: { cls: 'Shore battery', fixed: true, L: 18, B: 18, D: 6, hull: 300, sails: 1, crew: 40, melee: 0.9, guns: 0, speed: 0, turn: 0, reload: 9, cal: 1, bow: { n: 4, cal: 1, arc: 0.75 }, disp: 0.03, stock: { fire: 6 }, ai: { range: 200, plan: 'round' } },
+  castle: { cls: 'Castle', fixed: true, L: 24, B: 24, D: 9, hull: 800, sails: 1, crew: 90, melee: 1, guns: 0, speed: 0, turn: 0, reload: 8, cal: 2, bow: { n: 6, cal: 2, arc: 0.7 }, disp: 0.03, stock: { fire: 8 }, ai: { range: 260, plan: 'round' } },
   koules: { cls: 'Sea fortress', fixed: true, shape: 'square', L: 30, B: 30, D: 10, hull: 1100, sails: 1, crew: 120, melee: 1, guns: 0, speed: 0, turn: 0, reload: 10, cal: 2, bow: { n: 8, cal: 2, arc: 0.85 }, disp: 0.028, stock: { fire: 10 }, ai: { range: 260, plan: 'round' } },
 };
 
@@ -63,6 +63,10 @@ export const LIVERY = {
   pirate: { hullCol: 0x1d1d22, trimCol: 0x7c2f24, sailCol: '#4a4640', emblem: 'band', emblemCol: '#8a1f1f', flagCol: 0x111111, crewCols: [0x7a2a22, 0x2c2c2c, 0x8a6a3a, 0x5a4a3a] },
   stone: { hullCol: 0xb9ab8c, trimCol: 0x8f8268 },
 };
+
+// Your ship's company grows with your standing. A ship needs her full crew to load fast and to hold her deck;
+// a big ship with too few hands is a slow, hollow thing. Oarsmen come with an oared ship and are not counted.
+export const HANDS = [80, 90, 105, 120, 135, 150];
 
 // How well a ship is handled. Yours is 'own'. Most enemies are 'line'; a few are better or worse.
 export const GRADE = {

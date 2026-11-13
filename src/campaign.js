@@ -1,4 +1,4 @@
-import { HULLS, OFFICERS } from './fleet.js';
+import { HULLS, OFFICERS, HANDS } from './fleet.js';
 import { MISSIONS, ORDER, LEG_POOL } from './missions.js';
 import { STORY, NAMES, PORTS, SIDE_NAME } from './story.js';
 import { mulberry } from './geo.js';
@@ -31,11 +31,15 @@ export const CAMP = {
   livery: () => CAMP.st.side || 'island',
   has: (o) => !!CAMP.st && CAMP.st.officers.includes(o),
   portName: () => PORTS[CAMP.livery()],
+  hands: () => HANDS[Math.min(CAMP.st.stage, HANDS.length - 1)],
+  // how many of a ship's berths you can fill: your hands, her own oarsmen, and any marines fitted to her
+  crewFor(spec) { return Math.min(spec.crew, CAMP.hands() + (spec.rowers || 0) + ((spec.mods && spec.mods.crew) || 0)); },
+  man(p = G.player) { p.crew = Math.min(p.crew, CAMP.crewFor(p.spec)); },
   saved() {
     try { const s = JSON.parse(E.store.get(KEY) || 'null'); if (!s || s.v !== 1) return ''; return s.done ? `Campaign finished for ${SIDE_NAME[s.side]}` : `${s.side ? SIDE_NAME[s.side] + ' · ' : ''}next: ${MISSIONS[ORDER[s.stage]].title}`; } catch (e) { return ''; }
   },
   save() { const st = CAMP.st; st.gold = G.gold; st.ship = G.ship; st.fit = G.fit; st.stock = { ...G.player.stock }; E.store.set(KEY, JSON.stringify(st)); },
-  nextLine() { const st = CAMP.st; return st.done ? 'The war is over' : `Next: <b>${MISSIONS[ORDER[st.stage]].title}</b><br>${st.officers.length ? st.officers.length + ' officer' + (st.officers.length > 1 ? 's' : '') + ' aboard' : ''}`; },
+  nextLine() { const st = CAMP.st; return st.done ? 'The war is over' : `Next: <b>${MISSIONS[ORDER[st.stage]].title}</b><br>${CAMP.hands()} hands${st.officers.length ? ' · ' + st.officers.length + ' officer' + (st.officers.length > 1 ? 's' : '') : ''}`; },
 
   // ---------- starting and resuming ----------
   begin(isNew) {
@@ -50,7 +54,7 @@ export const CAMP = {
     CAMP.port();
   },
   rebuild() { const stock = G.player.stock; if (G.player.arcs) E.dropArcs(G.player); E.scene.remove(G.player.group); G.player = null; E.buildPlayer(true); G.player.stock = { chain: 0, grape: 0, fire: 0, ...stock }; },
-  port() { E.showPort(); E.snapCamera(); CAMP.save(); },
+  port() { E.showPort(); CAMP.man(); E.renderPort(); E.snapCamera(); CAMP.save(); },
 
   // ---------- telling the story: a page of text over the scene ----------
   tell(page, next, extra = '') {
@@ -65,7 +69,7 @@ export const CAMP = {
     if (st.done) return;
     CAMP.save();
     const b = CAMP.text(key).brief || { title: MISSIONS[key].title, text: [] }, sp = G.player.spec;
-    CAMP.tell({ eyebrow: `${CAMP.portName()} · orders`, ...b, go: 'Weigh anchor' }, 'camp:go', `<p class="note">You sail in the <b>${sp.name}</b> (${sp.cls.toLowerCase()}, draws ${sp.D.toFixed(1)}). The choice is fixed once you sail.</p>`
+    CAMP.tell({ eyebrow: `${CAMP.portName()} · orders`, ...b, go: 'Weigh anchor' }, 'camp:go', `<p class="note">You sail in the <b>${sp.name}</b> (${sp.cls.toLowerCase()}, draws ${sp.D.toFixed(1)}${G.player.crew < sp.crew ? `, short-handed: ${Math.round(G.player.crew)} of ${sp.crew}` : ''}). The choice is fixed once you sail.</p>`
       + `<div class="rowc" style="margin-top:0"><button class="btn sm" data-act="camp:port">Back to the quay</button></div>`);
   },
 
@@ -174,7 +178,7 @@ export const CAMP = {
     G.ship = id; CAMP.rebuild();
     const p = G.player;
     p.hull = p.hullMax * z.hullR; p.sails = p.sailsMax * z.sailR; p.stock = stock;
-    p.crew = free ? p.crewMax : Math.min(p.crewMax, Math.round(crew)); // your people go across with you; the marines can man her in full
+    p.crew = free ? p.crewMax : Math.min(p.crewMax, Math.round(crew) + (p.spec.rowers || 0)); // your people go across with you; the marines can man her in full
     run.prizes.splice(i, 1, was); run.crew0 = p.crew; run.lostMen = 0;
     E.sfx.horn(true); CAMP.renderPause();
   },
