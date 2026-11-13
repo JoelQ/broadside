@@ -1,4 +1,4 @@
-# Broadside: the Candia campaign (proposal)
+# Broadside: the Candia campaign
 
 A story campaign set in the Cretan War (1645–1669). You are an Aegean island captain who takes
 a commission with Venice or with the Ottoman fleet, and the campaign ends in the harbour of
@@ -8,8 +8,8 @@ The campaign follows the shape of the war and compresses its length: the fight t
 Crete, the blockade of the Dardanelles, the end at Candia. No years are shown on screen. (The
 real blockade was fought in the 1650s and the city fell in 1669.)
 
-Status: proposal. Numbers are starting points for the balance harness, and historical details
-need a research pass before any text is written.
+Status: implemented. This document is the design as proposed; the section "As built" at the end
+lists where the game differs from it and what the research pass could and could not confirm.
 
 ## Decisions already made
 
@@ -226,3 +226,53 @@ The existing five-pirate ladder stays playable as a skirmish mode.
   hopeless. Restarting the mission is the fallback; the repair caps may need raising.
 - **Tone.** Both sides need equal dignity in the writing, and the omissions listed above
   need to be kept consistently.
+
+## As built
+
+Where the game differs from the proposal above, and why.
+
+- **Hands.** "Big ships need crew you may not have" is a number: your ship's company grows from 80
+  to 150 hands over the campaign, and a ship with more berths than you have hands sails
+  short-handed (slower loading, weaker in a boarding). Oarsmen come with an oared ship. Marines
+  fitted to a ship are extra.
+- **Galleys pound before they board.** An AI galley takes station off the bow or stern of a ship
+  that cannot move and uses her bow guns; she boards only once the odds are well in her favour.
+  The harness showed that galleys which boarded at once made the calm a coin-toss on crew size.
+- **The calm is two legs.** The galleys in the calm (a galley and a galliot), then, after a pause,
+  the sailing ship the breeze brings, with whatever is left of the galleys.
+- **Mission 5, Venice.** The assault is led by fireships only. Bomb vessels are an anachronism for
+  1669 (they first appear in the 1680s).
+- **Prizes.** A prize of a kind you do not own joins your ships in port; one of a kind you already
+  own is sold. The fleet also lends you a ship after each mission (sloop, xebec, galley, armed
+  merchantman) so every route is open to a player who has captured nothing.
+- **The burning-prize route in the straits** ("set a prize alight and let the current take it down")
+  is not built. Fire does spread between hulls that foul each other.
+- **Storming a battery** is a boarding action against its garrison, so "by any means" includes it.
+- **Ships under AI do not board each other.** Only your deck is fought over; the background battle
+  in the finale is settled with guns.
+- **Touch.** New actions have buttons, but the campaign was built and tuned for the keyboard.
+
+### What the harness checks
+
+`tools/balance/legs.mjs` plays every leg with six hulls along each of that leg's scripted routes,
+and `legreport.mjs` flags any leg that fewer than three kinds of ship or fewer than three routes can
+win. The scripted captains are competent, not clever: 0% means "not with this script".
+
+### History: what the text relies on
+
+The research pass could read search summaries but not full source pages, so the text keeps to
+claims that were confirmed there and stays vague elsewhere. No years appear on screen.
+
+Relied on, confirmed: the Ottoman landing on Crete and the fall of Chania at the start of the war;
+Candia besieged for more than twenty years; a Venetian blockade of the Dardanelles in the 1650s;
+Venice holding the island fortresses of Suda, Spinalonga and Gramvousa; hired Dutch and English
+ships in Venetian service; Francesco Morosini commanding at the end and surrendering on terms to
+the Grand Vizier, Köprülü Fazıl Ahmed, in September 1669, the garrison and people being allowed to
+leave.
+
+Used but not confirmed from a full source, worth checking: that the sea fortress at Candia was
+called Rocca a Mare by the Venetians and Su Kulesi (Water Tower) by the Ottomans; the names
+Kilitbahir and Kale-i Sultaniye for the two castles at the Narrows; the direction of the current and
+the summer wind in the strait; that Ottoman galleys were known by their captains' names; the
+Venetian ending's "medal". Everything about Lychna, its captain, Manolis, Marousa, Barbaro and
+İbrahim Reis is invented, as are all ship names.

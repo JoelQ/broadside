@@ -51,9 +51,9 @@ export const HULLS = {
 
 // Shore works. B is the footprint, D the height of the gun platform; the battery fires along the heading.
 export const FORTS = {
-  battery: { cls: 'Shore battery', fixed: true, L: 18, B: 18, D: 6, hull: 300, sails: 1, crew: 40, melee: 0.9, guns: 0, speed: 0, turn: 0, reload: 9, cal: 1, bow: { n: 4, cal: 1, arc: 0.75 }, disp: 0.03, stock: { fire: 6 }, ai: { range: 200, plan: 'round' } },
-  castle: { cls: 'Castle', fixed: true, L: 24, B: 24, D: 9, hull: 800, sails: 1, crew: 90, melee: 1, guns: 0, speed: 0, turn: 0, reload: 8, cal: 2, bow: { n: 6, cal: 2, arc: 0.7 }, disp: 0.03, stock: { fire: 8 }, ai: { range: 260, plan: 'round' } },
-  koules: { cls: 'Sea fortress', fixed: true, shape: 'square', L: 30, B: 30, D: 10, hull: 1100, sails: 1, crew: 120, melee: 1, guns: 0, speed: 0, turn: 0, reload: 10, cal: 2, bow: { n: 8, cal: 2, arc: 0.85 }, disp: 0.028, stock: { fire: 10 }, ai: { range: 260, plan: 'round' } },
+  battery: { cls: 'Shore battery', fixed: true, L: 18, B: 18, D: 6, hull: 300, sails: 1, crew: 40, melee: 1.5, guns: 0, speed: 0, turn: 0, reload: 9, cal: 1, bow: { n: 4, cal: 1, arc: 0.75 }, disp: 0.03, stock: { fire: 6 }, ai: { range: 200, plan: 'round' } },
+  castle: { cls: 'Castle', fixed: true, L: 24, B: 24, D: 9, hull: 800, sails: 1, crew: 90, melee: 1.6, guns: 0, speed: 0, turn: 0, reload: 8, cal: 2, bow: { n: 6, cal: 2, arc: 0.7 }, disp: 0.03, stock: { fire: 8 }, ai: { range: 260, plan: 'round' } },
+  koules: { cls: 'Sea fortress', fixed: true, shape: 'square', L: 30, B: 30, D: 10, hull: 1100, sails: 1, crew: 120, melee: 1.6, guns: 0, speed: 0, turn: 0, reload: 10, cal: 2, bow: { n: 8, cal: 2, arc: 0.85 }, disp: 0.028, stock: { fire: 10 }, ai: { range: 260, plan: 'round' } },
 };
 
 export const LIVERY = {

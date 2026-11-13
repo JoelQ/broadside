@@ -766,7 +766,7 @@ function startBoarding(by, foe = G.enemy) {
   p.sailLevel = e.sailLevel = 0; // canvas in, so the decks are in plain view
   setMode('melee');
   $('mPN').textContent = p.spec.name; $('mEN').textContent = e.spec.name;
-  toast(by === 'player' ? 'Boarders away!' : 'Repel boarders!', 'big');
+  toast(e.spec.fuse ? 'They have lit the train — take her fast, or cut loose (X)!' : by === 'player' ? 'Boarders away!' : 'Repel boarders!', e.spec.fuse ? 'bad' : 'big', 4000);
   sfx.clang();
 }
 function syncBoardView(pWon, eWon) {
@@ -796,6 +796,13 @@ function boardingUpdate(dt) {
     b.fxT = 0.1;
     const who = Math.random() < 0.5 ? p : e, q = who.toWorld(_l.set(b.side * (who === p ? 1 : -1) * rand(0.1, 0.5) * who.spec.B, who.spec.D + 1.5, rand(-0.35, 0.35) * who.spec.L), _m);
     if (Math.random() < 0.4) { fx.musket(q.x, q.y, q.z); sfx.musket(); } else if (Math.random() < 0.5) sfx.clang();
+  }
+  // a fireship's people light the train when they are boarded: take her quickly or get clear
+  if (e.spec.fuse && !e.out && b.t > e.spec.fuse) {
+    p.boardView = e.boardView = null; G.bd = null;
+    G.state = 'battle'; G.focus = 'player'; G.boardCd = 4; setMode('battle');
+    shipOut(e, 'blown'); retarget(true);
+    return;
   }
   // a crew that has lost seven in ten of the men it brought to the rail gives up the deck
   if (e.crew <= Math.max(1, b.e0 * 0.3)) {
@@ -1196,7 +1203,7 @@ function enterHarbor() {
   moor();
   // every ship you own but are not sailing rides at anchor in the bay
   for (const t of G.trophyShips) scene.remove(t.group);
-  G.trophyShips = (G.mode === 'campaign' ? CAMP.stableIds() : ['wren', ...G.trophies]).filter((id) => id !== G.ship).map((id, i) => {
+  G.trophyShips = (G.mode === 'campaign' ? CAMP.stableIds() : ['wren', ...G.trophies]).filter((id) => id !== G.ship).sort((a, b) => hullSpec(a).L - hullSpec(b).L).map((id, i) => {
     const t = new Ship(hullSpec(id), false), m = harbor.moorings[i % harbor.moorings.length];
     t.id = id; t.crew = 14; t.sailLevel = 0;
     t.pos.set(m[0], 0, m[1]); t.heading = m[2];
@@ -1465,7 +1472,7 @@ G.step = (dt, n = 1) => { for (let i = 0; i < n; i++) update(dt); renderer.rende
 G.newAI = newAI;
 G.tick = (dt, n = 1) => { for (let i = 0; i < n; i++) update(dt); };
 G.world = world; G.view = { renderer, scene, camera };
-G.api = { aiApi, nearest, dropArcs, startScenario, showLegCard, showTitle: () => showTitle(), showPort: () => showPort(), clearShips, world, toast, strengthOf: (x) => strength(x), scene, restartSkirmish: () => restart(true),  addShip, beginScenario, beginBattle, shipOut, setTarget, foesOf, sep, relSpeed, hideScreen, showScreen, setMode, enterHarbor, snapCamera, buildPlayer, moor, playerSpec, renderPort: () => renderPort(), sfx, fx, floater, store, harbor, cutGrapples, hullSpec, updateAI, reach, inArc, hasGauge, strength: (s) => strength(s), rebuild: () => { if (G.player.arcs) dropArcs(G.player); scene.remove(G.player.group); G.player = null; buildPlayer(true); }, fire, act, tap, keys, startBoarding, boardSwivel, endBattle, toast, showPort, prize };
+G.api = { aiApi, nearest, dropArcs, startScenario, showLegCard, showTitle: () => showTitle(), clearShips, world, strengthOf: (x) => strength(x), scene, restartSkirmish: () => restart(true),  addShip, beginScenario, beginBattle, shipOut, setTarget, foesOf, sep, relSpeed, hideScreen, showScreen, setMode, enterHarbor, snapCamera, buildPlayer, moor, playerSpec, renderPort: () => renderPort(), sfx, fx, floater, store, harbor, cutGrapples, hullSpec, updateAI, reach, inArc, hasGauge, strength: (s) => strength(s), rebuild: () => { if (G.player.arcs) dropArcs(G.player); scene.remove(G.player.group); G.player = null; buildPlayer(true); }, fire, act, tap, keys, startBoarding, boardSwivel, endBattle, toast, showPort: () => showPort(), prize };
 CAMP.init(G, G.api); G.CAMP = CAMP;
 showTitle();
 snapCamera();

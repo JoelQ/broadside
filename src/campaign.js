@@ -142,7 +142,7 @@ export const CAMP = {
     });
     run.prizes.forEach((z, i) => {
       const h = HULLS[z.hull];
-      rows.push(`<div class="item prize"><div class="d">Prize: <b>${z.name}</b> · ${h.cls.toLowerCase()}<small>hull ${pct(z.hullR)} · sails ${pct(z.sailR)} · draws ${h.D.toFixed(1)}${z.own ? ' · your own ship' : ''}</small></div>
+      rows.push(`<div class="item prize"><div class="d">${z.own ? 'Your ship' : 'Prize'}: <b>${z.name}</b> · ${h.cls.toLowerCase()}<small>hull ${pct(z.hullR)} · sails ${pct(z.sailR)} · draws ${h.D.toFixed(1)}</small></div>
         <button class="btn sm" data-act="camp:strip:${i}" ${w < 1 || z.stripped || z.own ? 'disabled' : ''}>${z.stripped ? 'Stripped' : 'Strip her'}</button>
         <button class="btn sm" data-act="camp:flag:${i}" ${!free && w < 1 ? 'disabled' : ''}>Shift your flag${free ? '' : ' · one watch'}</button></div>`);
     });
@@ -207,6 +207,7 @@ export const CAMP = {
     E.enterHarbor(); E.snapCamera();
     if (key === 'm0') { CAMP.save0(); return CAMP.choose(); }
     CAMP.save();
+    if (st.done) return CAMP.ending();
     CAMP.debrief();
   },
   save0() { CAMP.save(); },

@@ -44,9 +44,9 @@ export const LEGS = [
     silence: [{ go: [-40, -200], r: 40, sail: 2 }, { kill: 'west', move: 'duel', ammo: 'round', anchor: true, anchorAt: 1.2 }, ...run('above')],
   } },
   { name: 'm4V The flagship', mission: 'm4', leg: 1, side: V, routes: {
-    guns: [{ kill: 'flag', move: 'duel', ammo: 'round' }, { go: 'zone:out', r: 40, wait: true }],
-    burn: [{ kill: 'flag', move: 'kite', ammo: 'fire' }, { go: 'zone:out', r: 40, wait: true }],
-    hug: [{ kill: 'flag', move: 'hug', ammo: 'round' }, { go: 'zone:out', r: 40, wait: true }],
+    guns: [{ kill: 'guard', move: 'duel', ammo: 'round' }, { go: [-50, 290], r: 40, sail: 2 }, { kill: 'flag', move: 'duel', ammo: 'round', anchor: true, anchorAt: 1.1 }, { go: 'zone:out', r: 40, wait: true }],
+    burn: [{ go: [100, 110], r: 40, sail: 2 }, { kill: 'flag', move: 'duel', ammo: 'fire', anchor: true, anchorAt: 0.85 }, { go: 'zone:out', r: 40, wait: true }],
+    stern: [{ go: [105, 120], r: 35, sail: 2 }, { kill: 'flag', move: 'duel', ammo: 'round', anchor: true, anchorAt: 0.8 }, { go: 'zone:out', r: 40, wait: true }],
     board: [{ kill: 'flag', move: 'duel', ammo: 'grape', board: 'rush' }],
     guardFirst: [{ kill: 'guard', move: 'duel', ammo: 'round' }, { kill: 'flag', move: 'duel', ammo: 'combo', board: 'odds' }, { go: 'zone:out', r: 40, wait: true }],
   } },

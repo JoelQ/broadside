@@ -206,7 +206,7 @@ const breeze = {
   title: 'The breeze',
   build(c) {
     const left = (c.carry.galleys || [null, null]);
-    const ships = [{ id: 'sail', spec: shipSpec('merchantman', c.foe, c.names.heavy, 'line'), side: 1, x: 380, z: 420, h: PI + 0.7 }];
+    const ships = [{ id: 'sail', spec: shipSpec('merchantman', c.foe, c.names.heavy, 'poor'), side: 1, x: 380, z: 420, h: PI + 0.7 }];
     left.forEach((g, i) => { if (g) ships.push({ id: 'g' + (i + 1), spec: shipSpec(i ? 'galliot' : 'galley', c.foe, c.names['galley' + (i + 1)], 'line'), side: 1, x: i ? 250 : -250, z: 260, h: PI, o: { hull: g.hull, sails: g.sails, crew: g.crew } }); });
     return {
       env: 'noon', wind: { dir: 1.2 + PI, str: 1 }, seedIslands: [1654, 2],
@@ -248,15 +248,15 @@ const fittingOut = {
   build(c) {
     return {
       env: 'golden', ...strait(), shoals: straitShoals([-300, 0, 300]),
-      player: { x: 60, z: -520, h: 0.5, speed: 6 },
+      player: { x: -60, z: -400, h: 0.2, speed: 6 },
       zones: [],
       ships: [
-        { id: 'flag', spec: shipSpec('flagship', c.foe, c.names.flag, 'poor', { guns: 9, ai: { cuts: 0.3 } }), side: 1, x: -70, z: 300, h: PI / 2, o: { crew: 0.4, sails: 0.3, anchored: true } },
-        { id: 'guard', spec: shipSpec('brig', c.foe, c.names.brig, 'line'), side: 1, x: 90, z: 120, h: PI },
+        { id: 'flag', spec: shipSpec('flagship', c.foe, c.names.flag, 'poor', { guns: 9, magazine: 0.04, ai: { cuts: 0.3 } }), side: 1, x: 110, z: 270, h: 0, o: { crew: 0.4, sails: 0.3, anchored: true } },
+        { id: 'guard', spec: shipSpec('brig', c.foe, c.names.brig, 'poor'), side: 1, x: -40, z: 70, h: PI },
       ],
       focus: 'flag',
       objective: () => (c.S && c.S.by.flag.out ? 'She is finished. Now get out: ride the current south' : 'Destroy or take the flagship fitting out above the castles'),
-      tip: 'She is half-manned and half-rigged, with half her guns still on the quay. At anchor she can only haul herself round slowly.',
+      tip: 'She is half-manned and half-rigged, with half her guns still on the quay and powder lighters alongside. At anchor she can only haul herself round slowly.',
       check: (S) => {
         const f = S.by.flag;
         if (f.out === 'captured') return 'won';
@@ -344,7 +344,7 @@ const flagDuel = (attacker) => ({
       shoals: [{ x: -260, z: 60, r: 70, depth: 3.5 }, { x: 300, z: 20, r: 80, depth: 3.5 }],
       player: { x: -40, z: -420, h: 0, speed: 6 },
       ships: [
-        { id: 'flag', spec: shipSpec('flagship', c.foe, c.names.flag, 'line', { noStrike: true }), side: 1, x: 60, z: 40, h: PI, o: { crew: 0.75 } },
+        { id: 'flag', spec: shipSpec('flagship', c.foe, c.names.flag, 'line'), side: 1, x: 60, z: 40, h: PI, o: { crew: 0.75, hull: 0.8 } },
         { id: 'koules', spec: shipSpec('koules', attacker ? c.foe : c.own, c.names.koules, 'line'), side: fortSide, x: 40, z: 250, h: PI, o: attacker ? { hull: 0.6, crew: 0.6 } : { hull: 0.35, crew: 0.4 } },
       ],
       objective: attacker ? 'Their flagship stands between you and the city. Finish her, and mind the fortress' : 'Their commander is coming in. Finish his flagship under what is left of your own guns',
@@ -357,14 +357,14 @@ const sortie = {
   title: 'The sortie',
   build(c) {
     const mole = [0, 230];
-    const fs = [[-170, -480], [0, -540], [180, -470]];
+    const fs = [[-200, -720], [0, -800], [210, -700]];
     return {
-      env: 'dusk', wind: { dir: 0.25, str: 1, steady: true }, islands: harbourCoast(),
+      env: 'dusk', wind: { dir: 1.2, str: 1, steady: true }, islands: harbourCoast(),
       player: { x: 0, z: 80, h: PI, speed: 7 },
       zones: [{ name: 'mole', x: mole[0], z: mole[1], r: 55, color: 0xff6a5a }],
       ships: [
-        ...fs.map(([x, z], i) => ({ id: 'fs' + i, spec: shipSpec('sloop', c.foe, 'Fireship', 'poor', { guns: 0, bow: { n: 1, cal: 0, arc: 0.2 }, magazine: 0.3, speed: 9.5, noStrike: true, stock: {} }), side: 1, x, z, h: 0, o: { crew: 0.3, goTo: mole, sail: 3 } })),
-        { id: 'escort', spec: shipSpec('galley', c.foe, c.names.galley1, 'line'), side: 1, x: 60, z: -380, h: 0 },
+        ...fs.map(([x, z], i) => ({ id: 'fs' + i, spec: shipSpec('sloop', c.foe, 'Fireship', 'poor', { guns: 0, bow: { n: 1, cal: 0, arc: 0.2 }, magazine: 0.3, fuse: 7, speed: 8, stock: {} }), side: 1, x, z, h: 0, o: { crew: 0.3, goTo: mole, sail: 3 } })),
+        { id: 'escort', spec: shipSpec('galliot', c.foe, c.names.galley1, 'line'), side: 1, x: 60, z: -520, h: 0 },
       ],
       focus: 'fs1',
       objective: () => { const S = c.S; if (!S) return ''; return `Fireships are coming in on the wind for the mole. Stop at least two of the three — stopped: ${S.flag.stopped || 0} · got through: ${S.flag.through || 0}`; },
