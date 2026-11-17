@@ -94,7 +94,11 @@ export function updateAI(ai, me, foe, world, dt, api) {
   // don't stall in irons: fall off to a close-hauled tack
   const str = world.wind.str ?? 1;
   // galley captains drive their oarsmen hard: sprint to close, row to hold station. Pushed too long they are spent, and she lies still
-  if (me.spec.oars) me.oar = ai.rest ? 0 : (closing || bowOn || dist > range * 1.4) && me.stamina > (me.oar === 2 ? 0.1 : 0.45) ? 2 : 1;
+  if (me.spec.oars) {
+    // a tired crew out of the thick of it gets a breather; in close action she pushes on, and may be spent
+    if (me.stamina < 0.12 && dist > 140) ai.breather = true; else if (me.stamina > 0.4 || dist < 90) ai.breather = false;
+    me.oar = ai.rest || ai.breather ? 0 : (closing || bowOn || dist > range * 1.4) && me.stamina > (me.oar === 2 ? 0.1 : 0.45) ? 2 : 1;
+  }
   const up = wrap(desired - upwind);
   if (Math.abs(up) < 0.68 && str > 0.3 && !me.anchored && !(me.spec.oars && me.oar)) desired = upwind + (up >= 0 ? 1 : -1) * 0.78;
   if (str > 1.3) sail = Math.min(sail, 2);

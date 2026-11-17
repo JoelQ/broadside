@@ -155,7 +155,7 @@ export class Ship {
       if (sp.oars) {
         // sprinting spends the oarsmen fast, rowing slowly; resting brings them back. Spent, they stop until they have their breath
         const resting = held || this.oar === 0 || this.spent;
-        this.stamina = clamp(this.stamina + dt * (resting ? 0.05 : this.oar === 2 ? -0.045 : -0.004), 0, 1);
+        this.stamina = clamp(this.stamina + dt * (resting ? 0.05 : this.oar === 2 ? -0.045 : -0.0015), 0, 1);
         if (!this.spent && this.stamina <= 0 && this.oar) this.spent = true;
         else if (this.spent && this.stamina >= 0.35) this.spent = false;
       }

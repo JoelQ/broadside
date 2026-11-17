@@ -557,7 +557,7 @@ function startScenario(def, c) {
     blow: (ship) => shipOut(ship, 'blown'),
     // things that happen during a fight: a ship arrives, a ship wakes up to you, a ship runs for it
     add: (d) => { const s = spawn(d); if (G.state === 'battle' && s.side !== G.player.side && !G.fast) floater('Sail ho!', 'rake', _v.set(s.pos.x, s.model.mastH, s.pos.z).clone()); return s; },
-    wake: (id, msg) => { const s = S.by[id]; if (!s || !s.ai || !s.ai.idle) return; s.ai.idle = false; if (msg && !G.fast) toast(msg, 'bad', 3500); },
+    wake: (id, msg) => { const s = S.by[id]; if (!s || !s.ai || !s.ai.idle) return; s.ai.idle = false; s.keepSail = false; if (s.anchored) s.weighT = 3; if (msg && !G.fast) toast(msg, 'bad', 3500); },
     escape: (s) => shipOut(s, 'escaped'),
     flee: (s, to) => { if (!s || s.out || !s.ai || s.ai.flee) return; s.ai.flee = true; s.ai.goTo = to; s.ai.hold = false; s.ai.idle = false; s.anchored = false; if (!G.fast) floater('Running!', 'good rake', _v.set(s.pos.x, s.model.mastH, s.pos.z).clone()); },
   };
@@ -565,7 +565,7 @@ function startScenario(def, c) {
     const o = d.o || {}, s = addShip(d.spec, d.side, d.x, d.z, wrap(d.h), { id: d.id, ...o });
     if (o.anchored) { s.anchored = true; s.speed = 0; s.keepSail = true; s.sailLevel = 0; }
     if (o.hold) s.ai.hold = true;
-    if (o.idle) { s.ai.idle = true; s.keepSail = true; }
+    if (o.idle) { s.ai.idle = true; s.anchored = true; s.speed = 0; s.keepSail = true; s.sailLevel = 0; } // lying at anchor on station
     if (o.goTo) { s.ai.goTo = o.goTo; s.keepSail = true; }
     s.v0 = s.speed; S.by[d.id] = s;
     return s;
@@ -679,7 +679,7 @@ function runAI(dt) {
     if (s.ai.hold) { // under false colours she takes you for a friend, until you show otherwise
       if (G.fired || sep(p, s) < s.spec.L * 1.1 || s.hull < s.hullMax) { s.ai.hold = false; if (!G.fast) toast(`${s.name} knows you now!`, 'bad'); } else { s.input.turn = 0; s.sailLevel = 1; continue; }
     }
-    if (s.ai.idle) { s.input.turn = 0.15; s.sailLevel = 1; if (s.spec.oars) s.oar = 0; continue; } // lying on station, not yet roused
+    if (s.ai.idle) { s.input.turn = 0; if (s.spec.oars) s.oar = 0; continue; } // lying on station, not yet roused
     if (s.ai.goTo) {
       steerTo(s, s.ai.goTo[0], s.ai.goTo[1], world);
       if (s.spec.oars) s.oar = s.stamina > 0.3 ? 2 : 1;

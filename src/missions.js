@@ -35,8 +35,7 @@ const candiaCoast = (z) => [-30, 190, 410, 630].map((x, i) => ({ x, z: z + (i % 
 const theRun = {
   title: 'The run',
   build(c) {
-    const heard = (S) => { const k = S.by.picket; return k.out || k.hull < k.hullMax || k.sides.some((x) => k.reload[x] > 0); };
-    const near = (S, id) => Math.hypot(S.p.pos.x - S.by[id].pos.x, S.p.pos.z - S.by[id].pos.z) < 380;
+    const near = (S, id, r) => Math.hypot(S.p.pos.x - S.by[id].pos.x, S.p.pos.z - S.by[id].pos.z) < r, patrol = [70, 190];
     return {
       env: 'golden', wind: { dir: PI / 2 - 0.5, str: 1 }, islands: candiaCoast(800),
       shoals: [
@@ -50,13 +49,18 @@ const theRun = {
         { id: 'heavy', spec: shipSpec('merchantman', c.foe, c.names.heavy, 'line', { ai: { reckless: 0.8, range: 130 } }), side: 1, x: -60, z: 240, h: PI / 2, o: { idle: true } },
         { id: 'brig', spec: shipSpec('brig', c.foe, c.names.brig, 'line', { ai: { reckless: 0.8, range: 90 } }), side: 1, x: 190, z: 330, h: -PI / 2, o: { idle: true } },
       ],
-      objective: () => (c.S && c.S.flag.alarm ? 'The patrol is under way. Reach the harbour, beat the patrol, or take one of them and sail in under her colours' : 'Bring the powder into Candia. The patrol off the harbour has not seen you yet'),
+      objective: () => { const S = c.S; if (!S) return ''; return S.flag.alarm ? 'The patrol is under way. Reach the harbour, beat the patrol, or take one of them and sail in under her colours' : S.flag.seen ? 'The picket is rowing to warn the patrol: catch her, or be quick' : 'Bring the powder into Candia. The patrol off the harbour has not seen you yet'; },
       tip: 'The pale water is shoal: a ship that draws less than you floats over it, one that draws more sticks. Rocks in the water are reef, and nothing floats over those.',
       events: [
-        { t: 5, fn: (S) => S.say('Manolis: “The galliot is their picket. If she fires, the patrol off the harbour will hear it: a hired ship with heavy guns, and a brig. Both draw more water than a sloop.”', '') },
+        { t: 5, fn: (S) => S.say('Manolis: “The galliot is their picket. If she sees us she will row for the patrol off the harbour: a hired ship with heavy guns, and a brig. Both draw more water than a sloop.”', '') },
       ],
       check: (S) => {
-        if (!S.flag.alarm && (heard(S) || near(S, 'heavy') || near(S, 'brig') || S.t > 90)) { S.flag.alarm = true; S.wake('heavy', 'The patrol has heard the guns: they are getting under way'); S.wake('brig'); }
+        const k = S.by.picket;
+        // the picket's whole job is to warn the patrol: once she sees you she rows for it
+        if (!S.flag.seen && !k.out && (near(S, 'picket', 430) || k.hull < k.hullMax)) { S.flag.seen = true; k.ai.goTo = patrol; S.say('The picket has seen you, and she is rowing for the patrol'); }
+        const warned = S.flag.seen && !k.out && Math.hypot(k.pos.x - patrol[0], k.pos.z - patrol[1]) < 110;
+        if (warned) k.ai.goTo = null;
+        if (!S.flag.alarm && (warned || near(S, 'heavy', 380) || near(S, 'brig', 380) || S.t > 200)) { S.flag.alarm = true; S.wake('heavy', warned ? 'The picket has reached the patrol: they are getting under way' : 'The patrol has seen you: they are getting under way'); S.wake('brig'); }
         return S.inZone('harbour') || allOut(S, ['heavy', 'brig']) || S.by.heavy.out === 'captured' || S.by.brig.out === 'captured' ? 'won' : null;
       },
     };
@@ -87,7 +91,7 @@ const theCove = {
       ],
       check: (S) => {
         const w = S.by.powder, g = S.by.guard;
-        if (g.ai && g.ai.idle && (Math.hypot(S.p.pos.x - g.pos.x, S.p.pos.z - g.pos.z) < 360 || g.hull < g.hullMax || S.t > 60)) S.wake('guard', 'The guard ship has seen you');
+        if (g.ai && g.ai.idle && (Math.hypot(S.p.pos.x - g.pos.x, S.p.pos.z - g.pos.z) < 300 || g.hull < g.hullMax)) S.wake('guard', 'The guard ship has seen you');
         if (!w.out && w.ai && w.ai.goTo && Math.hypot(w.pos.x - exit[0], w.pos.z - exit[1]) < 70) S.escape(w);
         return w.out === 'escaped' ? 'failed' : w.out ? 'won' : null;
       },
@@ -204,12 +208,12 @@ const calm = {
         { t: 6, fn: (S) => { if (!S.p.spec.oars) S.say('Manolis: “No steerage way. Anchor, and we can still swing her on the spring.”', ''); } },
         { t: 95, fn: (S) => S.say(c.has('pilot') ? 'Pilot: “Wind on the water to the north-east. A little longer.”' : 'Dark water to the north-east: wind is coming') },
         { t: 110, fn: (S) => S.wind(W, 0.5) },
-        { t: 130, fn: (S) => { S.wind(W, 1); S.flag.breeze = true; S.say('The breeze is here. Manolis points north-east: a tall ship, coming down with the wind behind her. “They sent a friend.”'); S.add({ id: 'sail', spec: shipSpec('merchantman', c.foe, c.names.heavy, 'line'), side: 1, x: up[0], z: up[1], h: Math.atan2(-up[0], -up[1]), o: { speed: 8 } }); } },
+        { t: 130, fn: (S) => { S.wind(W, 1); S.flag.breeze = true; S.say('The breeze is here. Manolis points north-east: a tall ship, coming down with the wind behind her. “They sent a friend.”'); S.add({ id: 'sail', spec: shipSpec('merchantman', c.foe, c.names.heavy, 'poor'), side: 1, x: up[0], z: up[1], h: Math.atan2(-up[0], -up[1]), o: { speed: 8 } }); } },
       ],
       check: (S) => {
         if (!S.flag.breeze) return null;
-        // once a sailing ship can move again, a beaten galley has no reason to stay
-        for (const id of ['g1', 'g2']) { const g = S.by[id], d = Math.hypot(g.pos.x - S.p.pos.x, g.pos.z - S.p.pos.z) || 1; if (!g.out && (g.hullR < 0.6 || g.crewR < 0.55)) S.flee(g, [g.pos.x + ((g.pos.x - S.p.pos.x) / d) * 900, g.pos.z + ((g.pos.z - S.p.pos.z) / d) * 900]); }
+        // once a sailing ship can move again the big galley wants no part of her, and a beaten galley has no reason to stay
+        for (const id of ['g1', 'g2']) { const g = S.by[id], d = Math.hypot(g.pos.x - S.p.pos.x, g.pos.z - S.p.pos.z) || 1; if (!g.out && ((id === 'g1' && !S.p.spec.oars) || g.hullR < 0.6 || g.crewR < 0.55)) S.flee(g, [g.pos.x + ((g.pos.x - S.p.pos.x) / d) * 900, g.pos.z + ((g.pos.z - S.p.pos.z) / d) * 900]); }
         return allOut(S, ['g1', 'g2', 'sail']) ? 'won' : null;
       },
     };
