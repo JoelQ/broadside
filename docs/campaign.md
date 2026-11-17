@@ -49,7 +49,7 @@ lists where the game differs from it and what the research pass could and could 
 
 ## Structure
 
-A mission is a **cruise**: two or three fights ("legs") with no port between them. Hull, sails,
+(As built, only missions 2 and 5 are cruises; see "As built".) A mission is a **cruise**: two or three fights ("legs") with no port between them. Hull, sails,
 crew and shot carry from one leg to the next.
 
 Between legs you get a **jury-rig pause** with three watches to spend. Each watch does one of:
@@ -238,8 +238,28 @@ Where the game differs from the proposal above, and why.
 - **Galleys pound before they board.** An AI galley takes station off the bow or stern of a ship
   that cannot move and uses her bow guns; she boards only once the odds are well in her favour.
   The harness showed that galleys which boarded at once made the calm a coin-toss on crew size.
-- **The calm is two legs.** The galleys in the calm (a galley and a galliot), then, after a pause,
-  the sailing ship the breeze brings, with whatever is left of the galleys.
+- **Most missions are one scene, not a cruise** (changed after the first playtest). Splitting a
+  mission into legs made every situation static: the calm was a defence scene and then a sailing
+  scene, when the point is that the wind rises while you are fighting. Now missions 1, 3 and 4 are
+  each one scene with events on a clock: ships that lie idle until they hear guns or see you
+  (the patrol off Candia, the guard ships), ships that arrive (the tall ship that comes with the
+  breeze), ships that run (beaten galleys once a sailing ship can move again; the powder ship,
+  which weighs at dark and must be stopped before she is clear). Only the pirate hunt (mission 2)
+  and the finale (mission 5) are still cruises with jury-rig pauses between fights.
+- **Mechanics you can see** (also after the first playtest, which found shoals, current, wind
+  shifts and cat's-paws had no visible effect):
+  - Shoal banks are always drawn: pale water ringed with broken water. Reefs (rocks showing)
+    ground anything, even a sloop; plain shoals stop only deeper ships. With the pilot aboard
+    every bank carries its depth, in red where your ship would stick. A ship aground lists over.
+  - In the straits, white lines on the water run with the current, and a note gives its set.
+  - Cat's-paws are local: dark ripple patches drifting downwind, with real wind inside them.
+  - Wind shifts are larger (25 to 55 degrees), swing round in a few seconds, and are reported in
+    points with what they mean for your heading.
+  - A ship with no way on barely answers her helm; at anchor the spring hauls her round faster
+    than drifting. This is what makes anchoring in a calm worth doing.
+  - Galley oarsmen tire: sprinting spends them fast, rowing slowly. Spent, they stop until they
+    have their breath back. An enemy galley's oars bar shows in her panel, and "Oarsmen spent!"
+    marks the moment she lies still.
 - **Mission 5, Venice.** The assault is led by fireships only. Bomb vessels are an anachronism for
   1669 (they first appear in the 1680s).
 - **Prizes.** A prize of a kind you do not own joins your ships in port; one of a kind you already

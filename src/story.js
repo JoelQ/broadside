@@ -53,9 +53,7 @@ export const STORY = {
   // one line under each leg's title, on the card before the fight
   legs: {
     'Home waters': { both: 'Forty houses and a chapel, and nobody else to send.' },
-    'The picket': { both: 'A powder ship does not want a long conversation.' },
-    'The patrol': { both: 'Candia’s walls are in sight. So are they.' },
-    'The guard ship': { both: 'She sits where the channel narrows, as she should.' },
+    'The run': { both: 'A powder ship does not want a long conversation. Candia’s walls are in sight, and so is the patrol.' },
     'The anchorage': { both: 'Powder for a month of siege, in one hull, waiting for dark.' },
     'The brothers': { both: 'They have hunted as a pair since they were boys.' },
     'A lee shore': { both: 'Nobody sensible is at sea today. Varga is.' },
@@ -64,11 +62,9 @@ export const STORY = {
     'Among the islets': { both: 'She learned these rocks from her mother.' },
     'False colours': { both: 'A borrowed flag, a steady course, and a straight face.' },
     'Dead calm': { both: 'Dawn, and the sails hang like washing.' },
-    'The breeze': { both: 'Now it is a sailor’s fight.' },
-    'The castles': { both: 'Two castles, one current, and all of it against you.' },
+    'Up the strait': { both: 'Two castles, one current, and all of it against you. Then the same way back.' },
     'The flagship': { both: 'Everything so far has been for this.' },
-    'The watch galley': { both: 'The current is with you. It will not let you change your mind.' },
-    'The blockade': { both: 'Two ships at anchor have shut the fleet in. Open the door.' },
+    'Down the strait': { both: 'The current is with you. It will not let you change your mind. Two ships at anchor have shut the fleet in: open the door.' },
     'The mole': { both: 'The day of the assault.' },
     'The harbour': { both: 'Smoke, and every ship for herself.' },
     'The sortie': { both: 'The day of the assault.' },
@@ -98,10 +94,6 @@ export const STORY = {
         'Captain Zuanne Barbaro has a cargo and no ship fit to carry it: powder, enough for a month of the city’s guns. “İbrahim Reis keeps a patrol off the harbour, and he is good at it. They will see you coming. There is shoal water inshore of them, if your ship is small enough to use it.”',
         'How you get the powder in is your affair. Getting it in is the Republic’s.',
       ] },
-      legs: [
-        { pause: ['Manolis: “That was the picket. The patrol proper lies off the harbour: a hired ship with heavy guns and a brig. Both draw more water than a sloop.”', 'The powder rides quietly in the hold. Nobody smokes.'] },
-        {},
-      ],
       end: { title: 'The powder is landed', text: [
         'The city’s boats come out before your anchor is down, and the barrels go ashore by lantern. On the walls above, the guns that were being rationed fire through the night.',
         'In the morning a boat brings a note in a neat hand, with no signature. <i>You are either lucky or good. I will find out which.</i> Manolis says it is how İbrahim Reis writes.',
@@ -113,10 +105,6 @@ export const STORY = {
         'İbrahim Reis commands the patrol and has news. “The <i>Santa Caterina</i>, a powder ship, under a captain named Barbaro. She has put into a cove down the coast to wait for dark, under a small battery. One guard ship outside. If that powder reaches the city, the siege is a month longer.”',
         'Take her, burn her or sink her. He does not mind which.',
       ] },
-      legs: [
-        { pause: ['Manolis: “The cove is past the next headland. The battery is on the western point and looks south-west. It was built to stop ships coming the obvious way.”', 'The light is going. She will sail when it is gone.'] },
-        {},
-      ],
       end: { title: 'The powder never arrives', text: [
         'By morning the whole coast knows. On the walls of Candia the guns go back to counted rounds.',
         'A prisoner exchange brings a note in a firm, angry hand. <i>That was my ship. I will remember yours.</i> It is signed Zuanne Barbaro.',
@@ -164,10 +152,6 @@ export const STORY = {
         'You are to meet a supply ship south of the cape. The meeting place is a day’s row from Chania, and İbrahim Reis can count as well as you can.',
         'Marousa has been chalking ranges on the gun carriages. “If the wind fails,” she says, “we are a fort. Forts can win, if they are patient.”',
       ] },
-      legs: [
-        { pause: ['The big galley hauls off as the breeze comes: she has no wish to meet a sailing ship that can move.', 'Manolis points north-east. A tall ship, hull down, coming with the wind behind her. “They sent a friend.”'] },
-        {},
-      ],
       end: { title: 'After the calm', text: [
         'Among the men pulled from the water is a Venetian in the rags of a red coat: Zuanne Barbaro, taken off Candia a year ago and chained to an oar in the galley you fought. He looks at your ship for some time.',
         '“I have had a year to think about what I would do with a deck under me again.”',
@@ -179,10 +163,6 @@ export const STORY = {
         'You are to carry dispatches round the cape. The Venetians at Suda keep galleys of their own, a day’s row from your course, and Captain Barbaro can count as well as you can.',
         'Marousa has been chalking ranges on the gun carriages. “If the wind fails,” she says, “we are a fort. Forts can win, if they are patient.”',
       ] },
-      legs: [
-        { pause: ['The big galley hauls off as the breeze comes: she has no wish to meet a sailing ship that can move.', 'Manolis points north-east. A tall ship, hull down, coming with the wind behind her. “They sent a friend.”'] },
-        {},
-      ],
       end: { title: 'After the calm', text: [
         'İbrahim Reis comes aboard at Chania, without his patrol. Two of his ships were lost off Candia while you were at sea, and the Kapudan Pasha has given what is left to another man.',
         '“I am a captain without a deck. You have a deck, and you keep winning on it. Let me bring my men.”',
@@ -197,10 +177,6 @@ export const STORY = {
         'Now the Captain General has word of a great ship fitting out above the castles: a flagship for a fleet meant to break the blockade. She is not ready. In a month she will be.',
         'The current in the strait runs out to sea, hard in mid-channel and slack along the shores, and the summer wind blows the same way. “Going up is slow,” says Manolis. “Coming down is fast, and you cannot take it back.”',
       ] },
-      legs: [
-        { pause: ['Above the castles the strait opens. Barbaro has been watching the far shore through a glass. “There. Yards down on deck, lighters alongside. And one guard ship, awake.”', 'Whatever is done to her, the way home is the way you came.'] },
-        {},
-      ],
       end: { title: 'Below the castles', text: [
         'The fleet at the mouth sees the smoke before it sees you. The fleet that was to break the blockade has no flagship, and whatever reaches Crete this year will be less than was meant.',
         'Then the dispatch boat from Candia comes in. The Grand Vizier himself has taken command of the siege, and he does not mean to wait another year.',
@@ -212,10 +188,6 @@ export const STORY = {
         'The fleet in the strait is not ready to fight its way out. It does not need to. Two ships are anchored across the channel at the mouth, and they are the blockade. Take one, sink one, burn one, or frighten one into cutting her cable, and the convoys can run.',
         'The current runs out to sea, hard in mid-channel and slack along the shores, and the summer wind blows the same way. “Going down is fast,” says Manolis, “and you cannot take it back. Only the eddies inshore will carry you up again.”',
       ] },
-      legs: [
-        { pause: ['Past the last bend the strait opens to the sea, and there they are: two ships, bows upstream, lying to their anchors as if they owned the water.', 'İbrahim Reis: “They cannot run. Remember that neither can we.”'] },
-        {},
-      ],
       end: { title: 'The door opens', text: [
         'Three nights later the first convoy goes out past the castles on the current, and the Venetians are too few to stop it. What reaches Crete this year will be all that was meant.',
         'Then the dispatch boat comes down from the capital. The Grand Vizier himself is going to Crete to end the siege, and he wants every ship.',

@@ -551,10 +551,24 @@ function startScenario(def, c) {
   world.clearIslands();
   const S = { by: {}, flag: {}, t: 0, p: G.player,
     inZone: (n) => { const z = (sc.zones || []).find((q) => q.name === n); return !!z && Math.hypot(G.player.pos.x - z.x, G.player.pos.z - z.z) < z.r; },
-    say: (t, cls = 'big') => toast(t, cls, 4500),
+    say: (t, cls = 'big') => toast(t, cls, Math.max(4500, t.length * 55)),
     wind: (dir, str) => world.setWind(dir, str),
     addZone: (z) => { sc.zones.push(z); drawZones(); },
     blow: (ship) => shipOut(ship, 'blown'),
+    // things that happen during a fight: a ship arrives, a ship wakes up to you, a ship runs for it
+    add: (d) => { const s = spawn(d); if (G.state === 'battle' && s.side !== G.player.side && !G.fast) floater('Sail ho!', 'rake', _v.set(s.pos.x, s.model.mastH, s.pos.z).clone()); return s; },
+    wake: (id, msg) => { const s = S.by[id]; if (!s || !s.ai || !s.ai.idle) return; s.ai.idle = false; if (msg && !G.fast) toast(msg, 'bad', 3500); },
+    escape: (s) => shipOut(s, 'escaped'),
+    flee: (s, to) => { if (!s || s.out || !s.ai || s.ai.flee) return; s.ai.flee = true; s.ai.goTo = to; s.ai.hold = false; s.ai.idle = false; s.anchored = false; if (!G.fast) floater('Running!', 'good rake', _v.set(s.pos.x, s.model.mastH, s.pos.z).clone()); },
+  };
+  const spawn = (d) => {
+    const o = d.o || {}, s = addShip(d.spec, d.side, d.x, d.z, wrap(d.h), { id: d.id, ...o });
+    if (o.anchored) { s.anchored = true; s.speed = 0; s.keepSail = true; s.sailLevel = 0; }
+    if (o.hold) s.ai.hold = true;
+    if (o.idle) { s.ai.idle = true; s.keepSail = true; }
+    if (o.goTo) { s.ai.goTo = o.goTo; s.keepSail = true; }
+    s.v0 = s.speed; S.by[d.id] = s;
+    return s;
   };
   const sc = { ...def, S, zones: [...(def.zones || [])], events: (def.events || []).map((e) => ({ t: e.t, fn: () => e.fn(S) })) };
   sc.check = () => { S.t = G.battleT; return def.check(S); };
@@ -563,18 +577,12 @@ function startScenario(def, c) {
   world.setEnv(def.env || 'noon');
   if (def.seedIslands) world.setIslands(def.seedIslands[0], def.seedIslands[1]);
   for (const i of def.islands || []) world.addIsland(i);
-  world.setShoals(def.shoals || [], c.has('pilot'));
+  world.setShoals(def.shoals || [], c.has('pilot'), G.player.spec.D);
   world.currentAt = def.current ? (x, z) => def.current(x, z) : null;
   world.setWind(def.wind.dir, def.wind.str ?? 1, true); world.wind.steady = !!def.wind.steady; world.wind.timer = 40;
   const p = G.player, pl = def.player;
   p.pos.set(pl.x, 0, pl.z); p.heading = wrap(pl.h); p.speed = p.v0 = pl.speed ?? 6; p.sailLevel = TOP;
-  for (const d of def.ships) {
-    const o = d.o || {}, s = addShip(d.spec, d.side, d.x, d.z, wrap(d.h), { id: d.id, ...o });
-    if (o.anchored) { s.anchored = true; s.speed = 0; s.keepSail = true; s.sailLevel = 0; }
-    if (o.hold) s.ai.hold = true;
-    if (o.goTo) { s.ai.goTo = o.goTo; s.keepSail = true; }
-    s.v0 = s.speed; S.by[d.id] = s;
-  }
+  for (const d of def.ships) spawn(d);
   // a blazing ship that fouls another passes the fire on; the blast of a powder ship hurts whatever is near
   sc.onOut = (s, how) => {
     if (how === 'blown') for (const o of G.ships) { const d = sep(s, o); if (o !== s && !o.out && d < 70) { o.hull -= (s.spec.fixed ? 60 : 110) * (1 - d / 70); if (o.isPlayer) toast('Caught in the blast!', 'bad'); } }
@@ -636,11 +644,12 @@ function shipOut(s, how) {
   s.out = how; s.grapple = 0;
   const foe = s.side !== G.player.side, near = !G.fast;
   if (how === 'sunk') { s.sinking = Math.max(s.sinking, 0.01); if (foe) G.stats.sunk++; }
+  else if (how === 'fled' || how === 'escaped') { s.struck = true; s.fire = 0; if (s.arcs) dropArcs(s); if (s.pip) { s.pip.remove(); s.pip = null; } scene.remove(s.group); G.ships = G.ships.filter((x) => x !== s); } // gone over the horizon
   else { s.struck = true; s.fire = 0; s.anchored = false; if (foe) { if (how === 'captured') G.stats.captured++; else G.stats.sunk++; } }
   if (how === 'blown') { fx.wood(_v.set(s.pos.x, s.spec.D + 2, s.pos.z).clone(), 40); for (let i = 0; i < 14; i++) fx.flame(s.pos.x + rand(-6, 6), s.spec.D + rand(0, 9), s.pos.z + rand(-6, 6)); sfx.cannon(1); G.shake = 1.4; if (!s.spec.fixed) s.sinking = Math.max(s.sinking, 0.01); }
   if (near && s !== G.player) {
-    const msg = { sunk: 'is going down!', struck: 'strikes — a floating wreck', captured: foe ? 'is yours!' : 'has been taken!', silenced: 'is silenced', blown: 'blows up!' }[how];
-    toast(`${s.name} ${msg}`, foe ? 'big' : 'bad', 4000); sfx.horn(foe);
+    const msg = { sunk: 'is going down!', struck: 'strikes — a floating wreck', captured: foe ? 'is yours!' : 'has been taken!', silenced: 'is silenced', blown: 'blows up!', fled: 'has run for it, out of the fight', escaped: 'has got away!' }[how];
+    toast(`${s.name} ${msg}`, foe && how !== 'escaped' ? 'big' : 'bad', 4000); sfx.horn(foe && how !== 'escaped');
   }
   if (G.sc.onOut) G.sc.onOut(s, how);
 }
@@ -670,7 +679,13 @@ function runAI(dt) {
     if (s.ai.hold) { // under false colours she takes you for a friend, until you show otherwise
       if (G.fired || sep(p, s) < s.spec.L * 1.1 || s.hull < s.hullMax) { s.ai.hold = false; if (!G.fast) toast(`${s.name} knows you now!`, 'bad'); } else { s.input.turn = 0; s.sailLevel = 1; continue; }
     }
-    if (s.ai.goTo) { steerTo(s, s.ai.goTo[0], s.ai.goTo[1], world); continue; }
+    if (s.ai.idle) { s.input.turn = 0.15; s.sailLevel = 1; if (s.spec.oars) s.oar = 0; continue; } // lying on station, not yet roused
+    if (s.ai.goTo) {
+      steerTo(s, s.ai.goTo[0], s.ai.goTo[1], world);
+      if (s.spec.oars) s.oar = s.stamina > 0.3 ? 2 : 1;
+      if (s.ai.flee && (Math.hypot(s.pos.x - s.ai.goTo[0], s.pos.z - s.ai.goTo[1]) < 60 || sep(p, s) > 650)) shipOut(s, 'fled');
+      continue;
+    }
     if ((s.ai.pick = (s.ai.pick || 0) - dt) <= 0 || !s.target || !s.target.active) { s.target = pickTarget(s); s.ai.pick = 2.5; }
     if (s.target) updateAI(s.ai, s, s.target, world, dt, aiApi);
     else { s.input.turn = 0; if (!s.spec.fixed) s.sailLevel = 1; }
@@ -704,6 +719,7 @@ function battleUpdate(dt) {
   if (world.wind.str > 1.3 && p.sailLevel === TOP) toastOnce('gale', 12, 'Full sail in a gale is tearing the canvas — shorten sail!', 'bad', 3000);
   if (world.wind.next != null && !G.windCalled && G.mode === 'campaign' && CAMP.has('pilot') && Math.abs(world.wind.next) > 0.25) { G.windCalled = true; toast(`Pilot: “Wind’s about to shift, ${world.wind.next > 0 ? 'veering' : 'backing'}.”`, '', 3500); }
   if (world.wind.next == null) G.windCalled = false;
+  worldNews(p);
   fates();
   if (p.hull <= 0) return endBattle('lost');
   const r = G.sc.check && G.sc.check(dt);
@@ -1037,7 +1053,7 @@ function updateHUD(dt) {
   if (++hudTick % 4) return;
   setBars('p', p);
   $('ePanel').style.visibility = e ? '' : 'hidden';
-  const st = (s) => [s.fire > 0 ? 'On fire' : '', s.aground > 0 ? 'Aground' : '', s.anchored ? 'At anchor' : '', s.hullR < 0.3 ? 'Taking on water' : '', s.sailR < 0.3 && !s.spec.fixed ? 'Rigging in tatters' : ''].filter(Boolean).join(' · ');
+  const st = (s) => [s.fire > 0 ? 'On fire' : '', s.aground > 0 ? 'Aground' : '', s.anchored ? (s === p ? 'At anchor: A / D haul on the spring' : 'At anchor') : '', s.spent ? 'Oarsmen spent' : '', s.hullR < 0.3 ? 'Taking on water' : '', s.sailR < 0.3 && !s.spec.fixed ? 'Rigging in tatters' : ''].filter(Boolean).join(' · ');
   $('pStatus').textContent = st(p);
   const ob = G.sc.objective, obT = typeof ob === 'function' ? ob() : ob || '';
   if ($('objective').textContent !== obT) $('objective').textContent = obT;
@@ -1054,10 +1070,12 @@ function updateHUD(dt) {
   const pos = pointOfSail(off, p.spec.point), wn = world.windName();
   $('pos').textContent = p.aground > 0 ? 'Aground!' : pos === 'In irons' && world.wind.str > 0.3 && !p.oarSpeed(world) ? 'In irons!' : '';
   $('windName').textContent = wn === 'Breeze' ? '' : wn; $('windName').className = wn === 'Gale' ? 'bad' : '';
-  if (p.spec.oars) { $('oarName').textContent = ['Oars shipped', 'Rowing', p.stamina > 0.02 ? 'Sprinting' : 'Spent'][p.oar]; $('stam').style.width = p.stamina * 100 + '%'; }
+  if (p.spec.oars) { $('oarName').textContent = p.spent ? 'Spent — resting' : ['Oars shipped', 'Rowing', 'Sprinting'][p.oar] + (p.stamina < 0.3 && p.oar ? ', tiring' : ''); $('stam').style.width = p.stamina * 100 + '%'; }
   drawRadar(p, e);
   if (!e) { $('boardGo').classList.add('hidden'); return; }
   setBars('e', e);
+  $('eOarRow').classList.toggle('hidden', !e.spec.oars);
+  if (e.spec.oars) { $('eOar').style.width = e.stamina * 100 + '%'; $('eOarRow').classList.toggle('spent', !!e.spent); $('eOarN').textContent = e.spent ? 'spent' : e.stamina < 0.3 ? 'tiring' : ''; }
   if (battle) { tag.querySelector('.d').textContent = `${e.name} · ${Math.round(dist)} yds`; tag.querySelector('.h i').style.width = e.hullR * 100 + '%'; }
   $('eStatus').textContent = [e.active ? AMMO[e.ammo].long : e.out === 'captured' ? 'Taken' : e.out === 'silenced' ? 'Silenced' : 'Out of the fight', st(e)].filter(Boolean).join(' · ');
   // what a boarding would look like, pinned to her marker once you are close
@@ -1141,7 +1159,7 @@ const KEYS_HTML = `<div class="keys">
   <div><kbd>Space</kbd> fire the side that bears</div><div><kbd>Q</kbd><kbd>E</kbd> fire port / starboard</div>
   <div><kbd>1</kbd>–<kbd>4</kbd> round · chain · grape · heated</div><div><kbd>B</kbd> board when alongside</div>
   <div><kbd>V</kbd> camera</div><div><kbd>P</kbd> pause · <kbd>M</kbd> mute</div>
-  <div><kbd>T</kbd> next target</div><div><kbd>G</kbd> anchor on a spring</div>
+  <div><kbd>T</kbd> next target</div><div><kbd>G</kbd> anchor: hold still, steady guns, A / D swing her round</div>
   <div><kbd>R</kbd> oars: rest · row · sprint</div><div><kbd>F</kbd> fire the bow guns</div></div>`;
 function showTitle() {
   G.state = 'title'; setMode(null);
@@ -1344,7 +1362,28 @@ function anchorKey() {
   if (p.anchored) { if (p.weighT <= 0) { p.weighT = 4; toast('Weighing anchor…', '', 2500); } return; }
   if (p.speed > 6) return toast('Too much way on her to anchor — shorten sail first', '', 1800);
   p.anchored = true; p.weighT = 0; sfx.creak();
-  toast('Anchored on a spring: A / D haul her round, and the guns are steadier', '', 3500);
+  toast('Anchored. She holds her ground and her guns are steadier, and a spring on the cable lets A / D haul her broadside round, wind or no wind. G again to weigh.', '', 6000);
+}
+// tell the player when the world changes under them: a wind shift, a galley's oarsmen giving out, wind on the water in a calm
+const POINTS = (r) => Math.max(1, Math.round(Math.abs(r) / (Math.PI / 16)));
+function worldNews(p) {
+  const w = world.wind;
+  if (w.shifted != null) {
+    const amt = w.shifted; w.shifted = null;
+    const pos = pointOfSail(wrap(p.heading - w.target), p.spec.point);
+    toast(`The wind ${amt > 0 ? 'veers' : 'backs'} ${POINTS(amt)} points. On this heading you will be ${pos === 'In irons' ? 'in irons' : pos.toLowerCase()}`, '', 4500);
+  }
+  for (const s of G.ships) {
+    if (!s.spec.oars || s.out) continue;
+    if (s.spent && !s.wasSpent && s !== p && s.side !== p.side && G.state === 'battle') floater('Oarsmen spent!', 'good rake', _v.set(s.pos.x, s.model.mastH * 0.8, s.pos.z).clone());
+    if (s.spent && !s.wasSpent && s === p) toast('Your oarsmen are spent: she lies still until they have their breath', 'bad', 3500);
+    s.wasSpent = s.spent;
+  }
+  if (world.paws.length && w.base < 0.3) toastOnce('paws', 9999, 'Dark ripples on the water are cat’s-paws: there is wind inside them', '', 5000);
+  if (world.currentAt && G.state === 'battle') {
+    const c = world.currentAt(p.pos.x, p.pos.z), v = Math.hypot(c[0], c[1]);
+    if (v > 1.5) toastOnce('current', 9999, `The current sets ${(v * 0.9).toFixed(1)} knots ${c[1] < 0 ? 'south, down the strait' : 'north'}: the white lines on the water show where it runs`, '', 5000);
+  }
 }
 function togglePause() {
   if (G.state !== 'battle' && G.state !== 'boarding' && !G.paused) return;
@@ -1457,6 +1496,7 @@ function update(dt) {
   updateCamera(dt);
   world.update(dt, camera.position);
   world.updateStreaks(dt, home ? harbor.focus : p.pos);
+  world.updateFeatures(dt, home ? harbor.focus : p.pos);
   if (now === 'battle' || now === 'boarding' || now === 'ending') updateHUD(dt);
   else { for (const s of G.ships) if (s.arcs) s.arcs.grp.visible = false; windRing.visible = boardRing.visible = false; if ($('pips').firstChild) updatePips(p, false); }
   if (now === 'boarding') updateMelee();

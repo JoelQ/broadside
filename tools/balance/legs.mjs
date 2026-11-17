@@ -18,44 +18,36 @@ const inshore = (x, zs) => zs.map((z) => ({ go: [x, z], r: 40 }));
 
 export const LEGS = [
   { name: 'm0 Home waters', mission: 'm0', leg: 0, side: null, routes: { guns, hug, prep } },
-  { name: 'm1V The picket', mission: 'm1', leg: 0, side: V, routes: { guns, run: run('north'), board } },
-  { name: 'm1V The patrol', mission: 'm1', leg: 1, side: V, routes: {
+  { name: 'm1V The run', mission: 'm1', leg: 0, side: V, routes: {
     guns, kite, run: run('harbour'),
-    shoals: [{ go: [520, 20], r: 50 }, { go: [660, 300], r: 50 }, { go: [540, 540], r: 50 }, ...run('harbour')],
+    shoals: [{ go: [520, 20], r: 50 }, { go: [520, 200], r: 45 }, { go: [660, 300], r: 50 }, { go: [540, 540], r: 50 }, ...run('harbour')],
     boardBrig: [{ kill: 'brig', move: 'duel', ammo: 'combo', board: 'rush' }],
   } },
-  { name: 'm1O The guard ship', mission: 'm1', leg: 0, side: O, routes: { guns, run: run('north'), board } },
-  { name: 'm1O The anchorage', mission: 'm1', leg: 1, side: O, routes: {
+  { name: 'm1O The anchorage', mission: 'm1', leg: 0, side: O, routes: {
+    guns,
     batter: [{ go: [-190, -40], r: 40, sail: 2 }, { kill: 'battery', move: 'duel', ammo: 'round', anchor: true, anchorAt: 1.2 }, { go: [-60, 60], r: 40, sail: 2 }, { kill: 'powder', move: 'duel', ammo: 'round', anchor: true, anchorAt: 0.9 }],
     direct: [{ kill: 'powder', move: 'duel', ammo: 'round' }],
-    eastBurn: [{ go: [230, 40], r: 50 }, { go: [150, 170], r: 40 }, { kill: 'powder', move: 'kite', ammo: 'fire', range: 110 }],
-    eastBoard: [{ go: [230, 40], r: 50 }, { go: [150, 170], r: 40 }, { kill: 'powder', move: 'duel', ammo: 'grape', board: 'rush' }],
+    eastBurn: [{ go: [230, -100], r: 50 }, { go: [230, 40], r: 50 }, { go: [150, 170], r: 40 }, { kill: 'powder', move: 'kite', ammo: 'fire', range: 110 }],
+    eastBoard: [{ go: [230, -100], r: 50 }, { go: [230, 40], r: 50 }, { go: [150, 170], r: 40 }, { kill: 'powder', move: 'duel', ammo: 'grape', board: 'rush' }],
   } },
   ...['brothers', 'leeShore', 'coveRaid', 'landing', 'islets', 'falseColours'].map((k) => ({ name: 'm2 ' + k, mission: 'm2', leg: k, side: V, routes: { guns, hug, burn, board, prep, ...(k === 'falseColours' ? { rakeBoard: [{ kill: 'a', move: 'close', ammo: 'grape', board: 'rush' }] } : {}) } })),
-  { name: 'm3 Dead calm', mission: 'm3', leg: 0, side: V, routes: {
+  { name: 'm3 Dead calm', mission: 'm3', leg: 0, side: V, maxT: 700, routes: {
     spring: [{ kill: 'all', move: 'duel', ammo: 'grape', anchor: true, anchorAt: 1.3 }],
-    guns, bow, board, prep,
+    guns, kite, bow, board, prep,
   } },
-  { name: 'm3 The breeze', mission: 'm3', leg: 1, side: V, carry: { galleys: [null, { hull: 0.7, sails: 0.8, crew: 0.7 }] }, routes: { guns, kite, hug, board, prep } },
-  { name: 'm4V The castles', mission: 'm4', leg: 0, side: V, routes: {
-    middle: run('above'),
-    west: [...inshore(-222, [-520, -360, -200, -60, 60, 200, 360, 500]), ...run('above')],
-    east: [...inshore(222, [-520, -360, -200, -40, 90, 200, 360, 500]), ...run('above')],
-    silence: [{ go: [-40, -200], r: 40, sail: 2 }, { kill: 'west', move: 'duel', ammo: 'round', anchor: true, anchorAt: 1.2 }, ...run('above')],
+  { name: 'm4V Up the strait', mission: 'm4', leg: 0, side: V, maxT: 800, routes: {
+    middle: [{ go: [0, 260], r: 50 }, { kill: 'flag', move: 'duel', ammo: 'round', anchor: true, anchorAt: 1.0 }, { go: 'zone:out', r: 40, wait: true }],
+    westBurn: [...inshore(-222, [-560, -400, -240, -80, 60, 200]), { go: [100, 300], r: 40, sail: 2 }, { kill: 'flag', move: 'duel', ammo: 'fire', anchor: true, anchorAt: 0.85 }, { go: 'zone:out', r: 40, wait: true }],
+    eastBoard: [...inshore(222, [-560, -400, -240, -60, 100, 260]), { kill: 'flag', move: 'duel', ammo: 'grape', board: 'rush' }],
+    silence: [{ go: [-40, -380], r: 40, sail: 2 }, { kill: 'west', move: 'duel', ammo: 'round', anchor: true, anchorAt: 1.2 }, { go: [-60, 260], r: 50 }, { kill: 'flag', move: 'duel', ammo: 'round', anchor: true, anchorAt: 1.0 }, { go: 'zone:out', r: 40, wait: true }],
+    guardFirst: [{ go: [0, 150], r: 50 }, { kill: 'guard', move: 'duel', ammo: 'round' }, { kill: 'flag', move: 'duel', ammo: 'combo', board: 'odds' }, { go: 'zone:out', r: 40, wait: true }],
   } },
-  { name: 'm4V The flagship', mission: 'm4', leg: 1, side: V, routes: {
-    guns: [{ kill: 'guard', move: 'duel', ammo: 'round' }, { go: [-50, 290], r: 40, sail: 2 }, { kill: 'flag', move: 'duel', ammo: 'round', anchor: true, anchorAt: 1.1 }, { go: 'zone:out', r: 40, wait: true }],
-    burn: [{ go: [100, 110], r: 40, sail: 2 }, { kill: 'flag', move: 'duel', ammo: 'fire', anchor: true, anchorAt: 0.85 }, { go: 'zone:out', r: 40, wait: true }],
-    stern: [{ go: [105, 120], r: 35, sail: 2 }, { kill: 'flag', move: 'duel', ammo: 'round', anchor: true, anchorAt: 0.8 }, { go: 'zone:out', r: 40, wait: true }],
-    board: [{ kill: 'flag', move: 'duel', ammo: 'grape', board: 'rush' }],
-    guardFirst: [{ kill: 'guard', move: 'duel', ammo: 'round' }, { kill: 'flag', move: 'duel', ammo: 'combo', board: 'odds' }, { go: 'zone:out', r: 40, wait: true }],
-  } },
-  { name: 'm4O The watch galley', mission: 'm4', leg: 0, side: O, routes: { guns, run: run('below'), board, prep } },
-  { name: 'm4O The blockade', mission: 'm4', leg: 1, side: O, routes: {
-    anchor: [{ go: [-85, -30], r: 40, sail: 2 }, { kill: 'heavy', move: 'duel', ammo: 'round', anchor: true, anchorAt: 1.05 }],
+  { name: 'm4O Down the strait', mission: 'm4', leg: 0, side: O, maxT: 700, routes: {
+    anchor: [{ go: [-85, -60], r: 40, sail: 2 }, { kill: 'heavy', move: 'duel', ammo: 'round', anchor: true, anchorAt: 1.05 }],
     guns: [{ kill: 'brig', move: 'duel', ammo: 'round' }],
     hug: [{ kill: 'brig', move: 'hug', ammo: 'round' }],
     burn: [{ kill: 'heavy', move: 'kite', ammo: 'fire' }],
+    galleyFirst: [{ kill: 'picket', move: 'duel', ammo: 'round' }, { kill: 'brig', move: 'duel', ammo: 'round' }],
     board: [{ kill: 'brig', move: 'duel', ammo: 'grape', board: 'rush' }],
     boardHeavy: [{ kill: 'heavy', move: 'duel', ammo: 'grape', board: 'rush' }],
   } },

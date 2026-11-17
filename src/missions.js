@@ -1,7 +1,8 @@
 import { shipSpec } from './fleet.js';
 
-// Every campaign mission, as data the engine can build. A mission is a cruise of legs; a leg is one
-// fight. `build(c)` returns a scenario:
+// Every campaign mission, as data the engine can build. Most missions are one scene that changes as it
+// goes (events on a clock, ships that wake, arrive or run); the pirate hunt and the finale are cruises of
+// several fights with a pause between. A leg is one scene. `build(c)` returns a scenario:
 //   env, wind { dir, str, steady }, islands [{ x, z, r }], seedIslands [seed, n], shoals [{ x, z, r, depth }],
 //   current(x, z) -> [vx, vz], zones [{ name, x, z, r }], player { x, z, h, speed },
 //   ships [{ id, spec, side, x, z, h, o }], objective, tip, check(S) -> 'won' | 'failed' | null, events [{ t, fn(S) }]
@@ -29,66 +30,68 @@ const home = {
 
 // ---------- 1. Powder for Candia ----------
 const candiaCoast = (z) => [-30, 190, 410, 630].map((x, i) => ({ x, z: z + (i % 2) * 30, r: 135 }));
-const runPicket = {
-  title: 'The picket',
+// Venice: one run from the open sea to the harbour. A galliot keeps the picket; the patrol lies off the harbour
+// and does not stir until it hears guns or sees you. Shoal banks inshore, and reefs among them that ground anything.
+const theRun = {
+  title: 'The run',
   build(c) {
-    return {
-      env: 'dusk', wind: { dir: PI / 2 + 0.3, str: 1 }, seedIslands: [77, 3],
-      player: { x: 0, z: -520, h: 0, speed: 8 },
-      zones: [{ name: 'north', x: 0, z: 640, r: 80 }],
-      ships: [{ id: 'picket', spec: shipSpec('galliot', c.foe, c.names.picket, 'line'), side: 1, x: 60, z: 120, h: PI }],
-      objective: 'Get past the picket to the north, or put her out of the fight',
-      tip: 'A galliot: one gun in her bow and a crowd of men. Do not let her lie across your stern.',
-      check: (S) => (S.by.picket.out || S.inZone('north') ? 'won' : null),
-    };
-  },
-};
-const runPatrol = {
-  title: 'The patrol',
-  build(c) {
+    const heard = (S) => { const k = S.by.picket; return k.out || k.hull < k.hullMax || k.sides.some((x) => k.reload[x] > 0); };
+    const near = (S, id) => Math.hypot(S.p.pos.x - S.by[id].pos.x, S.p.pos.z - S.by[id].pos.z) < 380;
     return {
       env: 'golden', wind: { dir: PI / 2 - 0.5, str: 1 }, islands: candiaCoast(800),
-      shoals: [{ x: 500, z: 50, r: 160, depth: 2.8 }, { x: 610, z: 300, r: 215, depth: 2.8 }, { x: 520, z: 540, r: 150, depth: 2.8 }, { x: -340, z: 300, r: 115, depth: 3.5 }],
-      player: { x: 0, z: -620, h: 0, speed: 8 },
+      shoals: [
+        { x: 500, z: 50, r: 160, depth: 2.8 }, { x: 610, z: 300, r: 215, depth: 2.8 }, { x: 520, z: 540, r: 150, depth: 2.8 }, { x: -340, z: 300, r: 115, depth: 3.5 },
+        { x: 585, z: 175, r: 34, depth: 1.4 }, { x: 470, z: 420, r: 30, depth: 1.4 }, { x: 150, z: 560, r: 30, depth: 1.4 },
+      ],
+      player: { x: 0, z: -720, h: 0, speed: 8 },
       zones: [{ name: 'harbour', x: 300, z: 640, r: 75 }],
       ships: [
-        { id: 'heavy', spec: shipSpec('merchantman', c.foe, c.names.heavy, 'line', { ai: { reckless: 0.8, range: 130 } }), side: 1, x: -60, z: 150, h: PI / 2 },
-        { id: 'brig', spec: shipSpec('brig', c.foe, c.names.brig, 'line', { ai: { reckless: 0.8, range: 90 } }), side: 1, x: 190, z: 260, h: -PI / 2 },
+        { id: 'picket', spec: shipSpec('galliot', c.foe, c.names.picket, 'line'), side: 1, x: 60, z: -260, h: PI },
+        { id: 'heavy', spec: shipSpec('merchantman', c.foe, c.names.heavy, 'line', { ai: { reckless: 0.8, range: 130 } }), side: 1, x: -60, z: 240, h: PI / 2, o: { idle: true } },
+        { id: 'brig', spec: shipSpec('brig', c.foe, c.names.brig, 'line', { ai: { reckless: 0.8, range: 90 } }), side: 1, x: 190, z: 330, h: -PI / 2, o: { idle: true } },
       ],
-      objective: 'Bring the powder into Candia: reach the harbour, beat the patrol, or take one of them and sail in under her colours',
-      tip: 'The pale water is shoal. A ship that draws less than you floats over it; one that draws more sticks.',
-      check: (S) => (S.inZone('harbour') || allOut(S, ['heavy', 'brig']) || S.by.heavy.out === 'captured' || S.by.brig.out === 'captured' ? 'won' : null),
-    };
-  },
-};
-const coveGuard = {
-  title: 'The guard ship',
-  build(c) {
-    return {
-      env: 'overcast', wind: { dir: -PI / 2 + 0.4, str: 1 }, seedIslands: [311, 3],
-      player: { x: 0, z: -520, h: 0, speed: 8 },
-      zones: [{ name: 'north', x: 0, z: 640, r: 80 }],
-      ships: [{ id: 'guard', spec: shipSpec('brig', c.foe, c.names.brig, 'line'), side: 1, x: -40, z: 150, h: PI }],
-      objective: 'Get past the guard ship to the anchorage, or put her out of the fight',
-      check: (S) => (S.by.guard.out || S.inZone('north') ? 'won' : null),
+      objective: () => (c.S && c.S.flag.alarm ? 'The patrol is under way. Reach the harbour, beat the patrol, or take one of them and sail in under her colours' : 'Bring the powder into Candia. The patrol off the harbour has not seen you yet'),
+      tip: 'The pale water is shoal: a ship that draws less than you floats over it, one that draws more sticks. Rocks in the water are reef, and nothing floats over those.',
+      events: [
+        { t: 5, fn: (S) => S.say('Manolis: “The galliot is their picket. If she fires, the patrol off the harbour will hear it: a hired ship with heavy guns, and a brig. Both draw more water than a sloop.”', '') },
+      ],
+      check: (S) => {
+        if (!S.flag.alarm && (heard(S) || near(S, 'heavy') || near(S, 'brig') || S.t > 90)) { S.flag.alarm = true; S.wake('heavy', 'The patrol has heard the guns: they are getting under way'); S.wake('brig'); }
+        return S.inZone('harbour') || allOut(S, ['heavy', 'brig']) || S.by.heavy.out === 'captured' || S.by.brig.out === 'captured' ? 'won' : null;
+      },
     };
   },
 };
 const cove = (c) => ({ islands: [{ x: -180, z: 300, r: 150 }, { x: 215, z: 340, r: 125 }, { x: 0, z: 560, r: 200 }] });
-const anchorage = {
+// Ottomans: one approach. A guard ship outside the cove, the powder ship at anchor inside under her battery.
+// At dark she weighs and runs for the open sea; if she gets clear, the powder reaches Candia.
+const theCove = {
   title: 'The anchorage',
   build(c) {
+    const exit = [840, -60];
     return {
       env: 'dusk', wind: { dir: 0.5, str: 0.8 }, ...cove(c),
-      player: { x: -230, z: -470, h: 0.3, speed: 7 },
+      player: { x: -200, z: -620, h: 0.3, speed: 7 },
       ships: [
+        { id: 'guard', spec: shipSpec('brig', c.foe, c.names.brig, 'line'), side: 1, x: -30, z: -60, h: PI, o: { idle: true } },
         { id: 'powder', spec: shipSpec('merchantman', c.foe, c.names.powder, 'poor', { magazine: 0.12, ai: { cuts: 0.4, plan: 'round' } }), side: 1, x: 25, z: 250, h: PI / 2, o: { crew: 0.6, anchored: true } },
         { id: 'battery', spec: shipSpec('battery', c.foe, 'The battery', 'line', { magazine: 0.05 }), side: 1, x: -95, z: 205, h: 3.6 },
       ],
       focus: 'powder',
-      objective: 'Deal with the powder ship before dark: take her, burn her or sink her',
+      objective: () => { const S = c.S; if (!S) return ''; return S.flag.dark ? 'She is under way for the open sea: stop her before she is clear' : 'Deal with the powder ship before dark: take her, burn her or sink her'; },
       tip: 'The red arc is the battery. It cannot bear east of the anchorage. Powder and fire do not mix.',
-      check: (S) => (S.by.powder.out ? 'won' : null),
+      events: [
+        { t: 5, fn: (S) => S.say('Manolis: “The battery is on the western point and looks south-west. It was built to stop ships coming the obvious way.”', '') },
+        { t: 100, fn: (S) => S.say('The light is going. She will sail when it is gone.', '') },
+        { t: 150, fn: (S) => { const w = S.by.powder; S.flag.dark = true; if (w.out || !w.anchored) return; w.weighT = 4; w.ai.goTo = exit; w.keepSail = true; S.addZone({ name: 'sea', x: exit[0], z: exit[1], r: 70, color: 0xff6a5a }); S.say('Dark: the powder ship is weighing anchor'); } },
+      ],
+      check: (S) => {
+        const w = S.by.powder, g = S.by.guard;
+        if (g.ai && g.ai.idle && (Math.hypot(S.p.pos.x - g.pos.x, S.p.pos.z - g.pos.z) < 360 || g.hull < g.hullMax || S.t > 60)) S.wake('guard', 'The guard ship has seen you');
+        if (!w.out && w.ai && w.ai.goTo && Math.hypot(w.pos.x - exit[0], w.pos.z - exit[1]) < 70) S.escape(w);
+        return w.out === 'escaped' ? 'failed' : w.out ? 'won' : null;
+      },
+      failText: 'The powder ship is away into the dark',
     };
   },
 };
@@ -182,39 +185,33 @@ const independent = {
 };
 
 // ---------- 3. The calm ----------
+// One scene. A dead calm with galleys coming out; at about two minutes the wind fills in from the north-east
+// and brings a sailing ship with it. A sailing ship holds on until it can move; a galley tries to finish first.
 const calm = {
   title: 'Dead calm',
   build(c) {
+    const W = 1.2 + PI, up = [Math.sin(1.2) * 560, Math.cos(1.2) * 560];
     return {
-      env: 'golden', wind: { dir: 1.2, str: 0.05, steady: true }, seedIslands: [1654, 2],
+      env: 'golden', wind: { dir: W, str: 0.05, steady: true }, seedIslands: [1654, 2],
       player: { x: 0, z: 0, h: 0, speed: 0 },
       ships: [
         { id: 'g1', spec: shipSpec('galley', c.foe, c.names.galley1, 'line'), side: 1, x: -260, z: 430, h: PI - 0.5 },
         { id: 'g2', spec: shipSpec('galliot', c.foe, c.names.galley2, 'line'), side: 1, x: 280, z: 400, h: PI + 0.5 },
       ],
-      objective: () => (c.S && c.S.t > 100 ? 'Wind is coming: hold on, or finish the galleys' : 'No wind, and two galleys coming out under oars: live through the calm'),
-      tip: 'Without wind a sailing ship barely steers. G drops an anchor on a spring, so A and D can haul your broadside round.',
+      objective: () => { const S = c.S; if (!S) return ''; return S.flag.breeze ? 'The breeze has brought one of their sailing ships: finish her, and any galley that stays to fight' : S.t > 95 ? 'Wind is coming from the north-east. Hold on' : 'No wind, and two galleys coming out under oars: live through the calm'; },
+      tip: 'Without wind a sailing ship barely steers. G drops anchor: she holds still, her guns steady, and a spring on the cable lets A and D haul her broadside round.',
       events: [
-        { t: 118, fn: (S) => { if (c.has('pilot')) S.say('Pilot: “Cat’s-paws to the north-east. The breeze will be on us inside the minute.”'); } },
-        { t: 140, fn: (S) => { S.wind(undefined, 1); S.say('The wind fills in'); } },
+        { t: 6, fn: (S) => { if (!S.p.spec.oars) S.say('Manolis: “No steerage way. Anchor, and we can still swing her on the spring.”', ''); } },
+        { t: 95, fn: (S) => S.say(c.has('pilot') ? 'Pilot: “Wind on the water to the north-east. A little longer.”' : 'Dark water to the north-east: wind is coming') },
+        { t: 110, fn: (S) => S.wind(W, 0.5) },
+        { t: 130, fn: (S) => { S.wind(W, 1); S.flag.breeze = true; S.say('The breeze is here. Manolis points north-east: a tall ship, coming down with the wind behind her. “They sent a friend.”'); S.add({ id: 'sail', spec: shipSpec('merchantman', c.foe, c.names.heavy, 'line'), side: 1, x: up[0], z: up[1], h: Math.atan2(-up[0], -up[1]), o: { speed: 8 } }); } },
       ],
-      check: (S) => { if (allOut(S, ['g1', 'g2']) || S.t > 162) { c.carry.galleys = ['g1', 'g2'].map((id) => { const g = S.by[id]; return g.out ? null : { hull: g.hullR, sails: g.sailR, crew: g.crewR }; }); return 'won'; } return null; },
-    };
-  },
-};
-const breeze = {
-  title: 'The breeze',
-  build(c) {
-    const left = (c.carry.galleys || [null, null]);
-    const ships = [{ id: 'sail', spec: shipSpec('merchantman', c.foe, c.names.heavy, 'line'), side: 1, x: 380, z: 420, h: PI + 0.7 }];
-    // the big galley wants no part of a sailing ship that can move; the galliot, if she lived, comes back with the tall ship
-    left.forEach((g, i) => { if (g && i) ships.push({ id: 'g' + (i + 1), spec: shipSpec(i ? 'galliot' : 'galley', c.foe, c.names['galley' + (i + 1)], 'line'), side: 1, x: i ? 250 : -250, z: 260, h: PI, o: { hull: g.hull, sails: g.sails, crew: g.crew } }); });
-    return {
-      env: 'noon', wind: { dir: 1.2 + PI, str: 1 }, seedIslands: [1654, 2],
-      player: { x: 0, z: 0, h: 0.3, speed: 5 },
-      ships,
-      objective: 'The breeze has brought one of their sailing ships with it: finish her, and anything that comes with her',
-      check: (S) => (allOut(S, ships.map((s) => s.id)) ? 'won' : null),
+      check: (S) => {
+        if (!S.flag.breeze) return null;
+        // once a sailing ship can move again, a beaten galley has no reason to stay
+        for (const id of ['g1', 'g2']) { const g = S.by[id], d = Math.hypot(g.pos.x - S.p.pos.x, g.pos.z - S.p.pos.z) || 1; if (!g.out && (g.hullR < 0.6 || g.crewR < 0.55)) S.flee(g, [g.pos.x + ((g.pos.x - S.p.pos.x) / d) * 900, g.pos.z + ((g.pos.z - S.p.pos.z) / d) * 900]); }
+        return allOut(S, ['g1', 'g2', 'sail']) ? 'won' : null;
+      },
     };
   },
 };
@@ -222,79 +219,57 @@ const breeze = {
 // ---------- 4. The straits ----------
 // The channel runs north-south. The current sets south, out to sea, strongest in the middle; inshore
 // there is slack water, a back-eddy and shoals. The wind blows down the channel too.
-const straitShores = () => [-690, -460, -230, 0, 230, 460, 690].flatMap((z) => [{ x: -400, z, r: 150 }, { x: 400, z, r: 150 }]);
+const straitShores = () => [-920, -690, -460, -230, 0, 230, 460, 690, 920].flatMap((z) => [{ x: -400, z, r: 150 }, { x: 400, z, r: 150 }]);
 const straitCurrent = (x) => { const a = Math.abs(x); return [0, a < 190 ? -3 * (1 - (a / 190) ** 2) - 0.3 : a < 270 ? 1.1 : 0]; };
 const straitShoals = (zs) => zs.flatMap((z) => [{ x: -232, z, r: 42, depth: 2.8 }, { x: 232, z: z + 60, r: 42, depth: 2.8 }]);
 const strait = () => ({ islands: straitShores(), current: straitCurrent, wind: { dir: PI - 1.1, str: 1, steady: true } });
-const castles = {
-  title: 'The castles',
+// Venice: one scene. Up the strait past the castles, destroy the flagship fitting out above them, and get out
+// again on the current.
+const upStrait = {
+  title: 'Up the strait',
   build(c) {
     return {
-      env: 'overcast', ...strait(), shoals: straitShoals([-420, -260, -100, 100, 260, 420]),
-      player: { x: 0, z: -640, h: 0.5, speed: 6 },
-      zones: [{ name: 'above', x: 0, z: 600, r: 110 }],
+      env: 'golden', ...strait(), shoals: straitShoals([-520, -330, -150, 30, 210, 390]),
+      player: { x: 0, z: -800, h: 0.5, speed: 6 },
       ships: [
-        { id: 'west', spec: shipSpec('castle', c.foe, c.names.castleW, 'line'), side: 1, x: -262, z: 0, h: PI / 2 },
-        { id: 'east', spec: shipSpec('castle', c.foe, c.names.castleE, 'line'), side: 1, x: 262, z: 30, h: -PI / 2 },
-      ],
-      focus: 'west',
-      objective: 'Go up the strait past the castles, against wind and current',
-      tip: 'The current is strongest in mid-channel. Inshore there is slack water and an eddy that sets north, among the shoals and under the castle guns.',
-      check: (S) => (S.inZone('above') ? 'won' : null),
-    };
-  },
-};
-const fittingOut = {
-  title: 'The flagship',
-  build(c) {
-    return {
-      env: 'golden', ...strait(), shoals: straitShoals([-300, 0, 300]),
-      player: { x: -60, z: -400, h: 0.2, speed: 6 },
-      zones: [],
-      ships: [
-        { id: 'flag', spec: shipSpec('flagship', c.foe, c.names.flag, 'poor', { guns: 9, magazine: 0.04, ai: { cuts: 0.3 } }), side: 1, x: 110, z: 270, h: 0, o: { crew: 0.4, sails: 0.3, anchored: true } },
-        { id: 'guard', spec: shipSpec('brig', c.foe, c.names.brig, 'poor'), side: 1, x: -40, z: 70, h: PI },
+        { id: 'west', spec: shipSpec('castle', c.foe, c.names.castleW, 'line'), side: 1, x: -262, z: -160, h: PI / 2 },
+        { id: 'east', spec: shipSpec('castle', c.foe, c.names.castleE, 'line'), side: 1, x: 262, z: -130, h: -PI / 2 },
+        { id: 'flag', spec: shipSpec('flagship', c.foe, c.names.flag, 'poor', { guns: 9, magazine: 0.04, ai: { cuts: 0.3 } }), side: 1, x: 110, z: 470, h: 0, o: { crew: 0.4, sails: 0.3, anchored: true } },
+        { id: 'guard', spec: shipSpec('brig', c.foe, c.names.brig, 'poor'), side: 1, x: -40, z: 290, h: PI, o: { idle: true } },
       ],
       focus: 'flag',
-      objective: () => (c.S && c.S.by.flag.out ? 'She is finished. Now get out: ride the current south' : 'Destroy or take the flagship fitting out above the castles'),
-      tip: 'She is half-manned and half-rigged, with half her guns still on the quay and powder lighters alongside. At anchor she can only haul herself round slowly.',
+      objective: () => { const S = c.S; if (!S) return ''; return S.by.flag.out ? 'She is finished. Now get out: ride the current south, past the castles' : 'Go up past the castles, against wind and current, and destroy or take the flagship fitting out above them'; },
+      tip: 'The current is strongest in mid-channel. Inshore there is slack water and an eddy that sets north, among the shoals and under the castle guns.',
       check: (S) => {
-        const f = S.by.flag;
+        const f = S.by.flag, g = S.by.guard;
+        if (!S.flag.above && S.p.pos.z > 0) { S.flag.above = true; S.say('Barbaro, at the glass: “There. Yards down on deck, lighters alongside. And one guard ship.” Whatever is done to her, the way home is the way you came.', ''); }
+        if (g.ai && g.ai.idle && (S.p.pos.z > 60 || g.hull < g.hullMax)) S.wake('guard', 'The guard ship is coming down on you');
         if (f.out === 'captured') return 'won';
-        if (f.out && !S.flag.exit) { S.flag.exit = true; S.addZone({ name: 'out', x: 0, z: -620, r: 110 }); S.say('Now get out: ride the current south'); }
+        if (f.out && !S.flag.exit) { S.flag.exit = true; S.addZone({ name: 'out', x: 0, z: -800, r: 120 }); S.say('Now get out: ride the current south'); }
         return f.out && S.inZone('out') ? 'won' : null;
       },
     };
   },
 };
-const straitPicket = {
-  title: 'The watch galley',
+// Ottomans: one scene. Down the strait on the current, past the watch galley, to break the blockade at the mouth.
+const downStrait = {
+  title: 'Down the strait',
   build(c) {
     return {
-      env: 'noon', ...strait(), shoals: straitShoals([-300, 0, 300]),
-      player: { x: 0, z: 620, h: PI, speed: 8 },
-      zones: [{ name: 'below', x: 0, z: -600, r: 110 }],
-      ships: [{ id: 'picket', spec: shipSpec('galley', c.foe, c.names.galley1, 'line'), side: 1, x: 40, z: -120, h: 0 }],
-      objective: 'Come down the strait: get past the picket galley, or finish her',
-      tip: 'Coming down is fast and hard to undo. The eddies inshore are the only way back up.',
-      check: (S) => (S.by.picket.out || S.inZone('below') ? 'won' : null),
-    };
-  },
-};
-const blockade = {
-  title: 'The blockade',
-  build(c) {
-    return {
-      env: 'golden', ...strait(), shoals: straitShoals([-420, -100, 220]),
-      player: { x: 0, z: 600, h: PI, speed: 7 },
+      env: 'golden', ...strait(), shoals: straitShoals([-560, -200, 100, 400]),
+      player: { x: 0, z: 800, h: PI, speed: 8 },
       ships: [
-        { id: 'heavy', spec: shipSpec('merchantman', c.foe, c.names.heavy, 'line', { ai: { cuts: 0.5 } }), side: 1, x: -85, z: -260, h: PI / 2, o: { anchored: true } },
-        { id: 'brig', spec: shipSpec('brig', c.foe, c.names.brig, 'crack', { ai: { cuts: 0.5 } }), side: 1, x: 95, z: -250, h: -PI / 2, o: { anchored: true } },
+        { id: 'picket', spec: shipSpec('galley', c.foe, c.names.galley1, 'line'), side: 1, x: 40, z: 320, h: 0 },
+        { id: 'heavy', spec: shipSpec('merchantman', c.foe, c.names.heavy, 'line', { ai: { cuts: 0.5 } }), side: 1, x: -85, z: -400, h: PI / 2, o: { anchored: true } },
+        { id: 'brig', spec: shipSpec('brig', c.foe, c.names.brig, 'crack', { ai: { cuts: 0.5 } }), side: 1, x: 95, z: -390, h: -PI / 2, o: { anchored: true } },
       ],
       focus: 'heavy',
-      objective: 'Break the blockade: take, sink or burn one of the two ships, or make her cut her cable',
-      tip: 'They are anchored and cannot dodge. Neither can you, once the current has you.',
-      check: (S) => (S.by.heavy.out || S.by.brig.out || S.flag.cut ? 'won' : null),
+      objective: 'Break the blockade at the mouth: take, sink or burn one of the two anchored ships, or make her cut her cable',
+      tip: 'Coming down is fast and hard to undo; the eddies inshore are the only way back up. The blockade cannot dodge. Neither can you, once the current has you.',
+      check: (S) => {
+        if (!S.flag.seen && S.p.pos.z < -60) { S.flag.seen = true; S.say('İbrahim Reis: “They cannot run. Remember that neither can we.”', ''); }
+        return S.by.heavy.out || S.by.brig.out || S.flag.cut ? 'won' : null;
+      },
     };
   },
 };
@@ -387,10 +362,10 @@ const sortie = {
 
 export const MISSIONS = {
   m0: { title: 'Home waters', pay: 150, legs: () => [home] },
-  m1: { title: 'Powder for Candia', pay: 350, legs: (c) => (c.side === 'venice' ? [runPicket, runPatrol] : [coveGuard, anchorage]) },
+  m1: { title: 'Powder for Candia', pay: 350, legs: (c) => (c.side === 'venice' ? [theRun] : [theCove]) },
   m2: { title: 'Independent command', pay: 450, legs: (c) => independent.legs(c) },
-  m3: { title: 'The calm', pay: 500, legs: () => [calm, breeze] },
-  m4: { title: 'The straits', pay: 600, legs: (c) => (c.side === 'venice' ? [castles, fittingOut] : [straitPicket, blockade]) },
+  m3: { title: 'The calm', pay: 500, legs: () => [calm] },
+  m4: { title: 'The straits', pay: 600, legs: (c) => (c.side === 'venice' ? [upStrait] : [downStrait]) },
   m5: { title: 'Candia', pay: 0, legs: (c) => (c.side === 'venice' ? [sortie, melee, flagDuel(false)] : [assaultMouth, melee, flagDuel(true)]) },
 };
 export const ORDER = ['m0', 'm1', 'm2', 'm3', 'm4', 'm5'];

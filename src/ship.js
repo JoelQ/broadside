@@ -110,9 +110,9 @@ export class Ship {
   }
   // oars: 0 rest, 1 row, 2 sprint. Speed under oars owes nothing to the wind; only a gale troubles it.
   oarSpeed(world) {
-    if (!this.spec.oars || !this.oar) return 0;
-    const tired = this.oar === 2 && this.stamina <= 0.02;
-    return this.spec.oars * (this.oar === 2 && !tired ? 1 : 0.62) * (0.3 + 0.7 * this.crewR) * ((world.wind.str ?? 1) > 1.3 ? 0.5 : 1);
+    if (!this.spec.oars || !this.oar || this.spent) return 0;
+    const fresh = 0.75 + 0.25 * clamp(this.stamina / 0.4, 0, 1); // a tiring crew pulls a slower stroke
+    return this.spec.oars * (this.oar === 2 ? 1 : 0.62) * fresh * (0.3 + 0.7 * this.crewR) * ((world.wind.str ?? 1) > 1.3 ? 0.5 : 1);
   }
   toWorld(local, out = new THREE.Vector3()) {
     const s = Math.sin(this.heading), c = Math.cos(this.heading);
@@ -124,7 +124,7 @@ export class Ship {
   }
   maxSpeedNow(world) {
     const off = wrap(this.heading - world.wind.dir);
-    const str = world.wind.str ?? 1, windF = str <= 1 ? str : 1 + (str - 1) * 0.3; // a gale adds less than it takes from the gunnery
+    const str = world.strAt ? world.strAt(this.pos.x, this.pos.z) : world.wind.str ?? 1, windF = str <= 1 ? str : 1 + (str - 1) * 0.3; // a gale adds less than it takes from the gunnery
     const v = this.spec.speed * SAILS[this.sailLevel].spd * polar(off, this.spec.point) * (0.25 + 0.75 * this.sailR) * (this.hullR < 0.3 ? 0.82 : 1) * windF;
     const s = this.sailLevel > 0 ? Math.max(v, (this.spec.sweeps || 0) * this.crewR) : v; // sweeps: oars give a floor under the wind
     return Math.max(s, this.oarSpeed(world));
@@ -142,17 +142,23 @@ export class Ship {
       const m = this.mass, rowing = oars > 0 && oars >= tgt - 0.01;
       this.speed += (tgt - this.speed) * Math.min(1, (dt * (held ? 2.2 : tgt > this.speed ? (rowing ? 0.8 : 0.42) : 0.7)) / m ** 0.8);
       this.rudder += clamp(this.input.turn - this.rudder, -dt * 2.2, dt * 2.2);
-      const way = 0.3 + 0.7 * clamp(this.speed / (0.45 * sp.speed), 0, 1);
+      const way = 0.06 + 0.94 * clamp(this.speed / (0.45 * sp.speed), 0, 1);
       // the hull swings toward the rate the rudder asks for; a heavy hull takes longer to start and to stop swinging.
       // At anchor she is hauled round on a spring, slowly but whatever the wind; aground she does not answer at all.
-      const rate = this.aground > 0 ? 0 : this.anchored ? (this.rudder * 0.12) / this.mass ** 0.7 : this.rudder * sp.turn * Math.max(way, rowing ? 0.75 : 0) * SAILS[this.sailLevel].turn;
+      const rate = this.aground > 0 ? 0 : this.anchored ? (this.rudder * 0.2) / this.mass ** 0.7 : this.rudder * sp.turn * Math.max(way, rowing ? 0.75 : 0) * SAILS[this.sailLevel].turn;
       this.yaw += (rate - this.yaw) * Math.min(1, dt / (0.35 * m));
       this.heading = wrap(this.heading + this.yaw * dt);
       this.speed *= 1 - Math.abs(this.rudder) * 0.07 * dt;
       if (this.aground > 0) this.aground = Math.max(0, this.aground - dt);
       this.offT -= dt;
       if (this.weighT > 0 && (this.weighT -= dt) <= 0) this.anchored = false;
-      if (sp.oars) this.stamina = clamp(this.stamina + dt * (held || this.oar === 0 ? 0.045 : this.oar === 2 ? -0.03 : 0.006), 0, 1);
+      if (sp.oars) {
+        // sprinting spends the oarsmen fast, rowing slowly; resting brings them back. Spent, they stop until they have their breath
+        const resting = held || this.oar === 0 || this.spent;
+        this.stamina = clamp(this.stamina + dt * (resting ? 0.05 : this.oar === 2 ? -0.045 : -0.004), 0, 1);
+        if (!this.spent && this.stamina <= 0 && this.oar) this.spent = true;
+        else if (this.spent && this.stamina >= 0.35) this.spent = false;
+      }
       // carrying full sail in a gale tears it
       if ((world.wind.str ?? 1) > 1.3 && this.sailLevel === TOP && !held) { this.sails = Math.max(0, this.sails - 0.9 * dt); this.rigT = 0; }
       if (!held && world.currentAt) { const c = world.currentAt(this.pos.x, this.pos.z); this.pos.x += c[0] * dt; this.pos.z += c[1] * dt; }
@@ -178,6 +184,7 @@ export class Ship {
     const set = SAILS[this.sailLevel].spd;
     let roll = (hp - hq) / 8 * 0.6 - this.rudder * clamp(this.speed / 12, 0, 1) * 0.07 + Math.sin(relWind) * 0.05 * set;
     let y = (hb + hs) * 0.5 * 0.85, pitch = -Math.atan2(hb - hs, L * 0.7) * 0.8;
+    if (this.aground > 0 && !this.spec.fixed) { roll += 0.13 * (this.spec.seedSign || 1); pitch -= 0.05; y += 0.4; }
     if (this.sinking > 0) {
       const k = this.sinking;
       y -= k * k * 0.22; roll += Math.min(0.6, k * 0.09) * (this.spec.seedSign || 1); pitch += Math.min(0.35, k * 0.04);
@@ -215,10 +222,16 @@ export class Ship {
     for (let i = 0; i < fp.count; i++) { const x = fp.getX(i); fp.setZ(i, Math.sin(x * 2.2 - world.time * 9) * 0.12 * x); }
     fp.needsUpdate = true;
     this.figs.update(dt, world.time, this.boardView || null);
+    // at anchor: the cable runs from the bow down into the water, with the spring led aft
+    if (this.anchored && !this.cable) {
+      const L = this.spec.L, g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 2.5, L * 0.48), new THREE.Vector3(0, -4, L * 0.48 + 16), new THREE.Vector3(this.spec.B * 0.4, 2.2, -L * 0.3)]);
+      this.cable = new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0x2a1e12 })); this.group.add(this.cable);
+    }
+    if (this.cable) this.cable.visible = this.anchored;
     if (this.model.oars) {
       // the oars: a long pull and a quick recovery when rowing, shipped level when resting
-      const on = this.oar && !this.anchored && this.aground <= 0 && this.sinking <= 0 && !this.struck;
-      this.oarPh = (this.oarPh || 0) + dt * (on ? (this.oar === 2 ? 5.2 : 3.2) : 0);
+      const on = this.oar && !this.spent && !this.anchored && this.aground <= 0 && this.sinking <= 0 && !this.struck;
+      this.oarPh = (this.oarPh || 0) + dt * (on ? (this.oar === 2 ? 5.2 : 3.2) * (0.6 + 0.4 * clamp(this.stamina / 0.4, 0, 1)) : 0);
       const sw = on ? Math.sin(this.oarPh) * 0.42 : 0, lift = on ? Math.max(0, Math.cos(this.oarPh)) * 0.16 : 0.2;
       for (const o of this.model.oars) { const e = o.matrix.elements, sx = o.userData.sx; e[2] = sw * sx; e[1] = lift * sx; }
     }

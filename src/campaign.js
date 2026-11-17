@@ -105,7 +105,7 @@ export const CAMP = {
   card(def) {
     const run = CAMP.run, t = CAMP.text(run.key), leg = (t.legs || [])[run.i] || {};
     const obj = typeof def.objective === 'function' ? def.objective() : def.objective;
-    return { eyebrow: `${MISSIONS[run.key].title} · ${run.i + 1} of ${run.legs.length}`, title: def.title, line: obj, hook: (STORY.legs[def.title] || {})[CAMP.livery()] || (STORY.legs[def.title] || {}).both || leg.hook || '' };
+    return { eyebrow: run.legs.length > 1 ? `${MISSIONS[run.key].title} · ${run.i + 1} of ${run.legs.length}` : MISSIONS[run.key].title, title: def.title, line: obj, hook: (STORY.legs[def.title] || {})[CAMP.livery()] || (STORY.legs[def.title] || {}).both || leg.hook || '' };
   },
   onOut(s, how) {
     if (how !== 'captured' || s.side === G.player.side || s.spec.fixed || !HULLS[s.spec.hullId]) return;
