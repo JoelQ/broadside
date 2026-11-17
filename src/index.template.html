@@ -116,11 +116,15 @@ body.touch #coach{bottom:auto;top:130px;font-size:14px}
 .spot:hover,.spot.sel{background:rgba(215,178,90,.4);border-color:#ffe29a}
 .spot i{display:none;position:absolute;right:-5px;top:-5px;width:13px;height:13px;border-radius:50%;background:var(--red);border:1px solid #fff}
 .spot.need i{display:block}
-#shop{left:10px;top:150px;width:300px;pointer-events:auto}
+#shop{left:10px;top:150px;width:300px;pointer-events:auto;z-index:2}
 #shop h3{margin:0 0 6px;font:400 24px var(--head);color:var(--brass);display:flex;justify-content:space-between}
 #shop .role{font-size:14px;font-style:italic;opacity:.85;margin:4px 0 8px}
 .cmp{display:grid;grid-template-columns:52px 1fr 44px;gap:8px;align-items:center;font-size:13px;margin:5px 0} .cmp .t{position:relative;height:11px;background:rgba(0,0,0,.45);border-radius:6px} .cmp .t i{display:block;height:100%;background:var(--brass);border-radius:6px} .cmp .t u,.mk{position:absolute;top:-3px;width:3px;height:17px;background:#fff;border-radius:2px} .mk{position:static;display:inline-block;height:11px;vertical-align:-1px}
 .spot.ship{background:rgba(31,70,120,.8);border-color:#8cc4f5}
+#fleetList{position:absolute;right:14px;bottom:130px;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:auto;text-shadow:0 2px 8px rgba(0,0,0,.8)}
+#fleetList .spot{position:static;text-align:right;font-size:17px}
+#fleetList .spot:after{display:none}
+#fleetList .spot small{display:block;font:italic 12px var(--body,serif);opacity:.8}
 #shop .x{background:none;border:0;cursor:pointer;font-size:16px;opacity:.7}
 .item{display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px solid rgba(255,255,255,.12);font-size:15px}
 .item .d{flex:1;line-height:1.2} .item .d small{display:block;opacity:.7;font-size:12.5px}
@@ -244,6 +248,7 @@ body.touch #coach{bottom:auto;top:130px;font-size:14px}
   <div id="portTop"><div class="eyebrow">Home port</div><div class="nm" id="portName">Port Halcyon</div><div id="purse"></div></div>
   <div id="spots"></div>
   <div id="shop" class="panel hidden"></div>
+  <div id="fleetList"></div>
   <div id="portGo"><div id="nextLine"></div><button class="btn big" data-act="sail">Put to sea</button></div>
 </div>
 

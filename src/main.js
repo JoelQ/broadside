@@ -1221,8 +1221,10 @@ function takeCommand(id) {
   toast(`You take command of the ${G.player.spec.name}`, 'big', 3000);
 }
 function buildSpots() {
-  $('spots').innerHTML = harbor.spots.map((s) => `<button class="spot" data-spot="${s.id}">${s.name}<i></i></button>`).join('')
-    + G.trophyShips.map((t) => `<button class="spot ship" data-spot="ship:${t.id}">${t.spec.name}</button>`).join('');
+  // shops float over their buildings; your other ships are a fixed list, so a label can never sit on a shop
+  $('spots').innerHTML = harbor.spots.map((s) => `<button class="spot" data-spot="${s.id}">${s.name}<i></i></button>`).join('');
+  $('fleetList').innerHTML = G.trophyShips.length ? `<div class="eyebrow">${G.mode === 'campaign' ? 'Your other ships' : 'Your prizes'}</div>`
+    + G.trophyShips.map((t) => `<button class="spot ship" data-spot="ship:${t.id}">${t.spec.name}<small>${t.spec.cls}</small></button>`).join('') : '';
 }
 function showPort() {
   G.state = 'port'; G.focus = 'player'; G.shop = null; G.cam.yaw = 0;
@@ -1241,7 +1243,7 @@ function renderPort() {
   const cam = G.mode === 'campaign';
   $('nextLine').innerHTML = cam ? CAMP.nextLine() : `Next: <b>${nx.captain}</b><br>${nx.cls} <i>${nx.name}</i>`;
   const need = { hull: p.hullMax - p.hull, sails: p.sailsMax - p.sails, crew: Math.round(p.crewMax - p.crew) };
-  document.querySelectorAll('#spots .spot').forEach((el) => {
+  document.querySelectorAll('#spots .spot, #fleetList .spot').forEach((el) => {
     const sh = SHOPS[el.dataset.spot] || {};
     el.classList.toggle('need', !cam && !!sh.repair && need[sh.repair] >= 1);
     el.classList.toggle('sel', G.shop === el.dataset.spot);
@@ -1293,8 +1295,8 @@ function portAction(a) {
 function updatePortUI() {
   const n = harbor.spots.length;
   document.querySelectorAll('#spots .spot').forEach((el, i) => {
-    const t = G.trophyShips[i - n];
-    const s = project(i < n ? harbor.spots[i].pos : _l.set(t.pos.x, t.model.mastH + 6, t.pos.z));
+    if (i >= n) return;
+    const s = project(harbor.spots[i].pos);
     el.style.transform = `translate(-50%,-100%) translate(${s.x}px,${s.y}px)`;
     el.style.display = s.behind ? 'none' : '';
   });

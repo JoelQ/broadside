@@ -61,7 +61,7 @@ export const CAMP = {
     G.state = 'story'; E.setMode(null);
     const paras = (page.text || []).map((t) => `<p>${t}</p>`).join('');
     E.showScreen(`<div class="story"><div class="eyebrow">${page.eyebrow || ''}</div><h2>${page.title || ''}</h2>${paras}${extra}
-      <div class="rowc">${typeof next === 'string' ? `<button class="btn big" data-act="${next}">${page.go || 'Continue'}</button>` : next}</div></div>`, 'dim');
+      <div class="rowc">${typeof next === 'string' && !next.startsWith('<') ? `<button class="btn big" data-act="${next}">${page.go || 'Continue'}</button>` : next}</div></div>`, 'dim');
   },
   text(key) { const m = STORY[key]; return (m && (m[CAMP.st.side] || m.both)) || {}; },
   brief() {
