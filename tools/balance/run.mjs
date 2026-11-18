@@ -21,7 +21,7 @@ const t0 = Date.now();
 await Promise.all(Array.from({ length: WORKERS }, async () => {
   const page = await browser.newPage({ viewport: { width: 320, height: 200 } });
   page.on('pageerror', (e) => console.error('PAGE ERROR', e.message));
-  await page.goto(pathToFileURL(path.join(here, '../../dist/index.html')).href);
+  await page.goto(pathToFileURL(process.env.DIST ? path.resolve(process.env.DIST) : path.join(here, '../../dist/index.html')).href); // DIST=<html> plays another build
   await page.waitForTimeout(600);
   await page.addScriptTag({ content: harness });
   while (queue.length) {
