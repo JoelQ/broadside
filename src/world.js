@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { mulberry } from './geo.js';
+import { mulberry, scatterIslands } from './geo.js';
 import { makeIsland } from './land.js';
 
 // ---------- shared wave model (JS + GLSL stay in sync) ----------
@@ -400,15 +400,9 @@ export class World {
   setIslands(seed, count) {
     this.islandGroup.clear();
     this.islands = [];
-    const rnd = mulberry(seed);
-    let guard = 0;
-    while (this.islands.length < count && guard++ < 200) {
-      const a = rnd() * Math.PI * 2, d = 190 + rnd() * 620, r = 26 + rnd() * 42;
-      const x = Math.sin(a) * d, z = Math.cos(a) * d;
-      if (this.islands.some((i) => Math.hypot(i.x - x, i.z - z) < i.r + r + 90)) continue;
-      const isl = { x, z, r: r * 0.8, h: r * (0.35 + rnd() * 0.3) };
-      this.islands.push(isl);
-      this.islandGroup.add(makeIsland(r, isl.h, rnd, x, z));
+    for (const o of scatterIslands(seed, count)) {
+      this.islands.push({ x: o.x, z: o.z, r: o.r * 0.8, h: o.h });
+      this.islandGroup.add(makeIsland(o.r, o.h, mulberry(o.seed), o.x, o.z));
     }
   }
 
