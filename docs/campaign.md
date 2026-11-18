@@ -260,6 +260,11 @@ Where the game differs from the proposal above, and why.
   - Galley oarsmen tire: sprinting spends them fast, rowing slowly. Spent, they stop until they
     have their breath back. An enemy galley's oars bar shows in her panel, and "Oarsmen spent!"
     marks the moment she lies still.
+- **Balance after the change.** `tools/balance/results/campaign-legs.txt`: all 17 fights pass the
+  three-ways rule. To make one-scene missions survivable without a repair pause, the strait castles
+  are poorer and lighter (three guns each), the flagship fitting out has six guns a side and a third
+  of her crew, her guard is a sloop, and the calm's galliot is a poor one. The skirmish ladder is
+  about where it was (mean win rate 0.71 against 0.68 before, within noise at three runs a cell).
 - **Mission 5, Venice.** The assault is led by fireships only. Bomb vessels are an anachronism for
   1669 (they first appear in the 1680s).
 - **Prizes.** A prize of a kind you do not own joins your ships in port; one of a kind you already

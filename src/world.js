@@ -330,7 +330,7 @@ export class World {
       m.position.set(s.x, 0.9, s.z); m.renderOrder = 1; this.shoalGroup.add(m);
       const danger = marked && draught > s.depth;
       const rg = new THREE.RingGeometry(s.r - 3, s.r + 2, 48); rg.rotateX(-Math.PI / 2);
-      const r = new THREE.Mesh(rg, new THREE.MeshBasicMaterial({ map: this.tex.foam, color: danger ? 0xff9a8a : 0xffffff, transparent: true, opacity: 0.7, depthWrite: false, depthTest: false, fog: false }));
+      const r = new THREE.Mesh(rg, new THREE.MeshBasicMaterial({ map: this.tex.foam, color: 0xffffff, transparent: true, opacity: 0.7, depthWrite: false, depthTest: false, fog: false }));
       r.position.set(s.x, 1, s.z); r.renderOrder = 2; r.userData.ph = Math.random() * 6; this.shoalGroup.add(r); this.shoalRings.push(r);
       if (reef) {
         const rnd = mulberry(Math.round(s.x * 3 + s.z * 7)), mat = new THREE.MeshStandardMaterial({ color: 0x4a4038, roughness: 1, flatShading: true });
@@ -343,7 +343,7 @@ export class World {
       }
       if (marked) {
         const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTexture(reef ? 'reef' : s.depth.toFixed(1), danger), transparent: true, depthTest: false, fog: false }));
-        sp.position.set(s.x, 4, s.z); sp.scale.set(14, 14, 1); sp.renderOrder = 3; this.shoalGroup.add(sp);
+        sp.position.set(s.x, 6, s.z); sp.scale.set(22, 22, 1); sp.renderOrder = 3; this.shoalGroup.add(sp);
       }
     }
   }
