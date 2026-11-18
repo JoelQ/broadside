@@ -5,7 +5,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node build.mjs"
+    "build": "node build.mjs",
+    "map": "node tools/map/map.mjs",
+    "test": "node --test tools/map/*.test.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.28.2",
