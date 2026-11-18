@@ -101,7 +101,10 @@ A prologue and five missions for each side (see [`docs/campaign.md`](docs/campai
 | `V` | Camera: facing the enemy / behind your ship |
 | `P`, `M` | Pause, mute |
 
-Touch devices get on-screen buttons.
+On a phone, hold it sideways. Starting a game goes full screen and locks the screen sideways where
+the browser allows it (on an iPhone, add the page to the home screen instead). Touch devices get
+on-screen buttons for the rudder, sail, fire, target, camera, anchor, oars and pause; tap a battery to
+fire that side and a shot to load it; drag the sea to look around and pinch to zoom.
 
 ## Build
 

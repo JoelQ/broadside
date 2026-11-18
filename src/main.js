@@ -37,7 +37,21 @@ function resize() {
 }
 window.addEventListener('resize', resize);
 resize();
-if ('ontouchstart' in window || navigator.maxTouchPoints > 0) document.body.classList.add('touch');
+const TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+if (TOUCH) document.body.classList.add('touch');
+// Full screen (and, where the browser allows it, locked sideways). iPhone Safari has no full screen
+// for pages, so the buttons hide there; adding the page to the home screen does the same job.
+const docEl = document.documentElement, FS_OK = !!(docEl.requestFullscreen || docEl.webkitRequestFullscreen);
+if (!FS_OK) document.body.classList.add('fsOff');
+const isFull = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+const PHONE = TOUCH && Math.min(screen.width, screen.height) < 600;
+function toggleFull(on = !isFull()) {
+  if (!FS_OK || on === isFull()) return;
+  if (!on) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
+  Promise.resolve((docEl.requestFullscreen || docEl.webkitRequestFullscreen).call(docEl, { navigationUI: 'hide' }))
+    .then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape'))
+    .catch(() => { /* refused: play on as we are */ });
+}
 const store = {
   get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } },
   set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* storage unavailable */ } },
@@ -50,7 +64,7 @@ const G = {
   player: null, enemy: null, ships: [], sc: {}, mode: 'skirmish', ai: newAI(), balls: [], pending: [], paused: false, trophies: [], trophyShips: [],
   aiGrapple: 0, boardCd: 0, endT: 0, outcome: null, bd: null, t: 0, shake: 0, focus: 'player', volley: 0, shop: null,
   stats: freshStats(), coach: null, ship: 'wren',
-  cam: { yaw: 0, pitch: 0.4, dist: 78, mode: 'helm', angle: 0.4, look: new THREE.Vector3(0, 7, -20), pos: new THREE.Vector3(40, 30, 90) },
+  cam: { yaw: 0, pitch: 0.4, dist: 78, zoom: 1, mode: 'helm', angle: 0.4, look: new THREE.Vector3(0, 7, -20), pos: new THREE.Vector3(40, 30, 90) },
 };
 window.G = G;
 
@@ -632,7 +646,7 @@ function beginBattle() {
   buildAmmoBar(); setupHudNames(); drawZones();
   $('bBow').classList.toggle('hidden', !G.player.bat.bow);
   $('bPort').classList.toggle('hidden', !G.player.bat.port); $('bStbd').classList.toggle('hidden', !G.player.bat.stbd);
-  $('oars').classList.toggle('hidden', !G.player.spec.oars);
+  $('oars').classList.toggle('hidden', !G.player.spec.oars); $('tbOar').classList.toggle('hidden', !G.player.spec.oars);
   G.coach = G.sc.coach ?? (G.mode === 'skirmish' && G.level === 0 && !store.get('broadside.coached')) ? { i: 0, t: 0 } : null;
   const tip = G.mode === 'skirmish' ? ENEMIES[G.level].tip : G.sc.tip;
   if (!G.coach && tip) setTimeout(() => G.state === 'battle' && toast(tip, '', 6000), 1500);
@@ -901,7 +915,7 @@ function updateCamera(dt) {
   if (st === 'title' || st === 'won') { center.set(p.pos.x - 6, 9, p.pos.z); want = 0.75 + Math.sin(G.t * 0.1) * 0.25 + c.yaw; dist = 72; pitch = 0.16; }
   else if (st === 'port') {
     const sp = G.shop && harbor.spots.find((s) => s.id === G.shop), ts = G.shop && G.trophyShips.find((t) => 'ship:' + t.id === G.shop);
-    if (sp) { center.set(sp.pos.x * 0.75, 7, sp.pos.z + 16); dist = 72; } else if (ts) { center.set(ts.pos.x, 8, ts.pos.z); dist = 80; } else { center.set(0, 7, 4); dist = 128; }
+    if (sp) { center.set(sp.pos.x * 0.75, 7, sp.pos.z + 16); dist = 72; } else if (ts) { center.set(ts.pos.x, 8, ts.pos.z); dist = 80; } else { center.set(0, 7, 4); dist = VH < 540 && camera.aspect > 1.6 ? 100 : 128; } // a short wide screen: closer, so the shop signs do not pile up
     want = 0.3 + Math.sin(G.t * 0.07) * 0.14 + c.yaw; pitch = 0.27;
   } else if (G.focus === 'enemy' && e) {
     const intro = st === 'intro';
@@ -923,6 +937,8 @@ function updateCamera(dt) {
     want = Math.atan2(-dx, -dz) + c.yaw; dist *= clamp(0.85 + d / 330, 0.9, 2); rate = 3;
   } else { want = p.heading + Math.PI + c.yaw; rate = 3.2; }
   if (camera.aspect < 1) dist *= 1.55;
+  else if (VH < 540 && st !== 'title' && st !== 'won' && st !== 'port') dist *= 1.18; // a phone on its side: stand off a little, the HUD takes the edges
+  if (st !== 'title' && st !== 'won') dist *= c.zoom; // pinch or wheel
   c.angle += wrap(want - c.angle) * Math.min(1, dt * rate);
   const cp = Math.cos(pitch);
   const tx = center.x + Math.sin(c.angle) * cp * dist, tz = center.z + Math.cos(c.angle) * cp * dist, ty = center.y + Math.sin(pitch) * dist;
@@ -1162,7 +1178,8 @@ const KEYS_HTML = `<div class="keys">
   <div><kbd>1</kbd>–<kbd>4</kbd> round · chain · grape · heated</div><div><kbd>B</kbd> board when alongside</div>
   <div><kbd>V</kbd> camera</div><div><kbd>P</kbd> pause · <kbd>M</kbd> mute</div>
   <div><kbd>T</kbd> next target</div><div><kbd>G</kbd> anchor: hold still, steady guns, A / D swing her round</div>
-  <div><kbd>R</kbd> oars: rest · row · sprint</div><div><kbd>F</kbd> fire the bow guns</div></div>`;
+  <div><kbd>R</kbd> oars: rest · row · sprint</div><div><kbd>F</kbd> fire the bow guns</div></div>
+  <div class="touchKeys">◀ ▶ rudder · Sail + / − · FIRE shoots whichever side bears<br>Tap PORT or STBD to fire one side · tap a shot to load it<br>Drag the sea to look around · pinch to zoom · tap the oars line to row</div>`;
 function showTitle() {
   G.state = 'title'; setMode(null);
   const saved = CAMP.saved();
@@ -1336,6 +1353,8 @@ function restart(full) {
 }
 function act(a) {
   sfx.init(); sfx.ui();
+  if (a === 'upright') return document.body.classList.add('upright');
+  if (PHONE && (a === 'camp:new' || a === 'camp:continue' || a === 'skirmish')) toggleFull(true); // a phone plays full screen, on its side
   if (a.startsWith('camp:')) return CAMP.act(a.slice(5));
   if (G.mode === 'campaign' && (a === 'sail' || a === 'restart' || a === 'retry')) return CAMP.act(a === 'sail' ? 'brief' : 'abandon');
   if (a === 'skirmish') { G.mode = 'skirmish'; restart(true); }
@@ -1436,29 +1455,70 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 document.addEventListener('click', (e) => {
-  const t = e.target.closest('[data-act],[data-ammo],[data-fire],[data-spot],[data-tapkey]');
+  const t = e.target.closest('[data-act],[data-ammo],[data-fire],[data-spot],[data-tapkey],[data-fs]');
   if (!t) return;
   const d = t.dataset;
-  if (d.act) act(d.act);
+  if (d.fs) toggleFull();
+  else if (d.act) act(d.act);
   else if (d.ammo) selectAmmo(d.ammo);
   else if (d.fire) fire(G.player, d.fire);
   else if (d.spot) { G.shop = G.shop === d.spot ? null : d.spot; sfx.init(); sfx.ui(); renderPort(); }
   else if (d.tapkey) tap(d.tapkey);
 });
+// Tap buttons fire on the press. Hold buttons (the rudder) are not tracked press by press: every touch
+// event re-reads which of them has a finger on it, so a lost release (a system edge swipe, a long-press
+// callout, a finger sliding off) can never leave one stuck, and sliding from one to the other swaps them.
+const holdBtns = [...document.querySelectorAll('.tb[data-key]')];
+function syncHolds(list) {
+  const SLACK = 14; // a held thumb drifts: keep the button down a little past its edge
+  const down = new Set();
+  for (const t of list) {
+    let best = null, bd = Infinity;
+    for (const b of holdBtns) {
+      const r = b.getBoundingClientRect();
+      if (!r.width) continue; // hidden
+      const dx = Math.max(r.left - t.clientX, 0, t.clientX - r.right), dy = Math.max(r.top - t.clientY, 0, t.clientY - r.bottom), d = Math.hypot(dx, dy);
+      if (d <= SLACK && d < bd) { best = b; bd = d; }
+    }
+    if (best) down.add(best);
+  }
+  for (const b of holdBtns) { const on = down.has(b); b.classList.toggle('on', on); keys[b.dataset.key] = on; }
+}
+for (const ev of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) document.addEventListener(ev, (e) => syncHolds(e.touches), { passive: true });
+for (const ev of ['blur', 'pagehide']) window.addEventListener(ev, () => syncHolds([]));
+document.addEventListener('visibilitychange', () => { if (document.hidden) syncHolds([]); });
 document.querySelectorAll('.tb').forEach((b) => {
   const k = b.dataset.key, tp = b.dataset.tap;
-  b.addEventListener('pointerdown', (e) => { e.preventDefault(); b.classList.add('on'); if (k) keys[k] = true; if (tp) tap(tp); });
-  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, () => { b.classList.remove('on'); if (k) keys[k] = false; });
+  b.addEventListener('contextmenu', (e) => e.preventDefault());
+  b.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    if (tp) { b.classList.add('on'); tap(tp); }
+    else if (k && e.pointerType === 'mouse') { b.classList.add('on'); keys[k] = true; } // touch holds are handled above
+  });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, (e) => {
+    if (tp) b.classList.remove('on');
+    else if (k && e.pointerType === 'mouse') { b.classList.remove('on'); keys[k] = false; }
+  });
 });
-let drag = null;
-canvas.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, id: e.pointerId }; canvas.setPointerCapture?.(e.pointerId); });
+let drag = null, pinch = 0;
+const touchPts = new Map();
+const spread = () => { const [a, b] = [...touchPts.values()]; return Math.hypot(a.x - b.x, a.y - b.y) || 1; };
+canvas.addEventListener('pointerdown', (e) => {
+  touchPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (touchPts.size === 2) { pinch = spread(); drag = null; return; } // two fingers: zoom, not look
+  drag = { x: e.clientX, y: e.clientY, id: e.pointerId }; canvas.setPointerCapture?.(e.pointerId);
+});
 canvas.addEventListener('pointermove', (e) => {
+  if (touchPts.has(e.pointerId)) touchPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinch && touchPts.size >= 2) { const d = spread(); G.cam.zoom = clamp(G.cam.zoom * (pinch / d), 0.45, 2.8); pinch = d; return; }
   if (!drag || drag.id !== e.pointerId) return;
   G.cam.yaw -= (e.clientX - drag.x) * 0.006; G.cam.pitch = clamp(G.cam.pitch + (e.clientY - drag.y) * 0.004, 0.06, 1.2);
   drag.x = e.clientX; drag.y = e.clientY;
 });
-for (const ev of ['pointerup', 'pointercancel']) canvas.addEventListener(ev, () => (drag = null));
-canvas.addEventListener('wheel', (e) => { e.preventDefault(); G.cam.dist = clamp(G.cam.dist * (1 + Math.sign(e.deltaY) * 0.1), 35, 220); }, { passive: false });
+for (const ev of ['pointerup', 'pointercancel']) canvas.addEventListener(ev, (e) => { touchPts.delete(e.pointerId); if (touchPts.size < 2) pinch = 0; drag = null; });
+canvas.addEventListener('wheel', (e) => { e.preventDefault(); G.cam.zoom = clamp(G.cam.zoom * (1 + Math.sign(e.deltaY) * 0.1), 0.45, 2.8); }, { passive: false });
+// a phone call or a switch to another app pauses the fight
+document.addEventListener('visibilitychange', () => { if (document.hidden && !G.paused && (G.state === 'battle' || G.state === 'boarding')) togglePause(); });
 canvas.addEventListener('dblclick', () => (G.cam.yaw = 0));
 
 // ---------- main loop ----------
