@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a1826">
 <title>Broadside — Pirate Hunter</title>
 <meta name="description" content="Age-of-sail ship combat in the browser: broadsides, wind, four kinds of shot, and boarding. Hunt five pirate captains.">
 <meta property="og:title" content="Broadside — Pirate Hunter">
@@ -14,6 +18,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Pirata+One&display=swap" rel="stylesheet">
 <style>
 :root{
+  --sl:env(safe-area-inset-left,0px); --sr:env(safe-area-inset-right,0px);
   --brass:#d7b25a; --navy:rgba(9,18,30,.74); --line:rgba(215,178,90,.5); --red:#c5402f; --green:#7fce7a; --cream:#f3ead2; --bad:#ff9a8a;
   --head:'Pirata One','IM Fell English',Georgia,serif; --body:'IM Fell English',Georgia,'Times New Roman',serif;
 }
@@ -96,7 +101,12 @@ kbd{font-family:ui-monospace,Menlo,monospace;font-size:.74em;background:rgba(255
 #touch{position:absolute;inset:0;display:none}
 body.touch #touch{display:block} body.touch #help{display:none} body.touch kbd{display:none}
 .tb{position:absolute;pointer-events:auto;width:58px;height:58px;border-radius:50%;background:rgba(10,20,32,.6);border:1px solid var(--line);color:var(--cream);font:400 15px var(--body);display:flex;align-items:center;justify-content:center;text-align:center;line-height:1}
-.tb:active,.tb.on{background:rgba(201,162,74,.45)}
+.tb.on{background:rgba(201,162,74,.45)} .tb[data-tap]:active{background:rgba(201,162,74,.45)} .tb{-webkit-touch-callout:none;touch-action:none}
+#tbL{left:calc(14px + var(--sl));bottom:20px} #tbR{left:calc(84px + var(--sl));bottom:20px} #tbUp{left:calc(14px + var(--sl));bottom:90px} #tbDn{left:calc(84px + var(--sl));bottom:90px}
+#tbOar{left:calc(14px + var(--sl));bottom:160px} #tbCam{right:calc(14px + var(--sr));bottom:90px} #tbTgt{right:calc(84px + var(--sr));bottom:90px} #tbAnc{right:calc(84px + var(--sr));bottom:20px}
+#tbFire{right:calc(14px + var(--sr));bottom:20px;width:72px;height:64px;border-radius:14px;background:rgba(184,55,43,.7)}
+.tb.mini{width:38px;height:38px;font-size:14px;top:150px;bottom:auto;right:calc(10px + var(--sr))} #tbFull{right:calc(54px + var(--sr))}
+.fsOff .fsBtn{display:none!important}
 body.touch #dial{bottom:auto;top:150px;transform:scale(.72);transform-origin:top left}
 body.touch #guns{bottom:6px;transform:translateX(-50%) scale(.82);transform-origin:bottom center}
 body.touch #coach{bottom:auto;top:130px;font-size:14px}
@@ -165,7 +175,7 @@ body.touch #coach{bottom:auto;top:130px;font-size:14px}
 .pip.friend{color:#a9d2ff} .pip.friend .h i{background:#7ab8ff} .pip.foe{color:#ffb4aa} .pip.out{color:#aaa;opacity:.7} .pip.out .h i{background:#888}
 #windName{font-size:12px;opacity:.85} #windName.bad{color:#ff9a8a;opacity:1}
 #oars{font-size:12px;margin-top:3px;pointer-events:auto;cursor:pointer} #oars .t{height:5px;background:rgba(0,0,0,.5);border-radius:3px;overflow:hidden;margin-top:2px} #oars .t i{display:block;height:100%;background:#8fd0ff}
-#screen.dim{background:rgba(5,10,18,.8);overflow-y:auto;align-items:flex-start}
+#screen.dim{background:rgba(5,10,18,.8);overflow-y:auto;align-items:flex-start;touch-action:pan-y;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .story{max-width:660px;margin:auto;text-align:left;font-size:17px;line-height:1.45;text-shadow:0 1px 3px #000;padding:10px 4px}
 .story.wide{max-width:860px}
 .story h2{font:400 clamp(30px,5vw,46px)/1 var(--head);color:#f6e3b0;margin:4px 0 12px;letter-spacing:1px}
@@ -174,6 +184,56 @@ body.touch #coach{bottom:auto;top:130px;font-size:14px}
 .story .cols{display:grid;grid-template-columns:240px 1fr;gap:16px;margin-top:10px} .story .shipstate h3{font:400 22px var(--head);margin:0 0 6px;color:#f6e3b0}
 .story .item{display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.12)} .story .item.prize{background:rgba(201,162,74,.1)}
 @media (max-width:700px){.story .cols{grid-template-columns:1fr}}
+
+/* ---------- phones held sideways (and any short window): smaller HUD so the sea shows ---------- */
+@media (max-height:540px){
+  .panel{padding:4px 8px;border-radius:6px}
+  .ship-panel{top:6px;width:min(190px,25vw)}
+  #pPanel{left:calc(6px + var(--sl))} #ePanel{right:calc(6px + var(--sr))}
+  .ship-panel h3{font-size:15px} .ship-panel .sub{display:none}
+  .bar{grid-template-columns:30px 1fr 24px;gap:4px;font-size:10px;margin:1px 0} .bar .t{height:7px}
+  .status,.gauge{font-size:10.5px}
+  #objective{top:6px;font-size:12px;padding:3px 10px;max-width:calc(100vw - 2 * min(190px,25vw) - 40px - var(--sl) - var(--sr))}
+  #toasts,body.touch #toasts{top:52px;width:min(420px,calc(100vw - 420px - var(--sl) - var(--sr)));gap:3px} .toast{font-size:12px;padding:2px 10px} .toast.big{font-size:18px}
+  #dial,body.touch #dial{left:calc(6px + var(--sl));top:76px;bottom:auto;transform:scale(.56);transform-origin:top left}
+  #guns,body.touch #guns{bottom:4px;transform:translateX(-50%) scale(.66);transform-origin:bottom center}
+  #ammoTip{font-size:16px}
+  #coach,body.touch #coach{top:auto;bottom:62px;width:min(460px,48vw);font-size:12.5px;padding:5px 10px;gap:6px}
+  #boardGo{bottom:118px;font-size:21px;padding:5px 16px} #boardGo small{font-size:11px} #boardGo.warn{font-size:17px}
+  #help{top:76px;right:calc(6px + var(--sr))}
+  .fl{font-size:15px} .fl.rake{font-size:20px}
+  body.touch .tb{width:50px;height:50px;font-size:13px;margin-bottom:0}
+  #tbUp{left:calc(18px + var(--sl));bottom:76px} #tbDn{left:calc(74px + var(--sl));bottom:76px}
+  body.touch #tbL,body.touch #tbR{width:60px;height:60px;font-size:20px;bottom:10px} #tbL{left:calc(18px + var(--sl))} #tbR{left:calc(84px + var(--sl))}
+  #tbFire,body.touch #tbFire{right:calc(10px + var(--sr));bottom:10px;width:64px;height:56px}
+  #tbAnc{right:calc(80px + var(--sr));bottom:10px} #tbOar{left:calc(18px + var(--sl));bottom:132px} #tbCam{right:calc(10px + var(--sr));bottom:72px} #tbTgt{right:calc(66px + var(--sr));bottom:72px}
+  body.touch .tb.mini{width:34px;height:34px;font-size:12px;top:auto;bottom:130px;right:calc(10px + var(--sr))} body.touch #tbFull{right:calc(50px + var(--sr))}
+  /* boarding */
+  #mStrip{bottom:6px;width:min(560px,72vw);padding:5px 10px}
+  #mStrip .vs{font-size:12px} #mStrip .vs b{font-size:22px} #mStrip .how{font-size:13px;margin:3px 0 4px} .tug{height:10px;margin-top:3px}
+  /* port */
+  #portTop{top:4px} #portTop .eyebrow{font-size:10px;letter-spacing:3px} #portTop .nm{font-size:24px} #purse{font-size:18px}
+  .spot{font-size:13px;padding:2px 9px} .spot:after{height:10px}
+  #shop{left:calc(6px + var(--sl));right:auto;width:min(290px,44vw);top:72px;bottom:auto;max-height:calc(100% - 80px);overflow-y:auto;touch-action:pan-y;overscroll-behavior:contain;padding:6px 10px}
+  #shop h3{font-size:19px;margin-bottom:2px} #shop .role{font-size:12.5px;margin:2px 0 5px} .item{font-size:13px;padding:4px 0} .item .d small{font-size:11px} .cmp{font-size:11.5px;margin:3px 0}
+  #fleetList{right:calc(10px + var(--sr));bottom:96px;gap:4px;max-height:calc(100% - 150px);overflow-y:auto;touch-action:pan-y;overscroll-behavior:contain;padding:2px} #fleetList .eyebrow{font-size:10px;letter-spacing:2px} #fleetList .spot{font-size:14px} #fleetList .spot small{font-size:10.5px}
+  #portGo{right:calc(10px + var(--sr));bottom:8px} #nextLine{font-size:12px;margin-bottom:5px} #portGo .btn.big{font-size:21px;padding:5px 24px}
+  /* screens */
+  #screen h1{font-size:min(clamp(44px,8vw,84px),15vh)} #titleWrap h1{font-size:min(clamp(64px,14vw,136px),24vh)}
+  #titleWrap .tag{margin:4px 0 14px}
+  .btn.big{font-size:21px;padding:6px 26px} .btn{font-size:16px;padding:5px 14px} .rowc{margin-top:12px}
+  .story{font-size:15px;line-height:1.38} .story h2{font-size:30px;margin-bottom:8px} .story .officer{font-size:14px;padding:6px 10px}
+  .lower .line{font-size:15px} .lower .hook{font-size:17px;margin:4px 0 10px} .banner .gold{font-size:32px} .stats b{font-size:22px} .keys{font-size:13px;margin-top:8px}
+  #screen.low{padding:0 calc(5vw + var(--sl)) 12vh}
+}
+/* touch: the keyboard guide makes no sense, show the touch one instead */
+.touchKeys{display:none} body.touch .touchKeys{display:block;font-size:14px;line-height:1.5;margin:10px auto 0;max-width:520px;opacity:.9} body.touch .keys{display:none}
+/* a phone held upright: the game wants it sideways */
+#rotate{display:none;position:fixed;inset:0;z-index:20;background:rgba(5,10,18,.92);flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;gap:14px;font-size:18px}
+#rotate .ph{width:46px;height:78px;border:3px solid var(--brass);border-radius:9px;animation:turn 2.4s ease-in-out infinite}
+@keyframes turn{0%,25%{transform:rotate(0)}55%,100%{transform:rotate(-90deg)}}
+#rotate h2{font:400 34px var(--head);margin:0;color:#f6e3b0}
+@media (orientation:portrait) and (max-width:600px){ body.touch:not(.upright) #rotate{display:flex} }
 </style>
 </head>
 <body>
@@ -222,15 +282,19 @@ body.touch #coach{bottom:auto;top:130px;font-size:14px}
   </div>
   <div id="boardGo" class="hidden" data-tapkey="b"></div>
   <div id="touch">
-    <div class="tb" data-key="a" style="left:14px;bottom:20px">◀</div>
-    <div class="tb" data-key="d" style="left:84px;bottom:20px">▶</div>
-    <div class="tb" data-tap="w" style="left:14px;bottom:90px">Sail +</div>
-    <div class="tb" data-tap="s" style="left:84px;bottom:90px">Sail −</div>
-    <div class="tb" data-tap="v" style="right:14px;bottom:90px">Cam</div>
-    <div class="tb" data-tap="t" style="right:84px;bottom:90px">Target</div>
-    <div class="tb" data-tap="g" style="right:84px;bottom:20px">Anchor</div>
-    <div class="tb" data-tap=" " style="right:14px;bottom:20px;width:72px;height:64px;border-radius:14px;background:rgba(184,55,43,.7)">FIRE</div>
+    <div class="tb" id="tbL" data-key="a">◀</div>
+    <div class="tb" id="tbR" data-key="d">▶</div>
+    <div class="tb" id="tbUp" data-tap="w">Sail +</div>
+    <div class="tb" id="tbDn" data-tap="s">Sail −</div>
+    <div class="tb" id="tbCam" data-tap="v">Cam</div>
+    <div class="tb" id="tbTgt" data-tap="t">Target</div>
+    <div class="tb" id="tbAnc" data-tap="g">Anchor</div>
+    <div class="tb" id="tbFire" data-tap=" ">FIRE</div>
+    <div class="tb hidden" id="tbOar" data-tap="r">Oars</div>
+    <div class="tb mini" id="tbPause" data-tap="p" aria-label="Pause">❚❚</div>
+    <div class="tb mini fsBtn" id="tbFull" data-fs="1" aria-label="Full screen">⛶</div>
   </div>
+</div>
 </div>
 
 <div id="objective" class="hidden"></div>
@@ -256,6 +320,8 @@ body.touch #coach{bottom:auto;top:130px;font-size:14px}
 </div>
 
 <div id="screen" class="hidden"></div>
+<div id="rotate"><div class="ph"></div><h2>Turn your phone sideways</h2><div>Broadside is played with the phone on its side.</div>
+  <div class="rowc"><button class="btn fsBtn" data-fs="1">Full screen</button><button class="btn sm" data-act="upright">Play upright anyway</button></div></div>
 <script>/*__BUNDLE__*/</script>
 </body>
 </html>
