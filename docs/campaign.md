@@ -122,7 +122,7 @@ what force reaches Candia, which sets up the finale.
 
 The strait has its own rule: a **current** runs out to sea, strongest in mid-channel, with
 slack water and back-eddies inshore, where the shoals and the castle guns are. The wind
-usually blows the same way. Going up is slow and coming down is fast and hard to undo.
+blows across the channel off the European hills. Going up is slow and coming down is fast and hard to undo.
 
 - *Venice: up the straits.* A new Ottoman flagship is fitting out above the castles with one
   guard ship. Destroy or take her, then get out. Heavy: fight up the middle and trade shots
@@ -276,6 +276,46 @@ Where the game differs from the proposal above, and why.
 - **Ships under AI do not board each other.** Only your deck is fought over; the background battle
   in the finale is settled with guns.
 - **Touch.** New actions have buttons, but the campaign was built and tuned for the keyboard.
+
+### Places: the Dardanelles and Candia
+
+The straits and the finale are set in real places, drawn as land rather than as rows of round
+islands. Both live in `src/maps.js` and are shared by every leg set there.
+
+- **The Dardanelles.** A winding channel with the Narrows above the middle of the chart, about 300
+  yards across, Kilitbahir on one shore and the Sultan's castle with the town of Çanakkale on the
+  other. Their arcs cross in mid-channel, where the current is strongest; close under either shore
+  they cannot bear. Above the Narrows the channel bends round Nara point, and the flagship lies in
+  the bay behind it with a yard, a quay and lighters alongside. The current follows the channel:
+  stronger where it is narrow, a back-eddy along each shore, dying away past the capes at the mouth.
+  Shoals sit in the slack water and reefs off the points. The wind blows off the European hills, so
+  going up is a reach against the current and the bay is a beat.
+- **Candia.** The city behind its sea walls and bastions, rising up the hill inside the land walls,
+  with campaniles and domes. Two moles close the harbour; the Koules stands at the end of the
+  western one and a battery on the head of the eastern. The arsenal's vaulted sheds line the inner
+  harbour, reefs lie under the walls either side, and the Ottoman siege lines and camp are on the
+  hills to the west. The assault on the mole battery is made from outside; its dead ground is along
+  the outside of its own mole. The harbour melee is now fought inside the moles. The moles stop shot
+  as well as ships.
+
+How a place is made (the same recipe will do for the other scenarios):
+
+1. Author the shore as a few dozen points (`coasts`) and the breakwaters as paths (`moles`).
+   `src/coast.js` roughens the outline and from that one shape makes the drawn land, the circles
+   ships run into, and `world.ground(x, z)`, which shot hits and the camera stays above.
+2. Give the water its rules from the same points: current along the channel, shoals off the points
+   and in the slack water, forts where the shore commands a passage.
+3. Flatten the ground where a town stands, keep trees off it, then build it (`src/works.js`: walls,
+   bastions, towers, towns, moles, the arsenal, a yard).
+4. Only add works that change what you see in a fight: a mole you can hide behind, the castle whose
+   arc you are about to cross, the yard where the ship you came for is lying.
+5. Move ships, zones and the harness routes (`tools/balance/legs.mjs`) to the new ground, and check
+   it with `tools/maps/look.mjs` (a chart from straight above, the deck view, and fixed cameras) at
+   desktop and phone size, and with the legs harness.
+
+AI captains steer round a coast by finding the nearest heading clear of all its circles, keeping to
+the side they chose so they do not dither at a headland. Round islands are steered round as before,
+so the other missions are unchanged.
 
 ### What the harness checks
 

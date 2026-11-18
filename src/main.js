@@ -310,6 +310,7 @@ function clearShot(a, b) {
     const t = clamp(((i.x - a.pos.x) * dx + (i.z - a.pos.z) * dz) / l2, 0, 1);
     if (Math.hypot(a.pos.x + dx * t - i.x, a.pos.z + dz * t - i.z) < i.r * 0.9) return false;
   }
+  if (world.pieces.length) { const n = Math.ceil(Math.sqrt(l2) / 12); for (let k = 1; k < n; k++) if (world.ground(a.pos.x + (dx * k) / n, a.pos.z + (dz * k) / n) > 3) return false; }
   return true;
 }
 const aiApi = { fire: (s, side) => fire(s, side), clearShot: (a, b) => clearShot(a, b), shotSpeed: (s) => AMMO[s.ammo].speed, reach: (a, b) => reach(a, b), strength: (s) => strength(s), inArc: (a, side, b, k) => inArc(a, side, b, k) };
@@ -441,6 +442,7 @@ function updateBalls(dt) {
         const d = Math.hypot(pos.x - isl.x, pos.z - isl.z);
         if (d < isl.r * 1.1 * (1 - clamp(pos.y / (isl.h * 1.4), 0, 1))) { fx.wood(pos, 5); done = true; break; }
       }
+      if (!done && world.pieces.length && pos.y < 30 && world.ground(pos.x, pos.z) > pos.y) { fx.wood(pos, 5); done = true; }
       if (!done && pos.y < world.height(pos.x, pos.z)) { fx.splash(pos, b.ammo === 'grape' ? 0.5 : 1); sfx.splash(camVol(pos)); done = true; }
     }
     if (b.ammo === 'chain') { b.mesh.rotation.y += b.spin * dt; b.mesh.rotation.z += b.spin * 0.6 * dt; }
@@ -469,6 +471,7 @@ function collide(a, b) {
     }
   }
 }
+const _shore = [], NONE = [];
 function collideIslands(s) {
   if (s.spec.fixed) return;
   // shoal water: a ship that draws too much sticks until her people work her off
@@ -492,7 +495,8 @@ function collideIslands(s) {
     const dx = s.backOff[0] - s.pos.x, dz = s.backOff[1] - s.pos.z, d = Math.hypot(dx, dz);
     if (d < 3 || s.offT < 3) s.backOff = null; else { s.pos.x += (dx / d) * 0.25; s.pos.z += (dz / d) * 0.25; }
   }
-  for (const isl of world.islands) for (const c of circles(s)) {
+  const land = world.pieces.length ? world.shoreNear(s.pos.x, s.pos.z, s.spec.L * 0.5 + s.spec.B, _shore) : NONE;
+  for (const isl of land.length ? world.islands.concat(land) : world.islands) for (const c of circles(s)) {
     const dx = c[0] - isl.x, dz = c[1] - isl.z, d = Math.hypot(dx, dz) || 0.01, ov = isl.r + s.spec.B * 0.5 - d;
     if (ov <= 0) continue;
     s.pos.x += (dx / d) * ov; s.pos.z += (dz / d) * ov;
@@ -598,6 +602,9 @@ function startScenario(def, c) {
   world.setEnv(def.env || 'noon');
   if (def.seedIslands) world.setIslands(def.seedIslands[0], def.seedIslands[1]);
   for (const i of def.islands || []) world.addIsland(i);
+  for (const c of def.coasts || []) world.addCoast(c);
+  for (const m of def.moles || []) world.addMole(m);
+  if (def.works && !G.fast) world.islandGroup.add(def.works(world));
   world.setShoals(def.shoals || [], c.has('pilot'), G.player.spec.D);
   world.currentAt = def.current ? (x, z) => def.current(x, z) : null;
   world.setWind(def.wind.dir, def.wind.str ?? 1, true); world.wind.steady = !!def.wind.steady; world.wind.timer = 40;
@@ -951,7 +958,7 @@ function updateCamera(dt) {
   const tx = center.x + Math.sin(c.angle) * cp * dist, tz = center.z + Math.cos(c.angle) * cp * dist, ty = center.y + Math.sin(pitch) * dist;
   const k = Math.min(1, dt * 5);
   c.pos.x += (tx - c.pos.x) * k; c.pos.y += (ty - c.pos.y) * k; c.pos.z += (tz - c.pos.z) * k;
-  c.pos.y = Math.max(c.pos.y, world.height(c.pos.x, c.pos.z) + 2.5);
+  c.pos.y = Math.max(c.pos.y, world.height(c.pos.x, c.pos.z) + 2.5, world.pieces.length ? world.ground(c.pos.x, c.pos.z) + 4 : -9);
   c.look.lerp(center, Math.min(1, dt * 6));
   camera.position.copy(c.pos);
   if (G.shake > 0) {
@@ -1143,6 +1150,8 @@ function drawRadar(p, e) {
   for (const i of world.shoals) { const [ix, iy] = pt(i.x, i.z); x.beginPath(); x.arc(ix, iy, i.r * k, 0, 7); x.fill(); }
   x.fillStyle = '#8c8266';
   for (const i of world.islands) { if (i.soft) continue; const [ix, iy] = pt(i.x, i.z); x.beginPath(); x.arc(ix, iy, i.r * k * 1.1, 0, 7); x.fill(); }
+  for (const c of world.coasts) { x.beginPath(); const P = c.shape.pts; for (let i = 0; i < P.length; i += 2) { const [ix, iy] = pt(P[i][0], P[i][1]); if (i) x.lineTo(ix, iy); else x.moveTo(ix, iy); } x.closePath(); x.fill(); }
+  if (world.moles.length) { x.strokeStyle = '#8c8266'; x.lineCap = x.lineJoin = 'round'; for (const m of world.moles) { x.lineWidth = Math.max(2, m.w * k); x.beginPath(); m.path.forEach((q, i) => { const [ix, iy] = pt(q[0], q[1]); if (i) x.lineTo(ix, iy); else x.moveTo(ix, iy); }); x.stroke(); } }
   x.strokeStyle = '#9dff9a'; x.lineWidth = 3;
   for (const z of G.sc.zones || []) {
     let [zx, zy] = pt(z.x, z.z); const d = Math.hypot(zx, zy);

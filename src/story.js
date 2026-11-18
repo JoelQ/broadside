@@ -175,7 +175,7 @@ export const STORY = {
       brief: { title: 'The straits', text: [
         'The Republic cannot beat the Sultan’s army on Crete, so it has gone to the door the army is fed through. A Venetian fleet lies off the mouth of the Dardanelles, a week’s sail from Candia, and everything bound for Crete must come out past it.',
         'Now the Captain General has word of a great ship fitting out above the castles: a flagship for a fleet meant to break the blockade. She is not ready. In a month she will be.',
-        'The current in the strait runs out to sea, hard in mid-channel and slack along the shores, and the summer wind blows the same way. “Going up is slow,” says Manolis. “Coming down is fast, and you cannot take it back.”',
+        'The current in the strait runs out to sea, hard in mid-channel and hardest through the Narrows, slack along the shores, and the summer wind comes down off the European hills. “Going up is slow,” says Manolis. “Coming down is fast, and you cannot take it back.”',
       ] },
       end: { title: 'Below the castles', text: [
         'The fleet at the mouth sees the smoke before it sees you. The fleet that was to break the blockade has no flagship, and whatever reaches Crete this year will be less than was meant.',
