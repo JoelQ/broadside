@@ -1465,10 +1465,40 @@ document.addEventListener('click', (e) => {
   else if (d.spot) { G.shop = G.shop === d.spot ? null : d.spot; sfx.init(); sfx.ui(); renderPort(); }
   else if (d.tapkey) tap(d.tapkey);
 });
+// Tap buttons fire on the press. Hold buttons (the rudder) are not tracked press by press: every touch
+// event re-reads which of them has a finger on it, so a lost release (a system edge swipe, a long-press
+// callout, a finger sliding off) can never leave one stuck, and sliding from one to the other swaps them.
+const holdBtns = [...document.querySelectorAll('.tb[data-key]')];
+function syncHolds(list) {
+  const SLACK = 14; // a held thumb drifts: keep the button down a little past its edge
+  const down = new Set();
+  for (const t of list) {
+    let best = null, bd = Infinity;
+    for (const b of holdBtns) {
+      const r = b.getBoundingClientRect();
+      if (!r.width) continue; // hidden
+      const dx = Math.max(r.left - t.clientX, 0, t.clientX - r.right), dy = Math.max(r.top - t.clientY, 0, t.clientY - r.bottom), d = Math.hypot(dx, dy);
+      if (d <= SLACK && d < bd) { best = b; bd = d; }
+    }
+    if (best) down.add(best);
+  }
+  for (const b of holdBtns) { const on = down.has(b); b.classList.toggle('on', on); keys[b.dataset.key] = on; }
+}
+for (const ev of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) document.addEventListener(ev, (e) => syncHolds(e.touches), { passive: true });
+for (const ev of ['blur', 'pagehide']) window.addEventListener(ev, () => syncHolds([]));
+document.addEventListener('visibilitychange', () => { if (document.hidden) syncHolds([]); });
 document.querySelectorAll('.tb').forEach((b) => {
   const k = b.dataset.key, tp = b.dataset.tap;
-  b.addEventListener('pointerdown', (e) => { e.preventDefault(); b.classList.add('on'); if (k) keys[k] = true; if (tp) tap(tp); });
-  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, () => { b.classList.remove('on'); if (k) keys[k] = false; });
+  b.addEventListener('contextmenu', (e) => e.preventDefault());
+  b.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    if (tp) { b.classList.add('on'); tap(tp); }
+    else if (k && e.pointerType === 'mouse') { b.classList.add('on'); keys[k] = true; } // touch holds are handled above
+  });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, (e) => {
+    if (tp) b.classList.remove('on');
+    else if (k && e.pointerType === 'mouse') { b.classList.remove('on'); keys[k] = false; }
+  });
 });
 let drag = null, pinch = 0;
 const touchPts = new Map();

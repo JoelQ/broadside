@@ -101,7 +101,7 @@ kbd{font-family:ui-monospace,Menlo,monospace;font-size:.74em;background:rgba(255
 #touch{position:absolute;inset:0;display:none}
 body.touch #touch{display:block} body.touch #help{display:none} body.touch kbd{display:none}
 .tb{position:absolute;pointer-events:auto;width:58px;height:58px;border-radius:50%;background:rgba(10,20,32,.6);border:1px solid var(--line);color:var(--cream);font:400 15px var(--body);display:flex;align-items:center;justify-content:center;text-align:center;line-height:1}
-.tb:active,.tb.on{background:rgba(201,162,74,.45)}
+.tb.on{background:rgba(201,162,74,.45)} .tb[data-tap]:active{background:rgba(201,162,74,.45)} .tb{-webkit-touch-callout:none;touch-action:none}
 #tbL{left:calc(14px + var(--sl));bottom:20px} #tbR{left:calc(84px + var(--sl));bottom:20px} #tbUp{left:calc(14px + var(--sl));bottom:90px} #tbDn{left:calc(84px + var(--sl));bottom:90px}
 #tbOar{left:calc(14px + var(--sl));bottom:160px} #tbCam{right:calc(14px + var(--sr));bottom:90px} #tbTgt{right:calc(84px + var(--sr));bottom:90px} #tbAnc{right:calc(84px + var(--sr));bottom:20px}
 #tbFire{right:calc(14px + var(--sr));bottom:20px;width:72px;height:64px;border-radius:14px;background:rgba(184,55,43,.7)}
@@ -203,9 +203,10 @@ body.touch #coach{bottom:auto;top:130px;font-size:14px}
   #help{top:76px;right:calc(6px + var(--sr))}
   .fl{font-size:15px} .fl.rake{font-size:20px}
   body.touch .tb{width:50px;height:50px;font-size:13px;margin-bottom:0}
-  #tbL{left:calc(10px + var(--sl));bottom:10px} #tbR{left:calc(66px + var(--sl));bottom:10px} #tbUp{left:calc(10px + var(--sl));bottom:66px} #tbDn{left:calc(66px + var(--sl));bottom:66px}
+  #tbUp{left:calc(18px + var(--sl));bottom:76px} #tbDn{left:calc(74px + var(--sl));bottom:76px}
+  body.touch #tbL,body.touch #tbR{width:60px;height:60px;font-size:20px;bottom:10px} #tbL{left:calc(18px + var(--sl))} #tbR{left:calc(84px + var(--sl))}
   #tbFire,body.touch #tbFire{right:calc(10px + var(--sr));bottom:10px;width:64px;height:56px}
-  #tbAnc{right:calc(80px + var(--sr));bottom:10px} #tbOar{left:calc(10px + var(--sl));bottom:122px} #tbCam{right:calc(10px + var(--sr));bottom:72px} #tbTgt{right:calc(66px + var(--sr));bottom:72px}
+  #tbAnc{right:calc(80px + var(--sr));bottom:10px} #tbOar{left:calc(18px + var(--sl));bottom:132px} #tbCam{right:calc(10px + var(--sr));bottom:72px} #tbTgt{right:calc(66px + var(--sr));bottom:72px}
   body.touch .tb.mini{width:34px;height:34px;font-size:12px;top:auto;bottom:130px;right:calc(10px + var(--sr))} body.touch #tbFull{right:calc(50px + var(--sr))}
   /* boarding */
   #mStrip{bottom:6px;width:min(560px,72vw);padding:5px 10px}
