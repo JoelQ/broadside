@@ -1,5 +1,5 @@
 // Plays one cell of legs.mjs and prints where everything was every few seconds.
-//   LEGS='m1V The patrol' HULLS=sloop ROUTES=shoals node tools/balance/trace.mjs [seconds-between-lines]
+//   LEGS='m1V The patrol' HULLS=sloop ROUTES=shoals [SEED=n] node tools/balance/trace.mjs [seconds-between-lines]
 import { createRequire } from 'module';
 import { readFileSync } from 'fs';
 import { pathToFileURL, fileURLToPath } from 'url';
@@ -14,8 +14,8 @@ await page.goto(pathToFileURL(path.join(here, '../../dist/index.html')).href);
 await page.waitForTimeout(600);
 await page.addScriptTag({ content: readFileSync(path.join(here, 'harness.js'), 'utf8') });
 for (const c of cells.slice(0, 3)) {
-  const r = await page.evaluate((cfg) => H.leg(cfg), JSON.parse(JSON.stringify({ ...c, trace: every })));
-  console.log(`== ${c.label}: ${r.o} at ${r.t}s`);
+  const r = await page.evaluate((cfg) => H.leg(cfg), JSON.parse(JSON.stringify({ ...c, trace: every, seed: process.env.SEED != null ? +process.env.SEED : undefined })));
+  console.log(`== ${c.label}: ${r.o} at ${r.t}s (seed ${r.seed})`);
   console.log(r.trace.join('\n'));
 }
 await browser.close();
