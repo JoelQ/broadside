@@ -153,3 +153,46 @@ export function lighters(B, x, z, ry, n = 3, seed = 3) {
   }
   rowboat(B, x - 14, z + 26, ry + 0.8, 0x8a3a2a);
 }
+
+// ---------- a city under siege ----------
+// smoke standing over a fire: puffs stacked and drifting downwind, in one translucent mesh
+const SMOKE = new THREE.MeshLambertMaterial({ color: 0x2b2826, transparent: true, opacity: 0.32, depthWrite: false, flatShading: true });
+export function smoke(group, x, y, z, h = 90, lean = [0.35, 0.1], seed = 1) {
+  const rnd = mulberry(seed), S = new Batch(), blob = new THREE.IcosahedronGeometry(1, 1);
+  for (let i = 0; i < 26; i++) {
+    const k = Math.pow(i / 25, 0.8), r = 4 + k * 26 + rnd() * 6, yy = y + 2 + k * h + (rnd() - 0.5) * 8, d = k * k * h, sp = 4 + k * 22;
+    S.add(blob, 0xffffff, new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(rnd() * 3, rnd() * 3, rnd() * 3)).setPosition(x + lean[0] * d + (rnd() - 0.5) * sp, yy, z + lean[1] * d + (rnd() - 0.5) * sp).scale(new THREE.Vector3(r, r * (0.6 + rnd() * 0.3), r * (0.8 + rnd() * 0.4))));
+  }
+  const m = S.mesh(SMOKE); m.renderOrder = 4; group.add(m);
+}
+// a burning house: glowing windows and flames through the roof (G is the lit batch)
+export function blaze(B, G, x, y, z, s = 1, rnd = Math.random) {
+  B.box(8 * s, 6 * s, 7 * s, 0x3a302a, x, y + 3 * s, z);
+  for (let i = 0; i < 4; i++) G.add(new THREE.ConeGeometry(1.8 * s, (5 + rnd() * 5) * s, 5), i % 2 ? 0xff8a2a : 0xffc04a, new THREE.Matrix4().makeTranslation(x + (rnd() - 0.5) * 6 * s, y + (8.5 + rnd() * 2) * s, z + (rnd() - 0.5) * 5 * s));
+  for (const sd of [-1, 1]) G.box(5 * s, 2 * s, 0.2, 0xff7a20, x, y + 3 * s, z + sd * 3.55 * s);
+}
+// a palazzo: a tall block with an arcade on the ground floor, rows of windows and a flat parapet
+export function palazzo(B, G, w, h, d, wall, glass) {
+  B.box(w, h + 3, d, wall, 0, (h - 3) / 2, 0);
+  B.box(w + 0.6, 0.6, d + 0.6, shade(wall, 0.8), 0, h + 0.3, 0);
+  B.box(w * 0.9, 1.6, d * 0.9, 0x9a5a3a, 0, h + 0.8, 0);
+  const n = Math.max(2, Math.round(w / 3.4));
+  for (let i = 0; i < n; i++) {
+    const x = -w / 2 + (w * (i + 0.5)) / n;
+    B.box(2.2, 3.6, 0.3, 0x2a2218, x, 1.8, d / 2 + 0.05); // arcade
+    for (let r = 1; r < Math.floor(h / 3.3); r++) G.box(1.0, 1.6, 0.15, glass, x, 1.6 + r * 3.3, d / 2 + 0.05);
+  }
+}
+// a basilica: nave, aisles, a dome over the crossing and a campanile beside it
+export function basilica(B, x, y, z, ry, k = 1, col = 0xe8dcc4) {
+  B.at(x, y, z, ry, () => {
+    B.box(16 * k, 15 * k, 44 * k, col, 0, 7.5 * k - 2, 0);
+    for (const s of [-1, 1]) { B.box(7 * k, 9 * k, 40 * k, shade(col, 0.92), s * 11 * k, 4.5 * k - 2, 0); B.quad([s * 8 * k, 13 * k - 2, -22 * k], [s * 8 * k, 13 * k - 2, 22 * k], [0, 19 * k - 2, 22 * k], [0, 19 * k - 2, -22 * k], 0x9a5a3a); }
+    B.tri([-8 * k, 13 * k - 2, 22.02 * k], [8 * k, 13 * k - 2, 22.02 * k], [0, 19 * k - 2, 22.02 * k], col);
+    B.add(new THREE.SphereGeometry(9 * k, 14, 7, 0, Math.PI * 2, 0, Math.PI / 2), 0x6f7f88, new THREE.Matrix4().makeTranslation(0, 20 * k - 2, -6 * k));
+    B.cyl(9.2 * k, 9.2 * k, 5 * k, col, 0, 17 * k - 2, -6 * k, 14);
+    B.cyl(0, 1.2 * k, 3 * k, 0xd8b04a, 0, 30 * k - 2, -6 * k, 6);
+    B.box(4 * k, 6 * k, 0.4, 0x2a2218, 0, 3 * k - 2, 22.1 * k);
+  });
+  campanile(B, x + Math.cos(ry) * 18 * k + Math.sin(ry) * 14 * k, y, z - Math.sin(ry) * 18 * k + Math.cos(ry) * 14 * k, 46 * k, 0xe0d0b0, 1.9 * k);
+}

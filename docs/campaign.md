@@ -290,13 +290,17 @@ islands. Both live in `src/maps.js` and are shared by every leg set there.
   stronger where it is narrow, a back-eddy along each shore, dying away past the capes at the mouth.
   Shoals sit in the slack water and reefs off the points. The wind blows off the European hills, so
   going up is a reach against the current and the bay is a beat.
-- **Candia.** The city behind its sea walls and bastions, rising up the hill inside the land walls,
-  with campaniles and domes. Two moles close the harbour; the Koules stands at the end of the
-  western one and a battery on the head of the eastern. The arsenal's vaulted sheds line the inner
-  harbour, reefs lie under the walls either side, and the Ottoman siege lines and camp are on the
-  hills to the west. The assault on the mole battery is made from outside; its dead ground is along
-  the outside of its own mole. The harbour melee is now fought inside the moles. The moles stop shot
-  as well as ships.
+- **Candia.** Taken more closely from the real city. Its fame was its walls, not its harbour: a
+  ring of great arrowhead bastions with a ditch, rising from the sea at both ends and climbing the
+  hill behind, which held for more than twenty years. The harbour was small and man-made, closed by
+  two moles. The Koules (Rocca a Mare, with St Mark's lions on its faces) stands at the end of the
+  western one and a battery on the head of the eastern. Two long rows of vaulted arsenal sheds line
+  the inner quay, with palazzi behind them and the city climbing to the walls: St Mark's, St Titus,
+  domes and campaniles. Mount Juktas stands behind the city and Dia lies out to sea. On the day of
+  the assault houses are burning inside the walls, smoke stands over the city, and Ottoman trenches
+  zigzag up to the bastions from the camps on both flanks. The assault on the mole battery is made
+  from outside; its dead ground is along the outside of its own mole. The harbour melee is fought
+  inside the moles, and the moles stop shot as well as ships.
 
 How a place is made (the same recipe will do for the other scenarios):
 

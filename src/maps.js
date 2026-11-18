@@ -1,6 +1,8 @@
 import { shipSpec } from './fleet.js';
 import { buildFortModel } from './fort.js';
-import { works, wall, tower, town, minaret, dome, campanile, mole, arsenal, yard, lighters, bastion } from './works.js';
+import { works, wall, tower, town, minaret, dome, campanile, mole, arsenal, yard, lighters, bastion, smoke, blaze, palazzo, basilica } from './works.js';
+import { mulberry } from './geo.js';
+import { shade } from './geo.js';
 
 // Places: the land, water and works a mission's fights are set in, as data a scenario spreads into
 // itself (coasts, moles, shoals, current, works). A place is drawn the same in every leg set in it;
@@ -91,49 +93,85 @@ const strait = (opts = {}) => ({
 });
 
 // ---------- Candia ----------
-// The city faces the sea along the north of the chart (z > 0), behind sea walls with bastions. In front of
-// the city the harbour is closed by two moles; the long western mole ends in the Koules, the sea fortress
-// at the harbour mouth, and the short eastern mole in a battery. The arsenal's vaulted sheds line the inner
-// harbour. Reefs lie under the walls either side.
-const CITY_SHORE = [[-1700, 150, 0], [-1300, 160], [-1060, 190], [-930, 245, 10], [-860, 330], [-770, 392], [-700, 410, 8], [-560, 395, 4], [-430, 392, 2], [-330, 405, 0], [-270, 420, 0], [-210, 445, 0], [-60, 452, 0], [90, 450, 0], [230, 438, 0], [300, 410, 0], [420, 396, 2], [560, 400, 4], [700, 420, 8], [800, 392], [900, 322], [975, 240, 10], [1150, 180], [1700, 140, 0]];
+// The city faces the sea along the north of the chart (z > 0). Its fame was its walls: a ring of great
+// arrowhead bastions and a ditch, rising from the sea at both ends and climbing the hill behind, which held
+// for more than twenty years. The harbour itself was small and man-made: a basin closed by two moles, the
+// long western one ending in the Koules (Rocca a Mare), the eastern in a battery, with the arsenal's vaulted
+// sheds along the inner quay. Mount Juktas stands behind the city and Dia lies out to sea. On the day of
+// the assault the city is burning and the Ottoman trenches are dug right up to the bastions.
+const CITY_SHORE = [[-1700, 150, 0], [-1300, 160], [-1060, 190], [-930, 245, 10], [-860, 330], [-770, 392], [-700, 405, 2], [-560, 395, 4], [-430, 392, 2], [-330, 405, 0], [-270, 420, 0], [-210, 445, 0], [-60, 452, 0], [90, 450, 0], [230, 438, 0], [300, 410, 0], [420, 396, 2], [560, 400, 4], [700, 408, 2], [800, 392], [900, 322], [975, 240, 10], [1150, 180], [1700, 140, 0]];
 const MOLES = [
   { path: [[-300, 412], [-300, 280], [-270, 172], [-170, 124], [-62, 108]], w: 15, top: 3.2, sea: -1 }, // the long western mole to the Koules
   { path: [[318, 404], [312, 280], [272, 166], [196, 130], [128, 124]], w: 14, top: 3.2, sea: 1 }, // the eastern mole
 ];
+// the trace of the walls, from the sea at the west round the hill to the sea at the east
+const RING = [[-700, 402], [-770, 610], [-700, 830], [-500, 1010], [-200, 1090], [200, 1090], [500, 1010], [700, 830], [770, 610], [700, 404]];
+const inRing = (x, z) => { let c = false; const p = [...RING, [700, 440], [-700, 440]]; for (let i = 0, j = p.length - 1; i < p.length; j = i++) if ((p[i][1] > z) !== (p[j][1] > z) && x < ((p[j][0] - p[i][0]) * (z - p[i][1])) / (p[j][1] - p[i][1]) + p[i][0]) c = !c; return c && z > 430; };
+const ringDist = (x, z) => { let best = 1e9; for (let i = 0; i < RING.length - 1; i++) { const a = RING[i], b = RING[i + 1], dx = b[0] - a[0], dz = b[1] - a[1], t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz))); best = Math.min(best, Math.hypot(a[0] + dx * t - x, a[1] + dz * t - z)); } return best; };
 export const KOULES = [-44, 104], MOLE_HEAD = [118, 122], MOUTH = [36, 116], BASIN = [20, 300];
+const candiaGround = (x, z, y) => {
+  if (y <= 1) return y;
+  const hill = 3.4 + Math.max(0, z - 440) * 0.075; // the city climbs the hill in terraces
+  const inside = inRing(x, z), d = ringDist(x, z);
+  if (inside) y = y + (hill - y) * smooth(0, 30, d) + (hill - y) * (1 - smooth(0, 30, d));
+  else if (d < 34 && z > 420) y = Math.max(1.2, Math.min(y, hill) - 9 * smooth(34, 12, d)); // the ditch
+  // Mount Juktas: a long ridge with a peak at its north end, gullied
+  const j = Math.hypot((x - 200) / 380, (z - 1640) / 330), r = Math.hypot((x - 60) / 640, (z - 1500) / 260);
+  const gully = 0.75 + 0.25 * Math.sin(Math.atan2(x - 200, z - 1640) * 9 + j * 6) * Math.min(1, j);
+  return y + (300 * Math.exp(-j * j * 2.4) + 110 * Math.exp(-r * r * 2)) * gully;
+};
 const candia = (opts = {}) => ({
-  coasts: [{ outline: [...CITY_SHORE, [1700, 1800, 0], [-1700, 1800, 0]], seed: 66, H: 42, rise: 150, beach: 4, scale: 190, dry: 0.5, trees: 0.6,
-    shape: (x, z, y) => { const k = smooth(560, 470, Math.abs(x)) * smooth(400, 430, z) * smooth(860, 780, z); return k && y > 1 ? y + (3.4 + (z - 430) * 0.085 - y) * k : y; },
-    clear: (x, z) => Math.abs(x) < 600 && z < 880 }],
+  coasts: [
+    { outline: [...CITY_SHORE, [1700, 1800, 0], [-1700, 1800, 0]], seed: 66, H: 46, rise: 150, beach: 4, scale: 190, dry: 0.55, trees: 0.5, shape: candiaGround, clear: (x, z) => Math.abs(x) < 820 && z < 1150 },
+    { outline: Array.from({ length: 14 }, (_, i) => { const a = (i / 14) * PI * 2; return [380 + Math.sin(a) * (420 + (i % 3) * 60), -1480 + Math.cos(a) * (170 + (i % 2) * 40)]; }), seed: 67, H: 70, rise: 90, scale: 160, dry: 0.7, trees: 0.2 }, // Dia, out to sea
+  ],
   moles: MOLES,
   shoals: [
     { x: -520, z: 345, r: 40, depth: 1.4 }, { x: -650, z: 330, r: 55, depth: 2.8 }, { x: 520, z: 345, r: 40, depth: 1.4 }, { x: 640, z: 320, r: 60, depth: 2.8 }, // the rocks under the walls
     { x: 360, z: 290, r: 34, depth: 2.6 }, { x: -380, z: 300, r: 34, depth: 2.6 }, // the banks outside the moles' roots
     ...(opts.shoals || []),
   ],
-  works: (world) => works((B, G) => {
-    const g = (x, z) => world.ground(x, z), lit = { glass: 0xffd98a };
-    for (const m of MOLES) mole(B, m, g);
-    const fort = (hull, name, at, h) => { const f = buildFortModel(shipSpec(hull, 'venice', name, 'line')); f.group.position.set(at[0], 0, at[1]); f.group.rotation.y = h; world.islandGroup.add(f.group); };
-    if (!opts.koules) fort('koules', 'Koules', KOULES, PI);
-    if (!opts.battery) fort('battery', 'The mole battery', MOLE_HEAD, PI + 0.3);
-    // the sea walls: bastions on the points, curtain between them
-    const front = [[-560, 400], [-430, 396], [-330, 410], [-272, 426], [-210, 452], [-60, 458], [90, 456], [230, 444], [300, 416], [420, 402], [560, 404]];
-    wall(B, g, front, { h: 9, w: 4, towers: false, floor: 1, out: -1 });
-    for (const [x, z, a] of [[-560, 405, PI + 0.5], [-430, 396, PI], [420, 402, PI], [560, 408, PI - 0.5]]) bastion(B, g, x, z, a, 26, 10, 0xc9b693, 1);
-    wall(B, g, [[-560, 405], [-600, 520], [-560, 700], [-420, 840], [0, 880], [420, 840], [560, 700], [600, 520], [560, 408]], { h: 11, w: 5, towers: false, floor: 1 }); // the land walls
-    for (const [x, z, a] of [[-600, 520, -PI / 2], [-560, 700, -2.3], [-420, 840, -2.7], [0, 880, 0], [420, 840, 2.7], [560, 700, 2.3], [600, 520, PI / 2]]) bastion(B, g, x, z, a + PI, 30, 12, 0xc9b693, 1);
-    arsenal(B, -150, 2.4, 448, PI, 6);
-    town(B, G, g, { seed: 21, n: 300, size: 1.45, x: 0, z: 640, w: 1100, d: 420, inside: (x, z) => Math.abs(x) < 540 - Math.max(0, z - 700) * 0.9 && z > 470 && !(x > -240 && x < -60 && z < 500), steep: 9, ...lit });
-    for (const [x, z, h] of [[60, 560, 38], [-260, 610, 30], [300, 640, 30], [-40, 760, 34]]) campanile(B, x, g(x, z), z, h, undefined, 1.5);
-    dome(B, 10, g(10, 600), 600, 17); dome(B, -360, g(-360, 700), 700, 10); dome(B, 210, g(210, 520), 520, 9);
-    // the harbour quay under the walls
-    wall(B, g, [[-200, 446], [90, 452], [228, 440], [292, 412]], { h: 1.2, w: 6, towers: false, merlons: false, col: 0xa89a7a, floor: 1 });
-    // the Ottoman siege lines on the hills to the west: trenches and a camp
-    for (let i = 0; i < 5; i++) { const x = -760 - i * 70, z = 520 + i * 40; wall(B, g, [[x, z], [x - 40, z + 50], [x + 10, z + 100]], { h: 1.4, w: 4, towers: false, merlons: false, col: 0x8a7a58 }); }
-    for (let i = 0; i < 18; i++) { const x = -1000 - (i % 6) * 26, z = 640 + Math.floor(i / 6) * 30, y = g(x, z); B.cyl(0, 4.2, 4.4, i % 3 ? 0xe8dcc0 : 0xb3221a, x, y + 2.1, z, 8); }
-    if (opts.extra) opts.extra(B, G, g);
-  }, true),
+  works: (world) => {
+    const group = works((B, G) => {
+      const g = (x, z) => world.ground(x, z), glass = 0xffd98a, rnd = mulberry(1669), WALL = 0xcdb894;
+      for (const m of MOLES) mole(B, m, g);
+      const fort = (hull, name, at, h) => { const f = buildFortModel(shipSpec(hull, 'venice', name, 'line')); f.group.position.set(at[0], 0, at[1]); f.group.rotation.y = h; world.islandGroup.add(f.group); };
+      if (!opts.koules) fort('koules', 'Koules', KOULES, PI);
+      if (!opts.battery) fort('battery', 'The mole battery', MOLE_HEAD, PI + 0.3);
+      // the sea walls rise straight from the water either side of the harbour, and close it at the back
+      wall(B, g, [[-700, 404], [-560, 397], [-430, 394], [-330, 408], [-300, 418]], { h: 15, w: 6, towers: false, floor: -1, out: -1 });
+      wall(B, g, [[318, 412], [420, 398], [560, 402], [700, 406]], { h: 15, w: 6, towers: false, floor: -1, out: -1 });
+      wall(B, g, [[-300, 470], [-60, 476], [90, 474], [300, 466]], { h: 13, w: 6, towers: false, floor: 1, out: -1 });
+      for (const [x, z, a, s] of [[-700, 400, PI + 0.6, 62], [-430, 392, PI, 40], [430, 394, PI, 40], [700, 402, PI - 0.6, 62]]) bastion(B, g, x, z, a, s, 16, WALL, -1);
+      // the land walls: great bastions on every angle of the trace, a curtain between them, the ditch outside
+      wall(B, g, RING, { h: 17, w: 8, towers: false, merlons: false, floor: 1 });
+      for (let i = 1; i < RING.length - 1; i++) { const [x, z] = RING[i], c = [0, 760]; bastion(B, g, x, z, Math.atan2(x - c[0], z - c[1]), 70, 18, WALL, 1); }
+      for (const [x, z, a] of [[-460, 1018, -0.5], [0, 1092, 0], [460, 1018, 0.5]]) B.box(14, 12, 9, shade(WALL, 0.9), x, g(x, z) + 8, z, 0, a); // the gates
+      // the arsenal: two long rows of vaulted sheds along the inner quay
+      arsenal(B, -175, 2.4, 452, PI, 8); arsenal(B, 160, 2.4, 450, PI, 9);
+      wall(B, g, [[-300, 416], [-270, 428], [-210, 452], [-60, 458], [90, 456], [230, 444], [300, 416], [318, 408]], { h: 1.2, w: 10, towers: false, merlons: false, col: 0xa89a7a, floor: 1 }); // the quay
+      for (const [x0, x1, z0] of [[-300, -260, 418], [-260, -210, 430], [-210, 230, 452], [230, 300, 430], [300, 320, 410]]) B.box(x1 - x0, 3, 480 - z0, 0xa89a7a, (x0 + x1) / 2, 1.1, (z0 + 480) / 2); // the quay's paving
+      // palazzi along the harbour front, then the city climbing the hill to the walls
+      for (let i = 0; i < 10; i++) { const x = -270 + i * 58 + (rnd() - 0.5) * 8, z = 512 + (rnd() - 0.5) * 6; B.at(x, g(x, z), z, PI, () => palazzo(B, G, 22 + rnd() * 10, 13 + rnd() * 6, 16, [0xe8dcc4, 0xd8b89a, 0xe0c8a0, 0xcfa98a][i % 4], glass)); }
+      town(B, G, g, { seed: 21, n: 520, size: 1.7, x: 0, z: 760, w: 1500, d: 680, inside: (x, z) => inRing(x, z) && ringDist(x, z) > 30 && z > 540, steep: 12, glass });
+      basilica(B, 40, g(40, 640), 640, PI, 1.4); // St Mark's
+      basilica(B, -300, g(-300, 760), 760, PI + 0.3, 1.1); // St Titus
+      dome(B, 300, g(300, 700), 700, 13); dome(B, -120, g(-120, 900), 900, 11);
+      for (const [x, z, h] of [[-420, 620, 34], [380, 600, 36], [200, 860, 32], [-200, 640, 30], [520, 760, 28], [-520, 820, 28], [120, 980, 30]]) campanile(B, x, g(x, z), z, h, undefined, 1.6);
+      // the siege: houses burning inside the walls, Ottoman trenches zigzagging up to the bastions, batteries and the camp
+      for (const [x, z] of [[-560, 760], [-430, 930], [480, 900], [-150, 1020], [610, 700], [-640, 650], [300, 1000]]) blaze(B, G, x, g(x, z), z, 2.2, rnd);
+      for (const side of [-1, 1]) for (let i = 0; i < 4; i++) {
+        const x0 = side * (900 + i * 60), z0 = 560 + i * 170, pts = [];
+        for (let k = 0; k < 6; k++) pts.push([x0 - side * k * 22 + (k % 2 ? side * 26 : -side * 26), z0 + k * 18]);
+        wall(B, g, pts, { h: 1.6, w: 5, towers: false, merlons: false, col: 0x8a7a58 });
+        if (i % 2) for (let k = 0; k < 3; k++) B.bar([pts[5][0] + k * 5, g(pts[5][0], pts[5][1]) + 1.5, pts[5][1]], [pts[5][0] + k * 5 - side * 3, g(pts[5][0], pts[5][1]) + 2, pts[5][1] + 4], 0.5, 0x1c1c1e, 7);
+      }
+      for (let i = 0; i < 40; i++) { const x = (i % 2 ? 1 : -1) * (1150 + ((i * 37) % 160)), z = 700 + ((i * 53) % 300), y = g(x, z); if (y > 2) B.cyl(0, 4.4, 4.6, i % 4 ? 0xe8dcc0 : 0xb3221a, x, y + 2.2, z, 8); }
+      if (opts.extra) opts.extra(B, G, g);
+    }, true);
+    for (const [x, z, sd] of [[-560, 760, 1], [-430, 930, 2], [480, 900, 3], [-150, 1020, 4], [610, 700, 5], [300, 1000, 6]]) smoke(group, x, world.ground(x, z) + 14, z, 150, [0.35, 0.12], sd);
+    return group;
+  },
 });
 
 export const PLACES = { strait, candia };
