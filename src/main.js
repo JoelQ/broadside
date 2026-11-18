@@ -987,17 +987,19 @@ function placeArcs(ship, on) {
   for (const k in a.sides) a.sides[k].scale.setScalar(ship.range(ship.ammo, k));
 }
 const BAT_EL = { port: 'bPort', stbd: 'bStbd', bow: 'bBow' };
+// a thin green line under an oared ship's name: her oarsmen's wind. Red when they are spent
+function oarBar(el, s) { const on = !!s.spec.oars && s.active; el.classList.toggle('on', on); if (on) { el.classList.toggle('spent', !!s.spent); el.firstChild.style.width = s.stamina * 100 + '%'; } }
 function updatePips(p, battle) {
   const box = $('pips');
   for (const s of G.ships) {
     const show = battle && s !== p && s !== G.enemy && !s.sinking && s.out !== 'blown' && (s.active || s.out === 'captured' || s.out === 'struck');
     if (!show) { if (s.pip) s.pip.style.display = 'none'; continue; }
-    if (!s.pip) { s.pip = document.createElement('div'); s.pip.innerHTML = '<b></b><div class="h"><i></i></div>'; box.appendChild(s.pip); s.pip.onclick = () => { if (s.side !== p.side && s.active) { setTarget(s); sfx.ui(); } }; }
+    if (!s.pip) { s.pip = document.createElement('div'); s.pip.innerHTML = '<b></b><div class="h"><i></i></div><div class="st"><i></i></div>'; box.appendChild(s.pip); s.pip.onclick = () => { if (s.side !== p.side && s.active) { setTarget(s); sfx.ui(); } }; }
     const q = project(_l.set(s.pos.x, s.group.position.y + s.model.mastH + 4, s.pos.z)), el = s.pip;
     if (q.behind || q.x < 0 || q.x > VW || q.y < 0 || q.y > VH) { el.style.display = 'none'; continue; }
     el.style.display = ''; el.className = 'pip ' + (!s.active ? 'out' : s.side === p.side ? 'friend' : 'foe');
     el.style.transform = `translate(-50%,-100%) translate(${q.x}px,${q.y}px)`;
-    if (hudTick % 4 === 0) { el.firstChild.textContent = s.name + (!s.active ? (s.out === 'captured' ? ' · taken' : ' · struck') : s.aground > 0 ? ' · aground' : ''); el.querySelector('i').style.width = s.hullR * 100 + '%'; }
+    if (hudTick % 4 === 0) { el.firstChild.textContent = s.name + (!s.active ? (s.out === 'captured' ? ' · taken' : ' · struck') : s.aground > 0 ? ' · aground' : ''); el.querySelector('i').style.width = s.hullR * 100 + '%'; oarBar(el.querySelector('.st'), s); }
   }
 }
 function updateHUD(dt) {
@@ -1076,7 +1078,7 @@ function updateHUD(dt) {
   setBars('e', e);
   $('eOarRow').classList.toggle('hidden', !e.spec.oars);
   if (e.spec.oars) { $('eOar').style.width = e.stamina * 100 + '%'; $('eOarRow').classList.toggle('spent', !!e.spent); $('eOarN').textContent = e.spent ? 'spent' : e.stamina < 0.3 ? 'tiring' : ''; }
-  if (battle) { tag.querySelector('.d').textContent = `${e.name} · ${Math.round(dist)} yds`; tag.querySelector('.h i').style.width = e.hullR * 100 + '%'; }
+  if (battle) { tag.querySelector('.d').textContent = `${e.name} · ${Math.round(dist)} yds`; tag.querySelector('.h i').style.width = e.hullR * 100 + '%'; oarBar(tag.querySelector('.st'), e); }
   $('eStatus').textContent = [e.active ? AMMO[e.ammo].long : e.out === 'captured' ? 'Taken' : e.out === 'silenced' ? 'Silenced' : 'Out of the fight', st(e)].filter(Boolean).join(' · ');
   // what a boarding would look like, pinned to her marker once you are close
   const near = dist < BOARD_RANGE, slow = relSpeed(p, e) < BOARD_SPEED, warn = !!G.grappler;
