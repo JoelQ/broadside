@@ -15,7 +15,7 @@
   // Without one, a fresh seed is drawn and reported in the result.
   function seedFor(cfg) {
     const seed = cfg.seed != null ? cfg.seed >>> 0 : (Math.random() * 2 ** 31) >>> 0;
-    G.seedRng(seed);
+    if (G.seedRng) G.seedRng(seed); // an older build has no seeded source: the fight is not replayable
     return seed;
   }
 
@@ -171,7 +171,8 @@
       return { seed: st.seed, o, win: o === 'won', t: legs.reduce((a, l) => a + l.t, 0), hull: legs[legs.length - 1].hull, crew: legs[legs.length - 1].crew, legs, aground: 0, boarded: 0, foes: legs.map((l) => `${l.title}:${l.o}@${l.hull}`).join(' > '), pos: '' };
     },
     // one campaign leg: { side, mission: 'm1', leg: 0 | pool key, hull, fit, officers, route: [steps], state: { hull, sails, crew }, stock, maxT }
-    leg(cfg) {
+    // Sets up one leg of a mission and beats to quarters, without playing it (screenshots use this).
+    setupLeg(cfg) {
       const C = G.CAMP;
       G.paused = true; G.fast = true; G.mode = 'campaign';
       const st = (C.st = C.fresh());
@@ -189,6 +190,10 @@
       if (cfg.state) { const p = G.player; if (cfg.state.hull) p.hull = p.hullMax * cfg.state.hull; if (cfg.state.sails) p.sails = p.sailsMax * cfg.state.sails; if (cfg.state.crew) p.crew = Math.round(p.crewMax * cfg.state.crew); }
       if (typeof cfg.leg === 'string' || run.i) C.startLeg();
       G.api.act('engage'); G.coach = null;
+      return C.run;
+    },
+    leg(cfg) {
+      const C = G.CAMP, run = H.setupLeg(cfg), st = C.st;
       const P = G.player, steps = typeof cfg.route === 'function' ? cfg.route(G.sc.S) : cfg.route;
       G.bot = routeBot(steps);
       const dt = 0.05, maxT = cfg.maxT || 600;
