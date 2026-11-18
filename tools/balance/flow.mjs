@@ -32,6 +32,7 @@ export default async (page, shot) => {
     }
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('broadside.campaign.v1')));
     console.log(`== ${side}: ${legs} legs, done=${saved && saved.done}\n` + log.join('\n'));
+    if (!saved || !saved.done || log.some((l) => l.startsWith('STUCK'))) throw new Error(`the ${side} campaign did not reach its ending`);
   }
   // a reload must offer to continue
   await page.reload(); await page.waitForTimeout(500);
