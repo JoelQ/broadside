@@ -11,6 +11,14 @@
   //   move:  duel (broadsides at half range) | kite (broadsides at long range) | hug (sit astern) | close (run alongside)
   //   ammo:  round | chain (until her sails are under 45%) | fire | grape (when close) | combo (chain, then fire, grape when close)
   //   board: never | rush | odds (once strength ratio reaches cfg.odds, default 1.25)
+  // Every fight is seeded, so any result can be played again exactly: pass cfg.seed to replay one.
+  // Without one, a fresh seed is drawn and reported in the result.
+  function seedFor(cfg) {
+    const seed = cfg.seed != null ? cfg.seed >>> 0 : (Math.random() * 2 ** 31) >>> 0;
+    G.seedRng(seed);
+    return seed;
+  }
+
   function captain(plan) {
     const ai = G.newAI(), st = { swap: 0, boardMode: plan.board === 'rush' };
     const oddsNow = (me, foe) => G.api.strength(me) / (G.api.strength(foe) || 1);
@@ -144,7 +152,7 @@
       G.paused = true; G.fast = true; G.mode = 'campaign';
       const st = (C.st = C.fresh());
       st.side = cfg.side || null; st.stage = C.order.indexOf(cfg.mission); st.officers = ['pilot', 'carpenter', 'gunner', 'marines'].slice(0, Math.max(0, st.stage));
-      st.stable = [{ id: 'h1', hull: cfg.hull, name: 'Test', fit: {} }]; st.seed = (Math.random() * 1e9) | 0;
+      st.stable = [{ id: 'h1', hull: cfg.hull, name: 'Test', fit: {} }]; st.seed = seedFor(cfg);
       G.ship = 'h1'; G.fit = {}; C.rebuild(); C.man();
       G.player.stock = { chain: 8, grape: 8, fire: 5 };
       C.startMission();
@@ -160,7 +168,7 @@
         C.act('next');
       }
       G.state = 'story'; G.outcome = null; G.player.sinking = 0; G.fast = false;
-      return { o, win: o === 'won', t: legs.reduce((a, l) => a + l.t, 0), hull: legs[legs.length - 1].hull, crew: legs[legs.length - 1].crew, legs, aground: 0, boarded: 0, foes: legs.map((l) => `${l.title}:${l.o}@${l.hull}`).join(' > '), pos: '' };
+      return { seed: st.seed, o, win: o === 'won', t: legs.reduce((a, l) => a + l.t, 0), hull: legs[legs.length - 1].hull, crew: legs[legs.length - 1].crew, legs, aground: 0, boarded: 0, foes: legs.map((l) => `${l.title}:${l.o}@${l.hull}`).join(' > '), pos: '' };
     },
     // one campaign leg: { side, mission: 'm1', leg: 0 | pool key, hull, fit, officers, route: [steps], state: { hull, sails, crew }, stock, maxT }
     leg(cfg) {
@@ -168,7 +176,7 @@
       G.paused = true; G.fast = true; G.mode = 'campaign';
       const st = (C.st = C.fresh());
       st.side = cfg.side || null; st.stage = C.order.indexOf(cfg.mission); st.officers = cfg.officers || ['pilot', 'carpenter', 'gunner', 'marines'].slice(0, Math.max(0, st.stage));
-      st.stable = [{ id: 'h1', hull: cfg.hull, name: 'Test', fit: {} }]; st.seed = (Math.random() * 1e9) | 0;
+      st.stable = [{ id: 'h1', hull: cfg.hull, name: 'Test', fit: {} }]; st.seed = seedFor(cfg);
       const kit = { runner: FULL.runner, line: FULL.line, boarder: FULL.boarder, gun: FULL.gun, galley: { marines: 2, hooks: 2, stroke: 2, oak: 2 } };
       G.ship = 'h1'; G.fit = cfg.fit ? { h1: kit[{ sloop: 'runner', brig: 'line', xebec: 'boarder', merchantman: 'gun', flagship: 'gun', galley: 'galley', galliot: 'galley' }[cfg.hull]] } : {};
       C.rebuild(); C.man();
@@ -192,7 +200,7 @@
         G.tick(dt, 1); t += dt;
       }
       const o = G.state === 'battle' || G.state === 'boarding' ? 'timeout' : G.outcome;
-      const res = { o, win: o === 'won', t: Math.round(t), hull: +(Math.max(0, P.hull) / P.hullMax).toFixed(2), crew: +(P.crew / P.crewMax).toFixed(2), aground: Math.round(aground), boarded,
+      const res = { seed: st.seed, o, win: o === 'won', t: Math.round(t), hull: +(Math.max(0, P.hull) / P.hullMax).toFixed(2), crew: +(P.crew / P.crewMax).toFixed(2), aground: Math.round(aground), boarded,
         foes: G.ships.filter((s) => s.side === 1).map((s) => s.out || (s.aground > 0 ? 'aground' : 'up')).join(','), prizes: run.prizes.length, trace, pos: [Math.round(P.pos.x), Math.round(P.pos.z)] };
       if (G.state === 'boarding') G.api.cutGrapples();
       G.bot = null; G.state = 'story'; G.outcome = null; P.sinking = 0; G.fast = false;
@@ -200,7 +208,7 @@
     },
 
     fight(cfg) {
-      G.paused = true; G.fast = true;
+      G.paused = true; G.fast = true; const seed = seedFor(cfg);
       G.trophies = cfg.ship === 'wren' ? [] : [cfg.ship]; G.ship = cfg.ship;
       G.fit = cfg.fit ? { [cfg.ship]: cfg.fit === 'full' ? FULL[KIT[cfg.ship]] : cfg.fit } : {};
       G.level = cfg.level;
@@ -219,7 +227,7 @@
       }
       const o = G.outcome || 'timeout';
       const res = {
-        o, win: o === 'struck' || o === 'sunk' || o === 'captured', how: o === 'captured' ? 'board' : o === 'struck' || o === 'sunk' ? 'guns' : o,
+        seed, o, win: o === 'struck' || o === 'sunk' || o === 'captured', how: o === 'captured' ? 'board' : o === 'struck' || o === 'sunk' ? 'guns' : o,
         t: Math.round(t), hull: +(Math.max(0, P.hull) / P.hullMax).toFixed(2), crew: Math.round(P.crew), eHull: +(Math.max(0, E.hull) / E.hullMax).toFixed(2), eCrew: Math.round(E.crew),
         eSails: +E.sailR.toFixed(2), boardedBy, exposed: +(exposed / (t || 1)).toFixed(2), shots: G.stats.shots, hits: G.stats.hits,
       };

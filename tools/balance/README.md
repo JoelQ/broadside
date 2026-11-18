@@ -34,6 +34,31 @@ confirm anything surprising with a focused jobs file at 20 runs per cell before 
 The captains are competent, not clever: a result of 0% means "not with these captains", and a
 person may do better or worse.
 
+## Seeds, replays and before/after
+
+Every fight is seeded: shot fall, damage, fires, the AI's choices and wind shifts all come from one seeded
+source (`src/rng.js`), and every result records its seed. Smoke, sparks and the crew stay on
+`Math.random`, so whether anything is drawn never changes what happens.
+
+- **Replay one fight.** `node tools/balance/replay.mjs <jobs.mjs> <label-regex> <seed> [trace-seconds]`
+  plays it again exactly. For a campaign leg it also prints where every ship was every few seconds.
+  `SEED=<n>` works with `trace.mjs` too.
+- **Compare before and after a change.** Run the same jobs file with the same `SEED` on both versions.
+  Run k of every cell is then played on seed `SEED + k`, so each fight faces the same luck both times,
+  and `compare.mjs` pairs them up:
+
+```bash
+SEED=1000 node tools/balance/run.mjs tools/balance/grid.mjs 6 /tmp/before.json
+# change the rules, npm run build
+SEED=1000 node tools/balance/run.mjs tools/balance/grid.mjs 6 /tmp/after.json
+node tools/balance/compare.mjs /tmp/before.json /tmp/after.json
+```
+
+It lists the cells whose win rate moved, biggest first, with how many fights flipped each way. A fight
+that flipped changed because of the rules, not the dice, so a small change shows up with far fewer runs
+than comparing two unseeded win rates. It's still the same captains on the same few seeds, so confirm
+anything that matters with more runs or a different `SEED`.
+
 ## Campaign legs
 
 The same harness plays campaign fights. `H.leg(cfg)` sets up one leg of one mission for a given

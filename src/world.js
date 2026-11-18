@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mulberry, scatterIslands } from './geo.js';
 import { makeIsland } from './land.js';
+import { rng } from './rng.js';
 
 // ---------- shared wave model (JS + GLSL stay in sync) ----------
 const RAW_WAVES = [
@@ -412,8 +413,8 @@ export class World {
     const w = this.wind;
     w.timer -= dt;
     // the next shift is decided a little before it arrives, so a good pilot can call it
-    if (w.timer <= 12 && w.next == null && !w.steady && w.base >= 0.3) w.next = (Math.random() < 0.5 ? -1 : 1) * (0.45 + Math.random() * 0.55);
-    if (w.timer <= 0) { w.timer = 45 + Math.random() * 35; if (w.next != null) { w.target = w.dir + w.next; w.shifted = w.next; } w.next = null; }
+    if (w.timer <= 12 && w.next == null && !w.steady && w.base >= 0.3) w.next = (rng() < 0.5 ? -1 : 1) * (0.45 + rng() * 0.55);
+    if (w.timer <= 0) { w.timer = 45 + rng() * 35; if (w.next != null) { w.target = w.dir + w.next; w.shifted = w.next; } w.next = null; }
     w.dir += (w.target - w.dir) * Math.min(1, dt * 0.22);
     // in a calm the air comes in cat's-paws: brief puffs a light ship can use
     w.strTarget = w.base;
