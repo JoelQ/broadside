@@ -7,6 +7,7 @@ import { updateAI, newAI } from './ai.js';
 import { buildHarbor } from './harbor.js';
 import { HULLS, shipSpec, GALLEY_KIT } from './fleet.js';
 import { CAMP } from './campaign.js';
+import { PT } from './playtest.js';
 import { steerTo } from './ai.js';
 
 const $ = (id) => document.getElementById(id);
@@ -1185,7 +1186,7 @@ function showTitle() {
   const saved = CAMP.saved();
   showScreen(`<div id="titleWrap"><h1>Broadside</h1><div class="tag">The war for Candia, 1645–1669. An island captain, two flags to choose from.</div>
     <div class="rowc">${saved ? `<button class="btn big" data-act="camp:continue">Continue the campaign</button><button class="btn" data-act="camp:new">New campaign</button>` : `<button class="btn big" data-act="camp:new">Begin the campaign</button>`}
-    <button class="btn" data-act="skirmish">Skirmish: five pirates</button></div>${saved ? `<div class="tag" style="font-size:15px;margin-top:14px">${saved}</div>` : ''}</div>`, 'clear');
+    <button class="btn" data-act="skirmish">Skirmish: five pirates</button>${__PLAYTEST__ ? PT.titleButton() : ''}</div>${saved ? `<div class="tag" style="font-size:15px;margin-top:14px">${saved}</div>` : ''}</div>`, 'clear');
 }
 function showIntro(es) {
   setMode(null); $('bars').classList.add('on');
@@ -1356,6 +1357,7 @@ function act(a) {
   if (a === 'upright') return document.body.classList.add('upright');
   if (PHONE && (a === 'camp:new' || a === 'camp:continue' || a === 'skirmish')) toggleFull(true); // a phone plays full screen, on its side
   if (a.startsWith('camp:')) return CAMP.act(a.slice(5));
+  if (__PLAYTEST__ && a.startsWith('pt:')) return PT.act(a.slice(3));
   if (G.mode === 'campaign' && (a === 'sail' || a === 'restart' || a === 'retry')) return CAMP.act(a === 'sail' ? 'brief' : 'abandon');
   if (a === 'skirmish') { G.mode = 'skirmish'; restart(true); }
   else if (a === 'sail') startIntro();
@@ -1409,7 +1411,7 @@ function worldNews(p) {
 function togglePause() {
   if (G.state !== 'battle' && G.state !== 'boarding' && !G.paused) return;
   G.paused = !G.paused;
-  if (G.paused) showScreen(`<div class="banner"><h1>Paused</h1>${KEYS_HTML}<div class="rowc"><button class="btn big" data-act="resume">Resume</button><button class="btn sm" data-act="restart">${G.mode === 'campaign' ? 'Give up this fight' : 'Abandon voyage'}</button></div></div>`);
+  if (G.paused) showScreen(`<div class="banner"><h1>Paused</h1>${KEYS_HTML}<div class="rowc"><button class="btn big" data-act="resume">Resume</button><button class="btn sm" data-act="restart">${G.mode === 'campaign' ? 'Give up this fight' : 'Abandon voyage'}</button></div>${__PLAYTEST__ && G.mode === 'campaign' ? PT.pauseRow() : ''}</div>`);
   else hideScreen();
 }
 
@@ -1564,11 +1566,13 @@ function update(dt) {
   if (now === 'boarding') updateMelee();
   if (now === 'port') updatePortUI();
   updateFloaters(dt);
+  if (__PLAYTEST__) PT.tick();
 }
 let last = performance.now();
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (!G.paused) update(dt);
+  if (__PLAYTEST__) for (let i = 1; i < G.ptSpeed && !G.paused; i++) update(dt); // playtest: time runs faster
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
@@ -1578,6 +1582,7 @@ G.tick = (dt, n = 1) => { for (let i = 0; i < n; i++) update(dt); };
 G.world = world; G.view = { renderer, scene, camera };
 G.api = { aiApi, nearest, dropArcs, startScenario, showLegCard, showTitle: () => showTitle(), clearShips, world, strengthOf: (x) => strength(x), scene, restartSkirmish: () => restart(true),  addShip, beginScenario, beginBattle, shipOut, setTarget, foesOf, sep, relSpeed, hideScreen, showScreen, setMode, enterHarbor, snapCamera, buildPlayer, moor, playerSpec, renderPort: () => renderPort(), sfx, fx, floater, store, harbor, cutGrapples, hullSpec, updateAI, reach, inArc, hasGauge, strength: (s) => strength(s), rebuild: () => { if (G.player.arcs) dropArcs(G.player); scene.remove(G.player.group); G.player = null; buildPlayer(true); }, fire, act, tap, keys, startBoarding, boardSwivel, endBattle, toast, showPort: () => showPort(), prize };
 CAMP.init(G, G.api); G.CAMP = CAMP;
+if (__PLAYTEST__) PT.install(G, G.api, CAMP);
 showTitle();
 snapCamera();
 requestAnimationFrame(frame);

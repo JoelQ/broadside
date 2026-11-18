@@ -5,7 +5,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node build.mjs"
+    "build": "node build.mjs",
+    "build:playtest": "node build.mjs --playtest"
   },
   "devDependencies": {
     "esbuild": "^0.28.2",

@@ -127,6 +127,24 @@ synthesized.
 Pushing to `main` publishes the build to GitHub Pages. Pushing a tag, or running the Release
 workflow from the Actions tab, attaches the built page to a GitHub release (see `.github/workflows`).
 
+## Playtesting
+
+```bash
+npm run build:playtest
+```
+
+This writes `dist/playtest.html`: the same game with playtest tools that the public build leaves out
+entirely (the code is compiled away, so no URL or key turns it on in the published game, and Pages
+only ever publishes `dist/index.html`). A red PLAYTEST badge marks it.
+
+- **Title screen → Playtest** (or the badge, in port): pick a side, any mission or any single fight
+  in a cruise, which ships wait in the harbour and which one you sail, fittings, officers, gold and
+  shot. Then jump straight into the fight, to the briefing, or to port.
+- **In a fight, pause (P)**: win or lose the fight on the spot, take the targeted ship as a prize,
+  repair and re-arm, turn on "unsinkable" (hull, sails and crew never drop below half), or run
+  time at ×2, ×4 or ×8.
+- Playtest progress saves under its own key, so it never overwrites a real campaign.
+
 ## Balance
 
 Everything was tuned with a harness that plays whole battles headlessly, a scripted captain
@@ -155,7 +173,8 @@ several scripted routes and reports which ones win, so no mission has a single a
 | `src/harbor.js` | Port Halcyon scenery and shop locations |
 | `src/data.js` | Skirmish mode's ships, the five pirates, fittings and shop stock |
 | `src/index.template.html` | Page markup and styles; the bundle is inlined here |
-| `build.mjs` | Bundles with esbuild into `dist/index.html` |
+| `src/playtest.js` | Playtest panel and fight controls; only in the playtest build |
+| `build.mjs` | Bundles with esbuild into `dist/index.html`, or `dist/playtest.html` with `--playtest` |
 | `tools/balance` | Headless balance harness |
 
 ## Licence
