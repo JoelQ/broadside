@@ -1,4 +1,5 @@
 import { wrap, clamp } from './ship.js';
+import { rng } from './rng.js';
 
 // Pirate captain: picks ammo, steers for a broadside (or a boarding), fires when the arc bears.
 export function updateAI(ai, me, foe, world, dt, api) {
@@ -11,7 +12,7 @@ export function updateAI(ai, me, foe, world, dt, api) {
 
   ai.think -= dt;
   if (ai.think <= 0) {
-    ai.think = 1.2 + Math.random();
+    ai.think = 1.2 + rng();
     const adv = api.strength(me) / Math.max(1, api.strength(foe)); // fighting strength, not headcount
     // only your deck is ever fought over: ships under AI on both sides settle it with guns
     ai.wantBoard = ((P.boarder && adv > (P.boardAt || 1.05)) || (adv > 2.2 && foe.crewR < 0.5 && dist < 150)) && me.crew > 12 && foe.isPlayer && !me.spec.fixed && !me.anchored;
@@ -33,7 +34,7 @@ export function updateAI(ai, me, foe, world, dt, api) {
     if (P.manualAmmo) a = me.ammo; // a scripted captain is choosing the shot
     if (a !== 'round' && me.spec.fixed && dist > me.range(a) * 1.05) a = 'round';
     if (a !== me.ammo && me.sides.every((k) => me.reload[k] > 0.5)) me.setAmmo(a);
-    else if (a !== me.ammo && Math.random() < 0.35) me.setAmmo(a);
+    else if (a !== me.ammo && rng() < 0.35) me.setAmmo(a);
     // side preference: present the loaded battery, with hysteresis
     const offP = Math.abs(wrap(bearing - Math.PI / 2 - me.heading)) + (me.reload.port || 0) * 0.12;
     const offS = Math.abs(wrap(bearing + Math.PI / 2 - me.heading)) + (me.reload.stbd || 0) * 0.12;
@@ -143,7 +144,7 @@ function gunnery(ai, me, foe, dist, dx, dz, dt, api) {
     const off = wrap(pb - me.normal(side));
     if (Math.abs(off) < me.bat[side].arc * 0.85 && api.reach(me, foe) < me.range(me.ammo, side) * 1.02 && api.clearShot(me, foe)) {
       api.fire(me, side);
-      ai.fireDelay = 0.4 + Math.random() * 0.8;
+      ai.fireDelay = 0.4 + rng() * 0.8;
     }
   }
 }

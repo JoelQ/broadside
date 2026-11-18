@@ -9,10 +9,13 @@ import { HULLS, shipSpec, GALLEY_KIT } from './fleet.js';
 import { CAMP } from './campaign.js';
 import { PT } from './playtest.js';
 import { steerTo } from './ai.js';
+import { rng, seedRng, rngSeed } from './rng.js';
 
 const $ = (id) => document.getElementById(id);
-const rand = (a, b) => a + Math.random() * (b - a);
-const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) * 2; // ~unit std
+// rand and gauss decide the fight and come from the seeded source; vrand is for looks only
+const rand = (a, b) => a + rng() * (b - a);
+const vrand = (a, b) => a + Math.random() * (b - a);
+const gauss = () => (rng() + rng() + rng() - 1.5) * 2; // ~unit std
 const GRAV = 22;
 let BOARD_SPEED = 6.5;
 const BOARD_SLOW = 7; // grapples only hold a ship making less than this (about 6 knots): slow her first
@@ -68,6 +71,9 @@ const G = {
   cam: { yaw: 0, pitch: 0.4, dist: 78, zoom: 1, mode: 'helm', angle: 0.4, look: new THREE.Vector3(0, 7, -20), pos: new THREE.Vector3(40, 30, 90) },
 };
 window.G = G;
+// The balance harness seeds every fight so it can be replayed. The waves (which shot can hit) run on the
+// world clock, so that starts again too.
+G.seedRng = (seed) => { seedRng(seed); world.time = 0; }; G.rngSeed = rngSeed;
 
 // Any ship you have boarded and taken is yours to command. In your hands she keeps her hull
 // and her handling, under your colours and with your gunners.
@@ -267,7 +273,7 @@ function ballMesh(ammo) {
     m.add(new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.12, 0.12), ironMat));
   } else if (ammo === 'grape') {
     m = new THREE.Group();
-    for (let i = 0; i < 5; i++) { const b = new THREE.Mesh(ballGeo, ironMat); b.position.set(rand(-0.7, 0.7), rand(-0.5, 0.5), rand(-0.7, 0.7)); b.scale.setScalar(0.38); m.add(b); }
+    for (let i = 0; i < 5; i++) { const b = new THREE.Mesh(ballGeo, ironMat); b.position.set(vrand(-0.7, 0.7), vrand(-0.5, 0.5), vrand(-0.7, 0.7)); b.scale.setScalar(0.38); m.add(b); }
   } else m = new THREE.Mesh(ballGeo, ammo === 'fire' ? hotMat : ironMat);
   scene.add(m);
   return m;
@@ -318,7 +324,7 @@ function fire(ship, side) {
   let ammo = ship.ammo;
   if (ammo !== 'round') { if (ship.stock[ammo] <= 0) ammo = ship.ammo = 'round'; else ship.stock[ammo]--; }
   const n = ship.model.muzzles[side].length, volley = ++G.volley;
-  for (let i = 0; i < n; i++) G.pending.push({ t: i * 0.075 + Math.random() * 0.07, ship, side, i, ammo, volley, tgt });
+  for (let i = 0; i < n; i++) G.pending.push({ t: i * 0.075 + rng() * 0.07, ship, side, i, ammo, volley, tgt });
   ship.startReload(side);
   if (ammo !== 'round' && ship.stock[ammo] <= 0) {
     ship.ammo = 'round';
@@ -340,8 +346,8 @@ function launch(p) {
     const tt = Math.hypot(tx - _m.x, tz - _m.z) / (A.speed * 0.98);
     // spread the battery along her hull, but only over the part that is within reach
     const near = alongKeel(tgt, _m.x, _m.z), spanL = tgt.spec.L * 0.31;
-    let along = (Math.random() * 2 - 1) * spanL;
-    if (Math.hypot(tx + tgt.fwdX * along - _m.x, tz + tgt.fwdZ * along - _m.z) > R) along = clamp(near + (Math.random() - 0.5) * tgt.spec.L * 0.2, -tgt.spec.L * 0.44, tgt.spec.L * 0.44);
+    let along = (rng() * 2 - 1) * spanL;
+    if (Math.hypot(tx + tgt.fwdX * along - _m.x, tz + tgt.fwdZ * along - _m.z) > R) along = clamp(near + (rng() - 0.5) * tgt.spec.L * 0.2, -tgt.spec.L * 0.44, tgt.spec.L * 0.44);
     tx += tgt.fwdX * (tgt.speed * tt + along); tz += tgt.fwdZ * (tgt.speed * tt + along);
     const dx = tx - _m.x, dz = tz - _m.z, ang = Math.atan2(dx, dz), d = Math.hypot(dx, dz);
     if (Math.abs(wrap(ang - normal)) <= arc + 0.06 && d <= R * 1.12) {
@@ -359,7 +365,7 @@ function launch(p) {
   const ce = Math.cos(el);
   const mesh = ballMesh(ammo);
   mesh.position.copy(_m);
-  G.balls.push({ mesh, ammo, owner: ship, dmg: ship.dmgOf(side), cal: ship.bat[side].cal, volley: p.volley, rigged: false, spin: rand(8, 16), vel: new THREE.Vector3(Math.sin(aim) * ce * v, Math.sin(el) * v, Math.cos(aim) * ce * v) });
+  G.balls.push({ mesh, ammo, owner: ship, dmg: ship.dmgOf(side), cal: ship.bat[side].cal, volley: p.volley, rigged: false, spin: vrand(8, 16), vel: new THREE.Vector3(Math.sin(aim) * ce * v, Math.sin(el) * v, Math.cos(aim) * ce * v) });
   fx.cannon(_m, Math.sin(normal), Math.cos(normal));
   sfx.cannon(0.25 + 0.75 * camVol(_m));
   if (ship.isPlayer) G.stats.shots++;
@@ -376,12 +382,12 @@ function hullHit(b, ship) {
   ship.hull -= hd; ship.sails -= sd;
   let kills = 0;
   if (A.kills) kills = Math.round(rand(A.kills[0], A.kills[1]) * (rake ? 1.6 : 1) * b.dmg);
-  else if (Math.random() < A.crew * (rake ? 2.4 : 1)) kills = 1 + (rake && Math.random() < 0.5 ? 1 : 0);
+  else if (rng() < A.crew * (rake ? 2.4 : 1)) kills = 1 + (rake && rng() < 0.5 ? 1 : 0);
   kills = Math.min(kills, Math.floor(ship.exposed)); // the men below decks are out of reach
   ship.crew -= kills;
   if (sd > 0) ship.rigT = 0;
   // one fire per volley at most, so a single broadside can't set three at once
-  if (A.ignite && ship.litBy !== b.volley && Math.random() < A.ignite) {
+  if (A.ignite && ship.litBy !== b.volley && rng() < A.ignite) {
     ship.litBy = b.volley;
     if (ship.fire === 0) floater(ship.isPlayer ? 'FIRE! Our gunners leave their guns' : 'FIRE! Her gunners leave their guns', ship.isPlayer ? 'bad rake' : 'good rake', _v.set(ship.pos.x, ship.model.mastH * 0.8, ship.pos.z).clone());
     // small shot starts small fires: light guns can keep one fire going, medium two, heavy three
@@ -411,7 +417,7 @@ function testHit(b, ship) {
   if (_l.y > -1.6 && _l.y <= deck && Math.abs(_l.x) <= hw) { hullHit(b, ship); return true; }
   if (!sp.fixed && _l.y > deck && _l.y < ship.model.mastH && Math.abs(_l.z) < hl * 0.86) {
     if (b.ammo === 'chain') { rigHit(b, ship, AMMO.chain.sail); return true; }
-    if (!b.rigged) { b.rigged = true; if (Math.random() < 0.3) rigHit(b, ship, 2); }
+    if (!b.rigged) { b.rigged = true; if (rng() < 0.3) rigHit(b, ship, 2); }
   }
   return false;
 }
@@ -453,7 +459,7 @@ function collide(a, b) {
     if (ov <= 0) continue;
     const nx = dx / d, nz = dz / d, rel = relSpeed(a, b);
     a.pos.x -= nx * ov * 0.5; a.pos.z -= nz * ov * 0.5; b.pos.x += nx * ov * 0.5; b.pos.z += nz * ov * 0.5;
-    if (a.fire > 0 && b.fire === 0 && Math.random() < 0.02) { b.fire = 1; b.fireT = 11; } else if (b.fire > 0 && a.fire === 0 && Math.random() < 0.02) { a.fire = 1; a.fireT = 11; }
+    if (a.fire > 0 && b.fire === 0 && rng() < 0.02) { b.fire = 1; b.fireT = 11; } else if (b.fire > 0 && a.fire === 0 && rng() < 0.02) { a.fire = 1; a.fireT = 11; }
     if (a.ramCd <= 0 && rel > 5 && (G.state === 'battle' || G.state === 'boarding')) {
       a.ramCd = b.ramCd = 1.6;
       const dmg = rel * 1.3;
@@ -504,11 +510,11 @@ function shipEffects(s, dt) {
   if (s.fire > 0 && s.sinking <= 0) {
     s.hull -= 0.0042 * s.hullMax * s.fire * dt; // the more timber, the more there is to burn
     s.sails = Math.max(0, s.sails - 0.5 * s.fire * dt);
-    if (s.exposed >= 1 && Math.random() < 0.13 * s.fire * dt) s.crew -= 1;
+    if (s.exposed >= 1 && rng() < 0.13 * s.fire * dt) s.crew -= 1;
     s.fireT -= dt * (0.5 + 0.9 * s.crewR);
     if (s.fireT <= 0) { s.fire--; s.fireT = 11; if (s.fire === 0 && s.isPlayer) toast('Fires are out', 'good'); }
     for (let i = 0; i < s.fire; i++) {
-      const p = s.toWorld(_l.set(rand(-0.3, 0.3) * sp.B, sp.D + rand(0, 4), rand(-0.35, 0.35) * sp.L), _m);
+      const p = s.toWorld(_l.set(vrand(-0.3, 0.3) * sp.B, sp.D + vrand(0, 4), vrand(-0.35, 0.35) * sp.L), _m);
       fx.flame(p.x, p.y, p.z);
       if (Math.random() < 0.25) fx.smoke(p.x, p.y + 2, p.z, 0.12, Math.sin(world.wind.dir) * 3, Math.cos(world.wind.dir) * 3);
     }
@@ -517,19 +523,19 @@ function shipEffects(s, dt) {
   if (s.fxT > 0) return;
   s.fxT = 0.06;
   if ((s.hullR < 0.45 || s.sinking > 0) && Math.random() < 0.5) {
-    const p = s.toWorld(_l.set(0, sp.D + 1, rand(-0.3, 0.3) * sp.L), _m);
+    const p = s.toWorld(_l.set(0, sp.D + 1, vrand(-0.3, 0.3) * sp.L), _m);
     fx.smoke(p.x, p.y, p.z, 0.22, Math.sin(world.wind.dir) * 3, Math.cos(world.wind.dir) * 3);
   }
   const v = s.speed;
   if (v > 1.5 && s.sinking < 2) {
     const sx = s.pos.x - s.fwdX * sp.L * 0.5, sz = s.pos.z - s.fwdZ * sp.L * 0.5;
-    fx.foam(sx + rand(-1.5, 1.5), world.height(sx, sz) + 0.25, sz + rand(-1.5, 1.5), 0, 0, 1.6 + v * 0.14, 2.2 + v * 0.12);
+    fx.foam(sx + vrand(-1.5, 1.5), world.height(sx, sz) + 0.25, sz + vrand(-1.5, 1.5), 0, 0, 1.6 + v * 0.14, 2.2 + v * 0.12);
     for (const side of [-1, 1]) {
       const bx = s.pos.x + s.fwdX * sp.L * 0.4 + s.fwdZ * side * 1.4, bz = s.pos.z + s.fwdZ * sp.L * 0.4 - s.fwdX * side * 1.4;
       fx.foam(bx, world.height(bx, bz) + 0.3, bz, s.fwdZ * side * v * 0.35, -s.fwdX * side * v * 0.35, 1.2 + v * 0.08, 1.4);
     }
   }
-  if (s.sinking > 0 && s.sinking < 7) fx.splash(_m.set(s.pos.x + rand(-6, 6), 0.3, s.pos.z + rand(-8, 8)), 0.4);
+  if (s.sinking > 0 && s.sinking < 7) fx.splash(_m.set(s.pos.x + vrand(-6, 6), 0.3, s.pos.z + vrand(-8, 8)), 0.4);
 }
 
 // ---------- battle flow ----------
@@ -622,8 +628,8 @@ function startIntro() {
   const sc = { check: () => (sc.foe.out ? sc.foe.out : null) };
   beginScenario(sc);
   world.setEnv(es.env);
-  world.setIslands(4242 + G.level * 97 + ((Math.random() * 1000) | 0), es.islands);
-  world.wind.dir = world.wind.target = rand(0, Math.PI * 2);
+  world.setIslands(4242 + G.level * 97 + ((rng() * 1000) | 0), es.islands);
+  world.wind.dir = world.wind.target = rand(0, Math.PI * 2); world.wind.timer = 40; // the first shift comes as long after the start as in a campaign leg
   const p = G.player;
   p.pos.set(0, 0, 0); p.heading = wrap(world.wind.dir + Math.PI / 2); p.speed = 7; p.sailLevel = TOP;
   // the last pirate fights to the end; the others give up as wrecks
@@ -661,7 +667,7 @@ function shipOut(s, how) {
   if (how === 'sunk') { s.sinking = Math.max(s.sinking, 0.01); if (foe) G.stats.sunk++; }
   else if (how === 'fled' || how === 'escaped') { s.struck = true; s.fire = 0; if (s.arcs) dropArcs(s); if (s.pip) { s.pip.remove(); s.pip = null; } scene.remove(s.group); G.ships = G.ships.filter((x) => x !== s); } // gone over the horizon
   else { s.struck = true; s.fire = 0; s.anchored = false; if (foe) { if (how === 'captured') G.stats.captured++; else G.stats.sunk++; } }
-  if (how === 'blown') { fx.wood(_v.set(s.pos.x, s.spec.D + 2, s.pos.z).clone(), 40); for (let i = 0; i < 14; i++) fx.flame(s.pos.x + rand(-6, 6), s.spec.D + rand(0, 9), s.pos.z + rand(-6, 6)); sfx.cannon(1); G.shake = 1.4; if (!s.spec.fixed) s.sinking = Math.max(s.sinking, 0.01); }
+  if (how === 'blown') { fx.wood(_v.set(s.pos.x, s.spec.D + 2, s.pos.z).clone(), 40); for (let i = 0; i < 14; i++) fx.flame(s.pos.x + vrand(-6, 6), s.spec.D + vrand(0, 9), s.pos.z + vrand(-6, 6)); sfx.cannon(1); G.shake = 1.4; if (!s.spec.fixed) s.sinking = Math.max(s.sinking, 0.01); }
   if (near && s !== G.player) {
     const msg = { sunk: 'is going down!', struck: 'strikes — a floating wreck', captured: foe ? 'is yours!' : 'has been taken!', silenced: 'is silenced', blown: 'blows up!', fled: 'has run for it, out of the fight', escaped: 'has got away!' }[how];
     toast(`${s.name} ${msg}`, foe && how !== 'escaped' ? 'big' : 'bad', 4000); sfx.horn(foe && how !== 'escaped');
@@ -674,7 +680,7 @@ function fates() {
     if (s.hull <= 0) shipOut(s, s.spec.fixed ? 'silenced' : 'sunk');
     else if (s.spec.fixed ? s.crew < s.crewMax * 0.2 : !s.spec.noStrike && s.hullR < 0.15) shipOut(s, s.spec.fixed ? 'silenced' : 'struck');
     // powder: a fire in a magazine ends things at once
-    else if (s.spec.magazine && s.fire > 0 && Math.random() < s.spec.magazine * s.fire * G.dtNow) shipOut(s, 'blown');
+    else if (s.spec.magazine && s.fire > 0 && rng() < s.spec.magazine * s.fire * G.dtNow) shipOut(s, 'blown');
   }
 }
 function endBattle(outcome) {
@@ -832,7 +838,7 @@ function boardingUpdate(dt) {
   if (e.spec.ai && e.spec.ai.boarder && e.stock.grape > 0 && b.eCd <= 0) { e.stock.grape--; b.eCd = 7; swivel(p, e, 6); }
   if ((b.fxT -= dt) <= 0) {
     b.fxT = 0.1;
-    const who = Math.random() < 0.5 ? p : e, q = who.toWorld(_l.set(b.side * (who === p ? 1 : -1) * rand(0.1, 0.5) * who.spec.B, who.spec.D + 1.5, rand(-0.35, 0.35) * who.spec.L), _m);
+    const who = Math.random() < 0.5 ? p : e, q = who.toWorld(_l.set(b.side * (who === p ? 1 : -1) * vrand(0.1, 0.5) * who.spec.B, who.spec.D + 1.5, vrand(-0.35, 0.35) * who.spec.L), _m);
     if (Math.random() < 0.4) { fx.musket(q.x, q.y, q.z); sfx.musket(); } else if (Math.random() < 0.5) sfx.clang();
   }
   // a crew that has lost seven in ten of the men it brought to the rail gives up the deck
@@ -852,7 +858,7 @@ function boardingUpdate(dt) {
   if (!b.warned && p.crew < b.p0 * 0.55 && sp < se) { b.warned = true; toast('We are losing the deck — cut the grapples!', 'bad', 3000); }
 }
 function swivel(target, by, n) {
-  const kill = Math.min(target.crew - 1, n + Math.random() * 3);
+  const kill = Math.min(target.crew - 1, n + rng() * 3);
   target.crew -= kill;
   const q = target.toWorld(_l.set(0, target.spec.D + 2, 0), new THREE.Vector3());
   fx.grape(q); fx.cannon(by.toWorld(_l.set(0, by.spec.D + 2, 0), _m), 0, 0); sfx.cannon(0.7);
