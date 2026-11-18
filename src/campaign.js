@@ -5,7 +5,7 @@ import { mulberry } from './geo.js';
 
 // The campaign: saved progress, the stable, officers, and the flow from briefing to cruise to port.
 // The engine (main.js) plays one leg at a time; this file decides which leg, and what happens between.
-const KEY = 'broadside.campaign.v1';
+const KEY = __PLAYTEST__ ? 'broadside.playtest.v1' : 'broadside.campaign.v1'; // the playtest build keeps its own save
 let G, E;
 const fresh = () => ({
   v: 1, side: null, stage: 0, gold: 0, seed: (Math.random() * 1e9) | 0, nextId: 2,
