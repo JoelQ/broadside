@@ -345,7 +345,7 @@ const sortie = {
       player: { x: 0, z: 80, h: PI, speed: 7 },
       zones: [{ name: 'mole', x: mole[0], z: mole[1], r: 55, color: 0xff6a5a }],
       ships: [
-        ...fs.map(([x, z], i) => ({ id: 'fs' + i, spec: shipSpec('sloop', c.foe, 'Fireship', 'poor', { guns: 0, bow: { n: 1, cal: 0, arc: 0.2 }, magazine: 0.3, fuse: 2, speed: 8, stock: {} }), side: 1, x, z, h: 0, o: { crew: 0.3, goTo: mole, sail: 3 } })),
+        ...fs.map(([x, z], i) => ({ id: 'fs' + i, spec: shipSpec('sloop', c.foe, 'Fireship', 'poor', { guns: 0, bow: { n: 1, cal: 0, arc: 0.2 }, magazine: 0.3, fuse: 2, speed: 7, stock: {} }), side: 1, x, z, h: 0, o: { crew: 0.3, goTo: mole, sail: 3 } })),
         { id: 'escort', spec: shipSpec('galliot', c.foe, c.names.galley1, 'line'), side: 1, x: 60, z: -520, h: 0 },
       ],
       focus: 'fs1',

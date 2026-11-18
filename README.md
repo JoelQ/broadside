@@ -61,18 +61,25 @@ A prologue and five missions for each side (see [`docs/campaign.md`](docs/campai
 | 4 | The straits | Go up the Dardanelles and destroy a flagship fitting out | Come down and break the blockade at the mouth |
 | 5 | Candia | Defend the harbour on the day of the assault | The assault |
 
-- A mission is a **cruise** of two or three fights with no port between them. Hull, sails, crew and
-  shot carry over. Between fights you get a **jury-rig pause** with three watches to spend on
-  repairs, the wounded, stripping a prize, or shifting your flag to a ship you captured.
+- Most missions are **one scene that changes as you fight**: patrols that lie at anchor until they
+  are warned, a wind that rises on the clock and brings another ship, a powder ship that sails at dark.
+- The pirate hunt and the finale are **cruises** of several fights with no port between them. Hull,
+  sails, crew and shot carry over, and between fights a **jury-rig pause** gives you watches to spend
+  on repairs, the wounded, stripping a prize, or shifting your flag to a ship you captured.
 - A mission sets a goal, never a method: every fight can be won in at least three different ways,
   by different kinds of ship, and the harness checks this.
 - You command one ship at a time, against one to three opponents. Prizes join your ships in port.
-- **Galleys** have heavy guns that fire ahead, weak sides, and oars that run on stamina.
+- **Galleys** have heavy guns that fire ahead, weak sides, and oars that run on stamina. A green line
+  under a galley's name is her oarsmen's wind; when it runs out they stop dead until they recover.
 - **Wind strength** changes: a calm leaves sailing ships helpless against oars, a gale spoils gunnery
   and tears full sail.
-- **Shoals** stop any ship that draws too much, yours or theirs. **Current** runs in the straits.
+- **Shoals** (pale water ringed with surf) stop any ship that draws too much, yours or theirs;
+  **reefs** (rocks showing) stop everything. **Current** runs in the straits, drawn as white lines on
+  the water. In a calm, **cat's-paws** are dark ripple patches with wind inside them.
   **Shore batteries** draw their arcs on the water and have dead ground.
-- **Anchoring on a spring** makes a ship a steady gun platform that can be hauled round in any wind.
+- **Anchoring** stops a ship dead and steadies her guns, and a spring on the cable still lets `A` / `D`
+  swing her broadside round. A ship with no way on barely steers, so in a calm this is how a sailing
+  ship keeps her guns on target.
 - Four **officers** join you along the way; each bends a rule instead of raising a number.
 - Progress is saved in the browser after every mission.
 
