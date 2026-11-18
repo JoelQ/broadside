@@ -225,7 +225,7 @@ export function buildHarbor() {
   return {
     group: g, spots, update,
     berth: { x: 8.2, z: -6, heading: 0 },
-    moorings: [[-34, 30, 1.9], [-78, 58, 2.3], [38, 62, -2.2], [-18, 98, 0.7], [84, 100, -1.2]],
+    moorings: [[-34, 30, 1.9], [38, 62, -2.2], [-78, 58, 2.3], [-125, 40, 2.0], [120, 50, -2.0], [-165, 75, 1.6], [165, 85, -1.7], [-18, 98, 0.7]], // nearest the quay first; small ships take these
     focus: new THREE.Vector3(0, 7, -26),
   };
 }

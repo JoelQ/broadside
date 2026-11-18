@@ -33,3 +33,25 @@ About 3 fights a second. With 6 runs per cell each figure is rough (one fight is
 confirm anything surprising with a focused jobs file at 20 runs per cell before changing numbers.
 The captains are competent, not clever: a result of 0% means "not with these captains", and a
 person may do better or worse.
+
+## Campaign legs
+
+The same harness plays campaign fights. `H.leg(cfg)` sets up one leg of one mission for a given
+side and hull and follows a **route**: a list of steps such as "sail to this point", "fight that ship
+this way", "board her", "anchor on a spring once in range".
+
+```bash
+NODE_PATH=... node tools/balance/run.mjs tools/balance/legs.mjs 4 /tmp/legs.json
+```
+
+```bash
+node tools/balance/legreport.mjs /tmp/legs.json
+```
+
+- `legs.mjs` is the grid: every leg x six hulls x that leg's routes. Filter with `LEGS=<regex>`,
+  `HULLS=sloop,brig`, `ROUTES=<regex>`; `FIT=1` fits every ship out fully.
+- `legreport.mjs` prints a table per leg and flags any leg that fewer than three kinds of ship, or
+  fewer than three routes, can win; it also flags a route that always works.
+- `drive.mjs` runs a script against the built page with screenshots, for checking flow and looks.
+
+The design rule being checked is in `docs/campaign.md`: no mission is won by one quality alone.

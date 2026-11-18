@@ -163,12 +163,56 @@ void main(){
 }
 `;
 
+function canvasTex(n, draw) {
+  const c = document.createElement('canvas'); c.width = c.height = n; draw(c.getContext('2d'), n);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+// dark ripples, densest in the middle
+const rippleTexture = () => canvasTex(256, (x, n) => {
+  const rnd = mulberry(7);
+  for (let i = 0; i < 900; i++) {
+    const a = rnd() * 6.28, d = Math.sqrt(rnd()) * n * 0.48, px = n / 2 + Math.cos(a) * d, py = n / 2 + Math.sin(a) * d;
+    x.strokeStyle = `rgba(255,255,255,${(0.55 * (1 - d / (n * 0.5))).toFixed(3)})`; x.lineWidth = 1 + rnd() * 1.5;
+    x.beginPath(); x.moveTo(px, py); x.lineTo(px + 6 + rnd() * 10, py + (rnd() - 0.5) * 3); x.stroke();
+  }
+  const g = x.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2); g.addColorStop(0, 'rgba(255,255,255,0.45)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.fillRect(0, 0, n, n);
+});
+// a sand bank seen through the water: bright in the middle, fading out
+const bankTexture = () => canvasTex(128, (x, n) => {
+  const g = x.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2);
+  g.addColorStop(0, 'rgba(255,250,215,1)'); g.addColorStop(0.75, 'rgba(255,255,255,0.75)'); g.addColorStop(0.9, 'rgba(255,255,255,0.35)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.fillRect(0, 0, n, n);
+});
+// broken water: a dashed, uneven white band
+const foamTexture = () => canvasTex(128, (x, n) => {
+  const rnd = mulberry(3);
+  for (let i = 0; i < 400; i++) { x.fillStyle = `rgba(255,255,255,${(0.3 + rnd() * 0.7).toFixed(2)})`; x.fillRect(rnd() * n, rnd() * n, 2 + rnd() * 6, 2 + rnd() * 3); }
+});
+const labelTexture = (txt, danger) => canvasTex(128, (x, n) => {
+  x.font = 'bold 44px Georgia, serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.lineWidth = 6; x.strokeStyle = 'rgba(0,0,0,0.6)'; x.strokeText(txt, n / 2, n / 2);
+  x.fillStyle = danger ? '#ff8a7a' : '#f6ecc8'; x.fillText(txt, n / 2, n / 2);
+});
+
 export class World {
   constructor(scene) {
     this.scene = scene;
     this.time = 0;
     this.amp = 1;
-    this.wind = { dir: 0.6, target: 0.6, timer: 40 };
+    this.wind = { dir: 0.6, target: 0.6, timer: 40, str: 1, strTarget: 1, base: 1, steady: false };
+    this.shoals = []; this.currentAt = null; this.envName = 'noon';
+    this.shoalGroup = new THREE.Group(); scene.add(this.shoalGroup);
+    this.paws = []; this.pawGroup = new THREE.Group(); scene.add(this.pawGroup);
+    this.tex = { ripple: rippleTexture(), bank: bankTexture(), foam: foamTexture() };
+    // current marks: foam lines that ride the current, so the set of the water is something you can see
+    const NF = 150;
+    this.flow = Array.from({ length: NF }, () => ({ x: 0, z: 0, life: 0, max: 1, vx: 0, vz: 0 }));
+    const fg = new THREE.BufferGeometry();
+    fg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(NF * 6), 3));
+    fg.setAttribute('color', new THREE.BufferAttribute(new Float32Array(NF * 8), 4));
+    this.flowMesh = new THREE.LineSegments(fg, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, fog: false }));
+    this.flowMesh.frustumCulled = false; scene.add(this.flowMesh);
     this.islands = [];
     this.islandGroup = new THREE.Group();
     scene.add(this.islandGroup);
@@ -220,7 +264,7 @@ export class World {
   }
 
   updateStreaks(dt, focus) {
-    const wx = Math.sin(this.wind.dir), wz = Math.cos(this.wind.dir), sp = 34;
+    const wx = Math.sin(this.wind.dir), wz = Math.cos(this.wind.dir), sp = 34 * Math.max(0.08, this.wind.str);
     const pos = this.streakMesh.geometry.attributes.position, col = this.streakMesh.geometry.attributes.color;
     this.streaks.forEach((s, i) => {
       s.life -= dt;
@@ -249,7 +293,7 @@ export class World {
     this.hemi.intensity = e.hemi;
     this.sun.color.set(e.sunCol); this.sun.intensity = e.dir;
     this.scene.fog.color.set(e.horizon); this.scene.fog.near = e.fog[0]; this.scene.fog.far = e.fog[1];
-    this.env = e;
+    this.env = e; this.envName = name; this.baseAmp = e.amp;
   }
 
   height(x, z) {
@@ -259,7 +303,99 @@ export class World {
     return h * this.amp;
   }
 
-  clearIslands() { this.islandGroup.clear(); this.islands = []; }
+  clearIslands() { this.islandGroup.clear(); this.islands = []; this.setShoals([]); this.currentAt = null; this.clearPaws(); this.setWind(undefined, 1, true); this.wind.steady = false; this.wind.next = null; }
+  // wind strength: 0 is a dead calm, 1 a working breeze, 1.6 a gale
+  setWind(dir, str, now) {
+    const w = this.wind;
+    if (dir !== undefined) { w.target = dir; if (now) w.dir = dir; }
+    if (str !== undefined) { w.strTarget = w.base = str; if (now) w.str = str; }
+  }
+  windName() { const s = this.wind.str; return s < 0.3 ? 'Calm' : s < 0.65 ? 'Light airs' : s <= 1.25 ? 'Breeze' : 'Gale'; }
+  // islands placed by hand: [{x, z, r, h?, seed?}]
+  addIsland(o) {
+    const rnd = mulberry(o.seed || Math.round(o.x * 7 + o.z * 13 + o.r)), isl = { x: o.x, z: o.z, r: o.r * 0.8, h: o.h || o.r * 0.45 };
+    this.islands.push(isl);
+    this.islandGroup.add(makeIsland(o.r, isl.h, rnd, o.x, o.z, o.opts || {}));
+    return isl;
+  }
+  // shoals: [{x, z, r, depth}]. A ship drawing more than `depth` sticks there. Pale water and a line of
+  // broken water mark every bank; a reef (depth under 2) shows rocks and grounds anything. With the
+  // pilot aboard each bank is sounded: its depth is written on it, red where your ship would stick.
+  setShoals(list, marked, draught = 0) {
+    for (const m of this.shoalGroup.children) { if (m.geometry) m.geometry.dispose(); }
+    this.shoalGroup.clear(); this.shoals = list; this.shoalRings = [];
+    for (const s of list) {
+      const reef = s.depth < 2, g = new THREE.CircleGeometry(s.r * 1.12, 36); g.rotateX(-Math.PI / 2);
+      const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: this.tex.bank, color: reef ? 0xb8d8c0 : 0x9fe8d6, transparent: true, opacity: reef ? 0.75 : 0.6, depthWrite: false, depthTest: false, fog: false }));
+      m.position.set(s.x, 0.9, s.z); m.renderOrder = 1; this.shoalGroup.add(m);
+      const danger = marked && draught > s.depth;
+      const rg = new THREE.RingGeometry(s.r - 3, s.r + 2, 48); rg.rotateX(-Math.PI / 2);
+      const r = new THREE.Mesh(rg, new THREE.MeshBasicMaterial({ map: this.tex.foam, color: 0xffffff, transparent: true, opacity: 0.7, depthWrite: false, depthTest: false, fog: false }));
+      r.position.set(s.x, 1, s.z); r.renderOrder = 2; r.userData.ph = Math.random() * 6; this.shoalGroup.add(r); this.shoalRings.push(r);
+      if (reef) {
+        const rnd = mulberry(Math.round(s.x * 3 + s.z * 7)), mat = new THREE.MeshStandardMaterial({ color: 0x4a4038, roughness: 1, flatShading: true });
+        for (let i = 0; i < Math.round(s.r / 6); i++) {
+          const a = rnd() * 6.28, d = Math.sqrt(rnd()) * s.r * 0.85, k = 1.5 + rnd() * 3;
+          const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(k, 0), mat);
+          rock.position.set(s.x + Math.sin(a) * d, -k * 0.35, s.z + Math.cos(a) * d); rock.scale.y = 0.6; rock.rotation.y = rnd() * 6;
+          this.shoalGroup.add(rock);
+        }
+      }
+      if (marked) {
+        const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTexture(reef ? 'reef' : s.depth.toFixed(1), danger), transparent: true, depthTest: false, fog: false }));
+        sp.position.set(s.x, 6, s.z); sp.scale.set(22, 22, 1); sp.renderOrder = 3; this.shoalGroup.add(sp);
+      }
+    }
+  }
+  // cat's-paws: in a calm the air comes in patches you can see as dark ripples, and a ship inside one has wind
+  clearPaws() { for (const p of this.paws) { this.pawGroup.remove(p.mesh); p.mesh.geometry.dispose(); } this.paws = []; }
+  strAt(x, z) {
+    let s = this.wind.str;
+    for (const p of this.paws) { const d = Math.hypot(x - p.x, z - p.z); if (d < p.r) s += 0.75 * p.f * (1 - (d / p.r) ** 2); }
+    return s;
+  }
+  updateFeatures(dt, focus) {
+    const w = this.wind, wx = Math.sin(w.dir), wz = Math.cos(w.dir);
+    if (w.base < 0.3 && w.str < 0.5 && this.paws.length < 6 && Math.random() < dt * 0.6) {
+      const a = Math.random() * 6.28, d = 90 + Math.random() * 330, r = 45 + Math.random() * 35;
+      const g = new THREE.CircleGeometry(r, 32); g.rotateX(-Math.PI / 2);
+      const mesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: this.tex.ripple, color: 0x0e2638, transparent: true, opacity: 0, depthWrite: false, fog: false }));
+      mesh.renderOrder = 1; this.pawGroup.add(mesh);
+      this.paws.push({ x: focus.x + Math.sin(a) * d - wx * 60, z: focus.z + Math.cos(a) * d - wz * 60, r, life: 0, max: 20 + Math.random() * 14, f: 0, mesh });
+    }
+    for (let i = this.paws.length - 1; i >= 0; i--) {
+      const p = this.paws[i];
+      p.life += dt; p.x += wx * 2.5 * dt; p.z += wz * 2.5 * dt;
+      p.f = Math.min(1, p.life / 3, (p.max - p.life) / 3);
+      if (w.base >= 0.3) p.f = Math.min(p.f, 0), p.life = Math.max(p.life, p.max);
+      p.mesh.position.set(p.x, 0.8, p.z); p.mesh.material.opacity = 0.55 * Math.max(0, p.f); p.mesh.rotation.y += dt * 0.02;
+      if (p.life >= p.max) { this.pawGroup.remove(p.mesh); p.mesh.geometry.dispose(); this.paws.splice(i, 1); }
+    }
+    for (const r of this.shoalRings || []) r.material.opacity = 0.5 + 0.25 * Math.sin(this.time * 1.7 + r.userData.ph);
+    // current marks
+    const pos = this.flowMesh.geometry.attributes.position, col = this.flowMesh.geometry.attributes.color;
+    this.flowMesh.visible = !!this.currentAt;
+    if (!this.currentAt) return;
+    this.flow.forEach((m, i) => {
+      m.life -= dt;
+      if (m.life <= 0) {
+        const a = Math.random() * 6.28, d = 15 + Math.random() * 260;
+        m.x = focus.x + Math.sin(a) * d; m.z = focus.z + Math.cos(a) * d;
+        const c = this.currentAt(m.x, m.z); m.vx = c[0]; m.vz = c[1];
+        m.max = m.life = Math.hypot(c[0], c[1]) > 0.4 ? 2.5 + Math.random() * 2 : 0.2 + Math.random();
+      }
+      m.x += m.vx * dt; m.z += m.vz * dt;
+      const v = Math.hypot(m.vx, m.vz), len = 3 + v * 3.2, a = v > 0.4 ? Math.sin((m.life / m.max) * Math.PI) * Math.min(0.85, 0.3 + v * 0.15) : 0;
+      const y = this.height(m.x, m.z) + 0.35, ux = m.vx / (v || 1), uz = m.vz / (v || 1);
+      pos.setXYZ(i * 2, m.x, y, m.z); pos.setXYZ(i * 2 + 1, m.x - ux * len, y, m.z - uz * len);
+      col.setXYZW(i * 2, 0.92, 0.97, 1, a); col.setXYZW(i * 2 + 1, 0.92, 0.97, 1, 0);
+    });
+    pos.needsUpdate = col.needsUpdate = true;
+  }
+  shoalAt(x, z, draught) {
+    for (const s of this.shoals) if (draught > s.depth && Math.hypot(x - s.x, z - s.z) < s.r) return s;
+    return null;
+  }
 
   setIslands(seed, count) {
     this.islandGroup.clear();
@@ -281,8 +417,14 @@ export class World {
     this.u.uTime.value = this.time;
     const w = this.wind;
     w.timer -= dt;
-    if (w.timer <= 0) { w.timer = 35 + Math.random() * 40; w.target = w.dir + (Math.random() - 0.5) * 1.3; }
-    w.dir += (w.target - w.dir) * Math.min(1, dt * 0.08);
+    // the next shift is decided a little before it arrives, so a good pilot can call it
+    if (w.timer <= 12 && w.next == null && !w.steady && w.base >= 0.3) w.next = (Math.random() < 0.5 ? -1 : 1) * (0.45 + Math.random() * 0.55);
+    if (w.timer <= 0) { w.timer = 45 + Math.random() * 35; if (w.next != null) { w.target = w.dir + w.next; w.shifted = w.next; } w.next = null; }
+    w.dir += (w.target - w.dir) * Math.min(1, dt * 0.22);
+    // in a calm the air comes in cat's-paws: brief puffs a light ship can use
+    w.strTarget = w.base;
+    w.str += (w.strTarget - w.str) * Math.min(1, dt * 0.25);
+    this.amp = this.u.uAmp.value = this.baseAmp * (0.25 + 0.75 * Math.min(1, w.str)) * (w.str > 1.25 ? 1.5 : 1);
     const s = 1400 / 220;
     const cx = Math.round(camPos.x / s) * s, cz = Math.round(camPos.z / s) * s;
     this.near.position.set(cx, 0, cz);
