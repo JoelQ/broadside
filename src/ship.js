@@ -145,7 +145,7 @@ export class Ship {
       const way = 0.06 + 0.94 * clamp(this.speed / (0.45 * sp.speed), 0, 1);
       // the hull swings toward the rate the rudder asks for; a heavy hull takes longer to start and to stop swinging.
       // At anchor she is hauled round on a spring, slowly but whatever the wind; aground she does not answer at all.
-      const rate = this.aground > 0 ? 0 : this.anchored ? (this.rudder * 0.2) / this.mass ** 0.7 : this.rudder * sp.turn * Math.max(way, rowing ? 0.75 : 0) * SAILS[this.sailLevel].turn;
+      const rate = this.aground > 0 ? 0 : this.anchored ? (this.rudder * 0.2 * (0.35 + 0.65 * this.crewR)) / this.mass ** 0.7 : this.rudder * sp.turn * Math.max(way, rowing ? 0.75 : 0) * SAILS[this.sailLevel].turn;
       this.yaw += (rate - this.yaw) * Math.min(1, dt / (0.35 * m));
       this.heading = wrap(this.heading + this.yaw * dt);
       this.speed *= 1 - Math.abs(this.rudder) * 0.07 * dt;

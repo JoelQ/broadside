@@ -191,18 +191,19 @@ const independent = {
 // ---------- 3. The calm ----------
 // One scene. A dead calm with galleys coming out; at about two minutes the wind fills in from the north-east
 // and brings a sailing ship with it. A sailing ship holds on until it can move; a galley tries to finish first.
+const galleysDone = (S) => allOut(S, ['g1', 'g2']);
 const calm = {
   title: 'Dead calm',
   build(c) {
-    const W = 1.2 + PI, up = [Math.sin(1.2) * 560, Math.cos(1.2) * 560];
+    const W = 1.2 + PI, up = [Math.sin(1.2) * 560, Math.cos(1.2) * 560], clear = [Math.sin(1.2 - 1.1) * 680, Math.cos(1.2 - 1.1) * 680];
     return {
       env: 'golden', wind: { dir: W, str: 0.05, steady: true }, seedIslands: [1654, 2],
       player: { x: 0, z: 0, h: 0, speed: 0 },
       ships: [
         { id: 'g1', spec: shipSpec('galley', c.foe, c.names.galley1, 'line'), side: 1, x: -260, z: 430, h: PI - 0.5 },
-        { id: 'g2', spec: shipSpec('galliot', c.foe, c.names.galley2, 'line'), side: 1, x: 280, z: 400, h: PI + 0.5 },
+        { id: 'g2', spec: shipSpec('galliot', c.foe, c.names.galley2, 'poor'), side: 1, x: 280, z: 400, h: PI + 0.5 },
       ],
-      objective: () => { const S = c.S; if (!S) return ''; return S.flag.breeze ? 'The breeze has brought one of their sailing ships: finish her, and any galley that stays to fight' : S.t > 95 ? 'Wind is coming from the north-east. Hold on' : 'No wind, and two galleys coming out under oars: live through the calm'; },
+      objective: () => { const S = c.S; if (!S) return ''; return S.flag.breeze ? (galleysDone(S) ? 'The galleys are done with. Finish the tall ship, or slip away upwind to the north' : 'The breeze has brought one of their sailing ships. Deal with the galleys; then finish her or slip away upwind') : S.t > 95 ? 'Wind is coming from the north-east. Hold on' : 'No wind, and two galleys coming out under oars: live through the calm'; },
       tip: 'Without wind a sailing ship barely steers. G drops anchor: she holds still, her guns steady, and a spring on the cable lets A and D haul her broadside round.',
       events: [
         { t: 6, fn: (S) => { if (!S.p.spec.oars) S.say('Manolis: “No steerage way. Anchor, and we can still swing her on the spring.”', ''); } },
@@ -212,9 +213,10 @@ const calm = {
       ],
       check: (S) => {
         if (!S.flag.breeze) return null;
+        if (galleysDone(S) && !S.flag.clear) { S.flag.clear = true; S.addZone({ name: 'clear', x: clear[0], z: clear[1], r: 90 }); }
         // once a sailing ship can move again the big galley wants no part of her, and a beaten galley has no reason to stay
         for (const id of ['g1', 'g2']) { const g = S.by[id], d = Math.hypot(g.pos.x - S.p.pos.x, g.pos.z - S.p.pos.z) || 1; if (!g.out && ((id === 'g1' && !S.p.spec.oars) || g.hullR < 0.6 || g.crewR < 0.55)) S.flee(g, [g.pos.x + ((g.pos.x - S.p.pos.x) / d) * 900, g.pos.z + ((g.pos.z - S.p.pos.z) / d) * 900]); }
-        return allOut(S, ['g1', 'g2', 'sail']) ? 'won' : null;
+        return allOut(S, ['g1', 'g2', 'sail']) || (S.flag.clear && S.inZone('clear')) ? 'won' : null;
       },
     };
   },
@@ -236,10 +238,10 @@ const upStrait = {
       env: 'golden', ...strait(), shoals: straitShoals([-520, -330, -150, 30, 210, 390]),
       player: { x: 0, z: -800, h: 0.5, speed: 6 },
       ships: [
-        { id: 'west', spec: shipSpec('castle', c.foe, c.names.castleW, 'line'), side: 1, x: -262, z: -160, h: PI / 2 },
-        { id: 'east', spec: shipSpec('castle', c.foe, c.names.castleE, 'line'), side: 1, x: 262, z: -130, h: -PI / 2 },
-        { id: 'flag', spec: shipSpec('flagship', c.foe, c.names.flag, 'poor', { guns: 9, magazine: 0.04, ai: { cuts: 0.3 } }), side: 1, x: 110, z: 470, h: 0, o: { crew: 0.4, sails: 0.3, anchored: true } },
-        { id: 'guard', spec: shipSpec('brig', c.foe, c.names.brig, 'poor'), side: 1, x: -40, z: 290, h: PI, o: { idle: true } },
+        { id: 'west', spec: shipSpec('castle', c.foe, c.names.castleW, 'poor', { bow: { n: 3 } }), side: 1, x: -262, z: -160, h: PI / 2 },
+        { id: 'east', spec: shipSpec('castle', c.foe, c.names.castleE, 'poor', { bow: { n: 3 } }), side: 1, x: 262, z: -130, h: -PI / 2 },
+        { id: 'flag', spec: shipSpec('flagship', c.foe, c.names.flag, 'poor', { guns: 6, magazine: 0.06, ai: { cuts: 0.3 } }), side: 1, x: 110, z: 470, h: 0, o: { crew: 0.35, sails: 0.3, hull: 0.75, anchored: true } },
+        { id: 'guard', spec: shipSpec('sloop', c.foe, c.names.picket, 'poor'), side: 1, x: -40, z: 290, h: PI, o: { idle: true } },
       ],
       focus: 'flag',
       objective: () => { const S = c.S; if (!S) return ''; return S.by.flag.out ? 'She is finished. Now get out: ride the current south, past the castles' : 'Go up past the castles, against wind and current, and destroy or take the flagship fitting out above them'; },

@@ -33,7 +33,9 @@ export const LEGS = [
   ...['brothers', 'leeShore', 'coveRaid', 'landing', 'islets', 'falseColours'].map((k) => ({ name: 'm2 ' + k, mission: 'm2', leg: k, side: V, routes: { guns, hug, burn, board, prep, ...(k === 'falseColours' ? { rakeBoard: [{ kill: 'a', move: 'close', ammo: 'grape', board: 'rush' }] } : {}) } })),
   { name: 'm3 Dead calm', mission: 'm3', leg: 0, side: V, maxT: 700, routes: {
     spring: [{ kill: 'all', move: 'duel', ammo: 'grape', anchor: true, anchorAt: 1.3 }],
+    springSlip: [{ kill: 'g2', move: 'duel', ammo: 'grape', anchor: true, anchorAt: 1.3 }, { kill: 'g1', move: 'duel', ammo: 'grape' }, { go: 'zone:clear', r: 40, wait: true }],
     guns, kite, bow, board, prep,
+    bowSlip: [{ kill: 'g2', move: 'bow', ammo: 'round' }, { kill: 'g1', move: 'bow', ammo: 'round' }, { go: 'zone:clear', r: 40, wait: true }],
   } },
   { name: 'm4V Up the strait', mission: 'm4', leg: 0, side: V, maxT: 800, routes: {
     middle: [{ go: [0, 260], r: 50 }, { kill: 'flag', move: 'duel', ammo: 'round', anchor: true, anchorAt: 1.0 }, { go: 'zone:out', r: 40, wait: true }],
@@ -73,7 +75,7 @@ for (const L of LEGS) {
   if (want && !want.test(L.name)) continue;
   for (const hull of hulls) for (const [rn, route] of Object.entries(L.routes)) {
     if (rts && !rts.test(rn)) continue;
-    if (rn === 'bow' && hull !== 'galley') continue;
+    if (rn.startsWith('bow') && hull !== 'galley') continue;
     cells.push({ label: `${L.name} | ${hull}${fit ? '+' : ''} | ${rn}`, legName: L.name, mission: L.mission, leg: L.leg, side: L.side, hull, fit, route, routeName: rn, carry: L.carry, maxT: L.maxT || 600 });
   }
 }

@@ -83,6 +83,7 @@
         break;
       }
       if (st.i >= steps.length) step = { kill: 'all', move: 'duel', ammo: 'round', board: 'never' };
+      if (step.go && typeof step.go === 'string' && !(G.sc.zones || []).some((q) => q.name === step.go.slice(5))) step = { kill: 'all', move: 'duel', ammo: 'round', board: 'never' }; // waiting for the zone: fight on
       st.swap -= dt;
       if (me.spec.oars && step.oar != null) me.oar = step.oar;
       if (step.go) {
