@@ -2,6 +2,7 @@ import { HULLS, OFFICERS, HANDS } from './fleet.js';
 import { MISSIONS, ORDER, LEG_POOL } from './missions.js';
 import { STORY, NAMES, PORTS, SIDE_NAME } from './story.js';
 import { mulberry } from './geo.js';
+import { portrait, speakerOf, officerFace, captainFace } from './portraits.js';
 
 // The campaign: saved progress, the stable, officers, and the flow from briefing to cruise to port.
 // The engine (main.js) plays one leg at a time; this file decides which leg, and what happens between.
@@ -105,7 +106,8 @@ export const CAMP = {
   card(def) {
     const run = CAMP.run, t = CAMP.text(run.key), leg = (t.legs || [])[run.i] || {};
     const obj = typeof def.objective === 'function' ? def.objective() : def.objective;
-    return { eyebrow: run.legs.length > 1 ? `${MISSIONS[run.key].title} · ${run.i + 1} of ${run.legs.length}` : MISSIONS[run.key].title, title: def.title, line: obj, hook: (STORY.legs[def.title] || {})[CAMP.livery()] || (STORY.legs[def.title] || {}).both || leg.hook || '' };
+    const faces = [...new Set([...(def.faces || []), ...def.ships.filter((d) => d.side === 1).map((d) => captainFace(d.spec.captain))].filter(Boolean))];
+    return { faces, eyebrow: run.legs.length > 1 ? `${MISSIONS[run.key].title} · ${run.i + 1} of ${run.legs.length}` : MISSIONS[run.key].title, title: def.title, line: obj, hook: (STORY.legs[def.title] || {})[CAMP.livery()] || (STORY.legs[def.title] || {}).both || leg.hook || '' };
   },
   onOut(s, how) {
     if (how !== 'captured' || s.side === G.player.side || s.spec.fixed || !HULLS[s.spec.hullId]) return;
@@ -146,7 +148,7 @@ export const CAMP = {
         <button class="btn sm" data-act="camp:strip:${i}" ${w < 1 || z.stripped || z.own ? 'disabled' : ''}>${z.stripped ? 'Stripped' : 'Strip her'}</button>
         <button class="btn sm" data-act="camp:flag:${i}" ${!free && w < 1 ? 'disabled' : ''}>Shift your flag${free ? '' : ' · one watch'}</button></div>`);
     });
-    const lines = (leg.pause || []).map((l) => `<p>${l}</p>`).join('');
+    const lines = (leg.pause || []).map((l) => { const who = speakerOf(l, CAMP.st.side); return who ? `<p class="said"><span class="face">${portrait(who, { small: true })}</span><span>${l}</span></p>` : `<p>${l}</p>`; }).join('');
     E.showScreen(`<div class="story wide"><div class="eyebrow">${MISSIONS[run.key].title} · between fights</div><h2>${w} watch${w === 1 ? '' : 'es'} to spend</h2>${lines}
       <div class="cols"><div class="shipstate"><h3>${p.spec.name}</h3>${bar('Hull', p.hullR, Math.ceil(p.hull))}${bar('Sails', p.sailR, Math.ceil(p.sails))}${bar('Crew', p.crewR, Math.round(p.crew))}
       <div class="role">Chain ×${p.stock.chain} · grape ×${p.stock.grape} · heated ×${p.stock.fire}</div></div><div class="watches">${rows.join('')}</div></div>
@@ -214,7 +216,7 @@ export const CAMP = {
   debrief() {
     const run = CAMP.run, st = CAMP.st, d = CAMP.text(run.key).end || { title: MISSIONS[run.key].title, text: [] };
     let extra = run.summary || '';
-    if (run.joined) { const o = OFFICERS[run.joined], who = (STORY.officers[run.joined] || {})[st.side] || {}; extra += `<div class="officer"><b>${who.name || o.name}</b> joins you. ${who.line || ''}<small>${o.does}</small></div>`; }
+    if (run.joined) { const o = OFFICERS[run.joined], who = (STORY.officers[run.joined] || {})[st.side] || {}; const face = officerFace(run.joined, st.side); extra += `<div class="officer">${face ? `<span class="face">${portrait(face)}</span>` : ''}<div><b>${who.name || o.name}</b> joins you. ${who.line || ''}<small>${o.does}</small></div></div>`; }
     CAMP.tell({ eyebrow: 'Afterwards', ...d, go: st.done ? 'The end of it' : 'Make port' }, st.done ? 'camp:ending' : 'camp:port', extra);
   },
   choose() {

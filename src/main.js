@@ -10,7 +10,7 @@ import { CAMP } from './campaign.js';
 import { PT } from './playtest.js';
 import { steerTo } from './ai.js';
 import { rng, seedRng, rngSeed } from './rng.js';
-import { portrait, speakerOf } from './portraits.js';
+import { portrait, speakerOf, captainFace } from './portraits.js';
 
 const $ = (id) => document.getElementById(id);
 // rand and gauss decide the fight and come from the seeded source; vrand is for looks only
@@ -626,9 +626,11 @@ function startScenario(def, c) {
   G.state = 'intro'; G.focus = 'enemy';
   showLegCard(c.card(def));
 }
+// the faces of whoever you are about to fight, above the card
+const faces = (ids) => (ids && ids.length ? `<div class="faces">${ids.map((id) => portrait(id)).join('')}</div>` : '');
 function showLegCard(h) {
   setMode(null); $('bars').classList.add('on');
-  showScreen(`<div class="lower"><div class="eyebrow">${h.eyebrow}</div><h1>${h.title}</h1><div class="line">${h.line}</div>
+  showScreen(`<div class="lower">${faces(h.faces)}<div class="eyebrow">${h.eyebrow}</div><h1>${h.title}</h1><div class="line">${h.line}</div>
     <div class="hook">${h.hook || ''}</div><button class="btn big" data-act="engage">${h.go || 'Beat to quarters'}</button></div>`, 'clear low');
 }
 function startIntro() {
@@ -1208,7 +1210,7 @@ function showTitle() {
 }
 function showIntro(es) {
   setMode(null); $('bars').classList.add('on');
-  showScreen(`<div class="lower"><div class="eyebrow">Wanted · ${G.level + 1} of ${ENEMIES.length}</div><h1>${es.captain}</h1>
+  showScreen(`<div class="lower">${faces([captainFace(es.captain)].filter(Boolean))}<div class="eyebrow">Wanted · ${G.level + 1} of ${ENEMIES.length}</div><h1>${es.captain}</h1>
     <div class="line">${es.cls} <i>${es.name}</i> · ${es.guns * 2} ${CAL[es.cal].name} guns · ${es.crew} crew · ${es.bounty} g bounty</div>
     <div class="hook">${es.hook}</div><button class="btn big" data-act="engage">Engage</button></div>`, 'clear low');
 }

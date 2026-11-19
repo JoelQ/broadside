@@ -112,6 +112,7 @@ const POOL = {
         { id: 'a', spec: pirate('galliot', 'Kastor', 'poor'), side: 1, x: -160, z: 260, h: PI },
         { id: 'b', spec: pirate('galliot', 'Polydeukes', 'poor'), side: 1, x: 170, z: 300, h: PI },
       ],
+      faces: ['kastor', 'polydeukes'], // the twins' galliots carry no captain's name
       objective: 'Two galliots hunting as a pair in light airs: finish both',
       tip: 'In light airs they are quicker than you. Grape thins the men at their oars.',
       check: (S) => (allOut(S, ['a', 'b']) ? 'won' : null),
