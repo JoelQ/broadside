@@ -316,6 +316,7 @@ export class World {
   addMole(m) {
     this.moles.push(m);
     for (const p of molePieces(m.path, m.w)) this.addPiece(p);
+    for (const [x, z, r] of m.platforms || []) this.addPiece({ x, z, r });
   }
   addPiece(p) { const k = Math.floor(p.x / 60) * 4099 + Math.floor(p.z / 60); let c = this.pieceGrid.get(k); if (!c) this.pieceGrid.set(k, (c = [])); c.push(p); this.pieces.push(p); }
   // shore circles within r of a point
@@ -328,7 +329,10 @@ export class World {
   ground(x, z) {
     let y = -20;
     for (const c of this.coasts) { const b = c.shape.box; if (x > b[0] - 30 && x < b[2] + 30 && z > b[1] - 30 && z < b[3] + 30) y = Math.max(y, c.ground(x, z)); }
-    for (const m of this.moles) if (segDist(m.path, x, z) < m.w / 2) y = Math.max(y, m.top);
+    for (const m of this.moles) {
+      if (segDist(m.path, x, z) < m.w / 2) y = Math.max(y, m.top + (m.parapet || 0)); // the sea wall along it stops shot too
+      for (const [px, pz, r] of m.platforms || []) if (Math.hypot(x - px, z - pz) < r) y = Math.max(y, m.top);
+    }
     return y;
   }
   clearIslands() { this.islandGroup.clear(); this.islands = []; this.coasts = []; this.moles = []; this.pieces = []; this.pieceGrid = new Map(); this.setShoals([]); this.currentAt = null; this.clearPaws(); this.setWind(undefined, 1, true); this.wind.steady = false; this.wind.next = null; }

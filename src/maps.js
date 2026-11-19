@@ -1,7 +1,8 @@
 import { shipSpec } from './fleet.js';
 import { buildFortModel } from './fort.js';
-import { works, wall, tower, town, minaret, dome, campanile, mole, arsenal, yard, lighters, bastion, smoke, blaze, palazzo, basilica } from './works.js';
+import { works, wall, tower, town, minaret, dome, campanile, mole, lantern, arsenal, yard, lighters, bastion, smoke, blaze, palazzo, basilica } from './works.js';
 import { mulberry } from './geo.js';
+import { smoothPath } from './coast.js';
 import { shade } from './geo.js';
 
 // Places: the land, water and works a mission's fights are set in, as data a scenario spreads into
@@ -100,15 +101,21 @@ const strait = (opts = {}) => ({
 // sheds along the inner quay. Mount Juktas stands behind the city and Dia lies out to sea. On the day of
 // the assault the city is burning and the Ottoman trenches are dug right up to the bastions.
 const CITY_SHORE = [[-1700, 150, 0], [-1300, 160], [-1060, 190], [-930, 245, 10], [-860, 330], [-770, 392], [-700, 405, 2], [-560, 395, 4], [-430, 392, 2], [-330, 405, 0], [-270, 420, 0], [-210, 445, 0], [-60, 452, 0], [90, 450, 0], [230, 438, 0], [300, 410, 0], [420, 396, 2], [560, 400, 4], [700, 408, 2], [800, 392], [900, 322], [975, 240, 10], [1150, 180], [1700, 140, 0]];
-const MOLES = [
-  { path: [[-300, 412], [-300, 280], [-270, 172], [-170, 124], [-62, 108]], w: 15, top: 3.2, sea: -1 }, // the long western mole to the Koules
-  { path: [[318, 404], [312, 280], [272, 166], [196, 130], [128, 124]], w: 14, top: 3.2, sea: 1 }, // the eastern mole
-];
 // the trace of the walls, from the sea at the west round the hill to the sea at the east
 const RING = [[-700, 402], [-770, 610], [-700, 830], [-500, 1010], [-200, 1090], [200, 1090], [500, 1010], [700, 830], [770, 610], [700, 404]];
 const inRing = (x, z) => { let c = false; const p = [...RING, [700, 440], [-700, 440]]; for (let i = 0, j = p.length - 1; i < p.length; j = i++) if ((p[i][1] > z) !== (p[j][1] > z) && x < ((p[j][0] - p[i][0]) * (z - p[i][1])) / (p[j][1] - p[i][1]) + p[i][0]) c = !c; return c && z > 430; };
 const ringDist = (x, z) => { let best = 1e9; for (let i = 0; i < RING.length - 1; i++) { const a = RING[i], b = RING[i + 1], dx = b[0] - a[0], dz = b[1] - a[1], t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz))); best = Math.min(best, Math.hypot(a[0] + dx * t - x, a[1] + dz * t - z)); } return best; };
 export const KOULES = [-44, 104], MOLE_HEAD = [118, 122], MOUTH = [36, 116], BASIN = [20, 300];
+// the moles: rounded where they bend, a gun platform standing out to sea at the chosen bends, and a sea wall
+// along the outer edge that stops shot like the mole itself (parapet: how far it stands above the walkway)
+const moleDef = (pts, w, bends) => ({
+  path: smoothPath(pts, 12), w, top: 3.2, parapet: 2, basin: BASIN,
+  platforms: bends.map((i) => { const [x, z] = pts[i], dx = x - BASIN[0], dz = z - BASIN[1], d = Math.hypot(dx, dz); return [x + (dx / d) * w * 0.55, z + (dz / d) * w * 0.55, w * 0.62]; }),
+});
+const MOLES = [
+  moleDef([[-300, 412], [-300, 280], [-270, 172], [-170, 124], [-62, 108]], 19, [1, 2, 3]), // the long western mole to the Koules
+  moleDef([[318, 404], [312, 280], [272, 166], [196, 130], [128, 124]], 18, [1, 2]), // the eastern mole, the lantern on it
+];
 const candiaGround = (x, z, y) => {
   if (y <= 1) return y;
   const hill = 3.4 + Math.max(0, z - 440) * 0.075; // the city climbs the hill in terraces
@@ -134,7 +141,8 @@ const candia = (opts = {}) => ({
   works: (world) => {
     const group = works((B, G) => {
       const g = (x, z) => world.ground(x, z), glass = 0xffd98a, rnd = mulberry(1669), WALL = 0xcdb894;
-      for (const m of MOLES) mole(B, m, g);
+      MOLES.forEach((m, i) => mole(B, G, m, { seed: 40 + i }));
+      { const p = MOLES[1].path.reduce((a, q) => (Math.hypot(q[0] - 222, q[1] - 140) < Math.hypot(a[0] - 222, a[1] - 140) ? q : a)); lantern(B, G, p[0], 3.2, p[1] + 2, 22); }
       const fort = (hull, name, at, h) => { const f = buildFortModel(shipSpec(hull, 'venice', name, 'line')); f.group.position.set(at[0], 0, at[1]); f.group.rotation.y = h; world.islandGroup.add(f.group); };
       if (!opts.koules) fort('koules', 'Koules', KOULES, PI);
       if (!opts.battery) fort('battery', 'The mole battery', MOLE_HEAD, PI + 0.3);

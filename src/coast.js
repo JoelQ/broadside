@@ -206,6 +206,19 @@ export function molePieces(path, w) {
   }
   return out;
 }
+// a path through the given points, rounded at the corners (Catmull-Rom), in steps of about `step` yards
+export function smoothPath(pts, step = 12) {
+  const out = [], P = (i) => pts[Math.max(0, Math.min(pts.length - 1, i))];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = P(i - 1), p1 = P(i), p2 = P(i + 1), p3 = P(i + 2), n = Math.max(1, Math.round(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / step));
+    for (let j = 0; j < n; j++) {
+      const t = j / n, t2 = t * t, t3 = t2 * t, f = (a, b, c, d) => 0.5 * (2 * b + (c - a) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (3 * b - a - 3 * c + d) * t3);
+      out.push([f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])]);
+    }
+  }
+  out.push(pts[pts.length - 1].slice());
+  return out;
+}
 export function segDist(path, x, z) {
   let best = 1e9;
   for (let i = 0; i < path.length - 1; i++) {

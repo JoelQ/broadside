@@ -98,19 +98,118 @@ export function town(B, G, ground, o) {
   return out;
 }
 // a stone mole: a walkway on a battered foundation, a parapet on the seaward side, bollards on the harbour side
-export function mole(B, m, ground) {
-  const { path, w, top } = m, side = m.sea ?? 1;
-  for (let i = 0; i < path.length - 1; i++) {
-    const a = path[i], b = path[i + 1], len = Math.hypot(b[0] - a[0], b[1] - a[1]), ry = Math.atan2(b[0] - a[0], b[1] - a[1]), x = (a[0] + b[0]) / 2, z = (a[1] + b[1]) / 2;
-    const nx = Math.cos(ry) * side, nz = -Math.sin(ry) * side; // seaward
-    B.box(w + 3, 4, len + 1.5, shade(STONE, 0.7), x, top - 4.6, z, 0, ry); // footing, wider below the water
-    B.box(w, 3, len + 1.2, STONE, x, top - 1.5, z, 0, ry);
-    for (let k = 0; k < Math.floor(len / 4.2); k++) { const t = (k + 0.5) / Math.floor(len / 4.2) - 0.5; B.box(w * 0.96, 0.08, 4, shade(STONE, 0.86 + ((k * 7) % 5) * 0.025), x + Math.sin(ry) * t * len, top + 0.02, z + Math.cos(ry) * t * len, 0, ry); }
-    B.box(1.4, 1.6, len + 1.2, shade(STONE, 0.92), x + nx * (w / 2 - 0.7), top + 0.8, z + nz * (w / 2 - 0.7), 0, ry);
-    for (let k = 0; k < Math.floor(len / 14); k++) { const t = (k + 0.5) / Math.floor(len / 14) - 0.5; B.cyl(0.35, 0.45, 0.9, IRON, x + Math.sin(ry) * t * len - nx * (w / 2 - 1), top + 0.45, z + Math.cos(ry) * t * len - nz * (w / 2 - 1), 7); }
-    B.box(w + 0.2, 0.9, len + 1.3, 0x4f5a48, x, 0.05, z, 0, ry); // weed at the waterline
+// A harbour mole: a broad stone arm with a working quay on the harbour side and a high sea wall on the
+// other, the sea wall's foot armoured with tumbled blocks. Round gun platforms stand out from it at its
+// bends (m.platforms), with a sentry box on each. m.path is the centre line, m.basin a point in the harbour.
+const ROCK = new THREE.DodecahedronGeometry(1, 0), WEED = 0x4f5a48;
+export function mole(B, G, m, opts = {}) {
+  const P = m.path, n = P.length, top = m.top, hw = m.w / 2, H = top + (m.parapet ?? 0) + 1, bas = m.basin ?? [0, 0], rnd = mulberry(opts.seed ?? 7);
+  // tangents and the seaward normal at every point of the path
+  const S = P.map((p, i) => { const a = P[Math.max(0, i - 1)], b = P[Math.min(n - 1, i + 1)], dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz) || 1; return [dz / l, -dx / l]; });
+  let sg = 0; P.forEach((p, i) => (sg += S[i][0] * (p[0] - bas[0]) + S[i][1] * (p[1] - bas[1])));
+  if (sg < 0) for (const v of S) { v[0] = -v[0]; v[1] = -v[1]; }
+  const pt = (i, off, y) => [P[i][0] + S[i][0] * off, y, P[i][1] + S[i][1] * off];
+  // a strip along the whole mole between two (offset, height) lines; flip turns it to face the other way
+  const strip = (o0, y0, o1, y1, col, every) => {
+    for (let i = 0; i < n - 1; i++) { const c = every ? shade(col, 0.9 + ((i * 7) % 5) * 0.035) : col; B.quad(pt(i, o0, y0), pt(i + 1, o0, y0), pt(i + 1, o1, y1), pt(i, o1, y1), c); }
+  };
+  const QUAY = shade(STONE, 0.94), SEAW = 0xbfae8c, FOOT = shade(STONE, 0.6), sw = 3.2;
+  strip(-hw - 2, -4.5, -hw, -0.8, FOOT); // the quay's footing
+  strip(-hw, -0.8, -hw, 0.7, WEED); strip(-hw, 0.7, -hw, top - 0.4, QUAY); strip(-hw - 0.4, top - 0.4, -hw - 0.4, top, shade(STONE, 1.04)); strip(-hw - 0.4, top, -hw, top, shade(STONE, 1.04)); // quay face and its coping
+  strip(-hw, top, hw - sw, top, 0xa89a7a, true); // the walkway, paved in courses
+  strip(hw - sw, top, hw - sw, H, shade(SEAW, 0.85)); // back of the sea wall
+  strip(hw - sw - 0.3, H, hw + 0.5, H, shade(SEAW, 0.8)); // its rounded coping
+  strip(hw + 0.5, H, hw + 0.5, H - 0.5, shade(SEAW, 0.92));
+  strip(hw + 0.5, H - 0.5, hw + 1.4, 0.7, SEAW); // the battered face
+  strip(hw + 1.4, 0.7, hw + 1.6, -0.6, WEED); strip(hw + 1.6, -0.6, hw + 4.5, -4.5, FOOT);
+  strip(hw + 0.95, H - 3.4, hw + 1.25, H - 3.4, shade(SEAW, 1.08)); strip(hw + 1.25, H - 3.4, hw + 1.05, H - 2.9, shade(SEAW, 1.08)); // the cordon
+  // the ends of the strip: closed off with masonry where no fort stands
+  for (const i of [0, n - 1]) { const a = pt(i, -hw - 2, -4.5), c = P[i]; B.cyl(hw + 1.5, hw + 2.5, top + 5, shade(STONE, 0.85), c[0], (top - 5) / 2, c[1], 12); }
+  // along the length: what stands on the quay and against the sea wall
+  let run = 0;
+  for (let i = 0; i < n - 1; i++) {
+    const a = P[i], b = P[i + 1], len = Math.hypot(b[0] - a[0], b[1] - a[1]), ry = Math.atan2(b[0] - a[0], b[1] - a[1]);
+    const at = (t, off) => [a[0] + (b[0] - a[0]) * t + S[i][0] * off, a[1] + (b[1] - a[1]) * t + S[i][1] * off];
+    for (let k = 0; k < 5; k++) { // tumbled blocks at the foot of the sea wall
+      const [x, z] = at(rnd(), hw + 2 + rnd() * 3.2), r = 0.9 + rnd() * 1.2;
+      B.add(ROCK, shade(0x9a9180, 0.7 + rnd() * 0.35), new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(rnd() * 3, rnd() * 3, rnd() * 3)).setPosition(x, -0.6 + rnd() * 1.2, z).scale(new THREE.Vector3(r * 1.3, r * 0.8, r)));
+    }
+    const r0 = run; run += len;
+    for (let d = Math.ceil(r0 / 16) * 16; d < run; d += 16) { const [x, z] = at((d - r0) / len, -hw + 0.9); B.cyl(0.32, 0.42, 0.9, IRON, x, top + 0.45, z, 7); } // bollards
+    for (let d = Math.ceil(r0 / 34) * 34; d < run; d += 34) { const [x, z] = at((d - r0) / len, hw + 1.2); B.box(2.6, H - 0.4, 2.2, shade(SEAW, 0.95), x, (H - 0.4) / 2 - 0.2, z, 0, ry); } // buttresses
+    for (let d = Math.ceil((r0 + 20) / 48) * 48 - 20; d < run; d += 48) { // lamps on iron brackets along the sea wall
+      const [x, z] = at((d - r0) / len, hw - sw - 0.4);
+      B.bar([x, top, z], [x, top + 4.6, z], 0.12, IRON, 4); G.box(0.7, 0.9, 0.7, 0xffd98a, x, top + 5, z); B.cyl(0, 0.6, 0.5, IRON, x, top + 5.7, z, 4);
+    }
+    for (let d = Math.ceil((r0 + 60) / 140) * 140 - 60; d < run; d += 140) { // water stairs down the quay face, a boat at the foot
+      const t = (d - r0) / len;
+      for (let st = 0; st < 5; st++) { const [x, z] = at(t + (st * 1.4) / len, -hw - 0.7); B.box(1.6, 0.6, 1.6, shade(STONE, 0.85 - st * 0.03), x, top - 0.6 - st * 0.62, z, 0, ry); }
+      const [bx, bz] = at(t + 6 / len, -hw - 2.4); rowboat(B, bx, bz, ry + 0.1, [0x8a3a2a, 0x2e4a5c, 0x6a5a2a][Math.floor(d) % 3]);
+    }
+    for (let d = Math.ceil((r0 + 100) / 150) * 150 - 100; d < run; d += 150) { // a coaster made fast alongside
+      const [x, z] = at((d - r0) / len, -hw - 3.1); tartane(B, x, z, ry + (Math.floor(d / 150) % 2 ? Math.PI : 0), Math.floor(d));
+      const [cx, cz] = at((d - r0) / len, -hw + 1.6); crane(B, cx, top, cz, ry - Math.PI / 2 * Math.sign(S[i][0] * Math.cos(ry) - S[i][1] * Math.sin(ry) || 1));
+    }
+    for (let d = Math.ceil((r0 + 30) / 90) * 90 - 30; d < run; d += 90) { // cargo landed on the quay
+      const [x, z] = at((d - r0) / len, -hw + 3 + rnd() * 3);
+      for (let q = 0; q < 4; q++) (q % 2 ? barrel(B, x + (rnd() - 0.5) * 4, top, z + (rnd() - 0.5) * 4) : crate(B, x + (rnd() - 0.5) * 4, top, z + (rnd() - 0.5) * 4, 1.2 + rnd() * 0.6, rnd()));
+    }
   }
-  for (const q of path.slice(1, -1)) B.cyl(w / 2 + 0.3, w / 2 + 0.6, 3, STONE, q[0], top - 1.5, q[1], 10);
+  // the gun platforms: round bulwarks with a parapet, guns looking out to sea and a sentry box on the point
+  for (const [x, z, r] of m.platforms ?? []) {
+    const ox = x - bas[0], oz = z - bas[1], ol = Math.hypot(ox, oz), out = Math.atan2(ox / ol, oz / ol);
+    B.cyl(r + 3, r + 6, 4, FOOT, x, -2.6, z, 14);
+    B.cyl(r + 0.6, r + 1.6, top + 4.6, SEAW, x, (top - 4.6) / 2 + 0.3, z, 14);
+    B.cyl(r, r, 0.3, 0xa89a7a, x, top + 0.35, z, 14);
+    for (let k = 0; k < 14; k++) {
+      const a = (k / 14) * Math.PI * 2, rel = Math.abs(((a - out + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+      if (rel > 1.7) continue; // open to the mole behind
+      if (k % 2 && rel < 1.2) continue; // an embrasure
+      B.box(2 * r * Math.sin(Math.PI / 14) + 0.3, 1.6, 1.4, shade(SEAW, 0.92), x + Math.sin(a) * (r + 0.1), top + 1.1, z + Math.cos(a) * (r + 0.1), 0, a);
+    }
+    for (const da of [-0.9, 0, 0.9]) { // three guns on their carriages
+      const a = out + da + Math.PI / 14, gx = x + Math.sin(a) * (r - 3.2), gz = z + Math.cos(a) * (r - 3.2);
+      B.box(1.6, 0.8, 2.4, 0x5a3a22, gx, top + 0.8, gz, 0, a); B.bar([gx, top + 1.4, gz], [gx + Math.sin(a) * 3.4, top + 1.6, gz + Math.cos(a) * 3.4], 0.32, IRON, 6, 0.24);
+    }
+    for (let q = 0; q < 6; q++) B.add(new THREE.IcosahedronGeometry(0.34, 0), IRON, new THREE.Matrix4().makeTranslation(x - Math.sin(out) * 2 + (q % 3) * 0.7, top + 0.8 + Math.floor(q / 3) * 0.5, z - Math.cos(out) * 2));
+    const sx = x + Math.sin(out) * (r + 0.6), sz = z + Math.cos(out) * (r + 0.6); // the sentry box
+    B.cyl(1.5, 0.3, 2.2, SEAW, sx, top + 0.7, sz, 8); B.cyl(1.5, 1.5, 3, shade(SEAW, 1.05), sx, top + 3.3, sz, 8); B.cyl(0, 1.8, 2.2, 0x8c6a4a, sx, top + 5.9, sz, 8);
+    for (let k = 0; k < 10; k++) { const a = out + (rnd() - 0.5) * 2.6, d = r + 2 + rnd() * 3.5, rr = 0.9 + rnd() * 1.2; B.add(ROCK, shade(0x9a9180, 0.7 + rnd() * 0.35), new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(rnd() * 3, rnd() * 3, rnd() * 3)).setPosition(x + Math.sin(a) * d, -0.6 + rnd() * 1.2, z + Math.cos(a) * d).scale(new THREE.Vector3(rr * 1.3, rr * 0.8, rr))); }
+  }
+}
+// a small lateen-rigged coaster lying at a quay
+export function tartane(B, x, z, ry, seed = 1) {
+  const rnd = mulberry(seed), hull = [0x5d4630, 0x3c3a36, 0x6a3a26][seed % 3];
+  B.at(x, 0, z, ry, () => {
+    const rr = [];
+    for (let k = 0; k <= 8; k++) { const u = k / 8, hw = 2.3 * Math.sin(Math.PI * (0.06 + u * 0.88)) ** 0.55, zz = (u - 0.5) * 17, sh = 1.6 + Math.abs(u - 0.5) * 1.4; rr.push([[-hw, sh, zz], [-hw * 0.8, -0.2, zz], [0, -1, zz], [hw * 0.8, -0.2, zz], [hw, sh, zz]]); }
+    B.loft(rr, [hull, shade(hull, 0.7), shade(hull, 0.7), hull]);
+    B.box(4, 0.15, 15, PLANK, 0, 1.6, 0);
+    B.bar([0, 1.6, 2.5], [0, 14, 2.9], 0.22, WOOD, 5); // the mast, raked forward
+    B.bar([0, 13, 8], [0, 7, -6], 0.12, WOOD, 4); // the lateen yard, sail furled along it
+    B.bar([0.1, 12.4, 6.6], [0.1, 7.6, -4.6], 0.32, 0xe0d4b4, 5);
+    B.bar([0, 1.8, 8.5], [0, 2.6, 11.5], 0.12, WOOD, 4); // bowsprit
+    for (let k = 0; k < 3; k++) (k % 2 ? barrel : (B2, a, b, c) => crate(B2, a, b, c, 1.3, rnd()))(B, (rnd() - 0.5) * 2, 1.7, -5 + k * 2.6);
+  });
+}
+// a timber crane on a quay, its jib out over the water
+export function crane(B, x, y, z, ry) {
+  B.at(x, y, z, ry, () => {
+    B.box(3, 0.6, 3, WOOD, 0, 0.3, 0); B.bar([0, 0.6, 0], [0, 9, 0], 0.35, WOOD, 6);
+    B.bar([0, 8.5, -1.5], [0, 11, 7], 0.25, WOOD, 5); B.bar([0, 3, 0], [0, 8.5, 5], 0.18, WOOD, 4);
+    B.bar([0, 11, 7], [0, 5, 7], 0.04, 0x222222, 3); B.box(1.2, 0.8, 1.2, 0x9a7a4a, 0, 4.6, 7);
+    B.cyl(1.4, 1.4, 1, PLANK, 0, 2, -1.6, 8, 0, 0, Math.PI / 2);
+  });
+}
+// a lighthouse on a mole: a square stone tower with a gallery and a lit lantern
+export function lantern(B, G, x, y, z, h = 20) {
+  B.box(6, h, 6, 0xd8c8a6, x, y + h / 2, z); B.box(7.4, 0.6, 7.4, shade(0xd8c8a6, 0.85), x, y + h * 0.55, z);
+  B.box(8, 0.7, 8, shade(0xd8c8a6, 0.8), x, y + h + 0.35, z);
+  for (const [dx, dz] of [[-3.7, 0], [3.7, 0], [0, -3.7], [0, 3.7]]) B.box(dx ? 0.3 : 7.6, 1, dz ? 0.3 : 7.6, IRON, x + dx, y + h + 1.2, z + dz);
+  G.cyl(1.9, 1.9, 3.2, 0xfff0b0, x, y + h + 2.3, z, 8);
+  for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; B.bar([x + Math.sin(a) * 2, y + h + 0.7, z + Math.cos(a) * 2], [x + Math.sin(a) * 2, y + h + 3.9, z + Math.cos(a) * 2], 0.1, IRON, 3); }
+  B.cyl(0, 2.6, 2.2, 0x45484f, x, y + h + 5, z, 8); B.cyl(0.3, 0.3, 1.4, IRON, x, y + h + 6.6, z, 4);
+  for (let k = 0; k < 3; k++) G.box(0.6, 1.2, 0.1, 0xffd98a, x, y + 5 + k * 5, z - 3.05);
 }
 // the Venetian arsenal: vaulted sheds side by side, open to the water, a hull on the stocks in one
 export function arsenal(B, x, y, z, ry, n = 5) {

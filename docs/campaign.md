@@ -293,8 +293,11 @@ islands. Both live in `src/maps.js` and are shared by every leg set there.
 - **Candia.** Taken more closely from the real city. Its fame was its walls, not its harbour: a
   ring of great arrowhead bastions with a ditch, rising from the sea at both ends and climbing the
   hill behind, which held for more than twenty years. The harbour was small and man-made, closed by
-  two moles. The Koules (Rocca a Mare, with St Mark's lions on its faces) stands at the end of the
-  western one and a battery on the head of the eastern. Two long rows of vaulted arsenal sheds line
+  two moles. Each is a broad curving arm of stone: a working quay on the harbour side, with
+  bollards, cranes, water stairs and coasters made fast alongside, and a high sea wall on the other,
+  its foot armoured with tumbled blocks, with round gun platforms standing out to sea at the bends.
+  A lighthouse stands on the eastern mole. The Koules (Rocca a Mare, with St Mark's lions on its
+  faces) stands at the end of the western one and a battery on the head of the eastern. Two long rows of vaulted arsenal sheds line
   the inner quay, with palazzi behind them and the city climbing to the walls: St Mark's, St Titus,
   domes and campaniles. Mount Juktas stands behind the city and Dia lies out to sea. On the day of
   the assault houses are burning inside the walls, smoke stands over the city, and Ottoman trenches
