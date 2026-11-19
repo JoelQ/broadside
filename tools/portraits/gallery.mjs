@@ -9,7 +9,7 @@ import { STORY } from '../../src/story.js';
 
 const out = path.resolve('out/portraits');
 mkdirSync(out, { recursive: true });
-const SIDE = { venice: 'Venice', ottoman: 'The Porte', island: 'Islander, serves either side', pirate: 'Pirate' };
+const SIDE = { crew: 'Your people', venice: 'Venice', ottoman: 'The Porte', pirate: 'Pirate' };
 const ids = Object.keys(CAST);
 const strip = (s) => s.replace(/<[^>]+>/g, '');
 
@@ -69,7 +69,7 @@ h2{margin:0;font-family:'Pirata One',Georgia,serif;font-weight:400;font-size:26p
 .bubble .face svg{width:44px;height:44px;border-radius:50%;border:2px solid #d7b25a;display:block}
 </style></head><body>
 <h1>Character portraits</h1>
-<p class="lede">Drawn in code (src/portraits.js), flat-shaded like the ships. Each one at dialog size, at three bubble sizes, and in a mock in-game bubble. Background: crimson for Venice, green for the Porte, sea blue for islanders, the ship's own colours for pirates.</p>
+<p class="lede">Drawn in code (src/portraits.js), flat-shaded like the ships. Each one at dialog size, at three bubble sizes, and in a mock in-game bubble. Background: sea blue for your own people (anyone who can sail as your officer), crimson for the Venetians and green for the Ottomans who give you orders, one shared smoke-brown for every pirate.</p>
 <div class="lineup">${strip2}</div>
 <div class="hook"><h3>How they hook in</h3>
 <p><b>In game, now:</b> any line that starts with a speaker's name (<i>Manolis: “…”</i>, <i>Pilot:</i>, <i>Barbaro</i>, <i>İbrahim Reis</i>, <i>Marousa</i>) shows that face in its bubble. <code>speakerOf(text)</code> in src/portraits.js picks the face, so new lines in src/missions.js need nothing extra.</p>

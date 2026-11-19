@@ -44,8 +44,8 @@ export const STORY = {
     title: 'Two offers',
     text: [
       'A fight off a small island is news for a week. Before the week was out two boats had called at Lychna.',
-      'The first carried a Venetian officer from the fortress of Suda, in a red coat, with a purse and a paper. The Republic is hiring ships to keep Candia alive, he said, and a captain who can fight a brig like that should not be carrying wine.',
-      'The second carried a quiet man from the Kapudan Pasha’s fleet at Chania, with a paper of his own. The Sultan’s fleet has need of captains who know these islands, he said, and Lychna is the Sultan’s island, after all.',
+      'The first carried Ser Alvise, a Venetian gentleman from the fortress of Suda, in black with a crimson stole, with a purse and a paper. The Republic is hiring ships to keep Candia alive, he said, and a captain who can fight a brig like that should not be carrying wine.',
+      'The second carried Hüseyin Efendi, a quiet man who keeps the Kapudan Pasha’s papers at Chania, with a paper of his own. The Sultan’s fleet has need of captains who know these islands, he said, and Lychna is the Sultan’s island, after all.',
       'Old Manolis, who has piloted these waters for fifty years and served under both flags, shrugged. “The sea is the same sea. Choose the paymaster you can live with.”',
     ],
     venice: 'Sail for Venice', ottoman: 'Sail for the Porte',
@@ -116,7 +116,7 @@ export const STORY = {
     [V]: {
       brief: { title: 'Independent command', text: [
         'A war is good weather for pirates. With both fleets busy off Crete, the Cyclades have filled with captains who serve nobody: renegades, deserters, and a few who were simply here first. They take the Republic’s supply ships and the Sultan’s alike.',
-        'The Provveditore gives you a commission and no instructions worth the name. Clear them out. Three have been reported this month; which three you find will depend on the wind.',
+        'Ser Alvise brings you a commission from the Provveditore, and no instructions worth the name. Clear them out. Three have been reported this month; which three you find will depend on the wind.',
         'Anything you take is yours to keep, and to sail.',
       ] },
       legs: [
@@ -131,7 +131,7 @@ export const STORY = {
     [O]: {
       brief: { title: 'Independent command', text: [
         'A war is good weather for pirates. With both fleets busy off Crete, the Cyclades have filled with captains who serve nobody: renegades, deserters, and a few who were simply here first. They take the Sultan’s supply ships and the Republic’s alike.',
-        'The Kapudan Pasha’s secretary gives you a commission and no instructions worth the name. The islands pay their tax to be kept safe; keep them safe. Three pirates have been reported this month; which three you find will depend on the wind.',
+        'Hüseyin Efendi gives you a commission and no instructions worth the name. The islands pay their tax to be kept safe; keep them safe. Three pirates have been reported this month; which three you find will depend on the wind.',
         'Anything you take is yours to keep, and to sail.',
       ] },
       legs: [
@@ -174,7 +174,7 @@ export const STORY = {
     [V]: {
       brief: { title: 'The straits', text: [
         'The Republic cannot beat the Sultan’s army on Crete, so it has gone to the door the army is fed through. A Venetian fleet lies off the mouth of the Dardanelles, a week’s sail from Candia, and everything bound for Crete must come out past it.',
-        'Now the Captain General has word of a great ship fitting out above the castles: a flagship for a fleet meant to break the blockade. She is not ready. In a month she will be.',
+        'Ser Alvise has come out with the dispatch boat. The Captain General has word of a great ship fitting out above the castles: a flagship for a fleet meant to break the blockade. She is not ready. In a month she will be.',
         'The current in the strait runs out to sea, hard in mid-channel and hardest through the Narrows, slack along the shores, and the summer wind comes down off the European hills. “Going up is slow,” says Manolis. “Coming down is fast, and you cannot take it back.”',
       ] },
       end: { title: 'Below the castles', text: [
@@ -185,7 +185,7 @@ export const STORY = {
     [O]: {
       brief: { title: 'The straits', text: [
         'The Venetians cannot beat the army on Crete, so they have gone to the door it is fed through. Their fleet lies off the mouth of the Dardanelles, and for months nothing has come out: no powder, no bread, no men.',
-        'The fleet in the strait is not ready to fight its way out. It does not need to. Two ships are anchored across the channel at the mouth, and they are the blockade. Take one, sink one, burn one, or frighten one into cutting her cable, and the convoys can run.',
+        'Hüseyin Efendi has come up from Chania with the orders, and reads them to you himself. The fleet in the strait is not ready to fight its way out. It does not need to. Two ships are anchored across the channel at the mouth, and they are the blockade. Take one, sink one, burn one, or frighten one into cutting her cable, and the convoys can run.',
         'The current runs out to sea, hard in mid-channel and slack along the shores, and the summer wind blows the same way. “Going down is fast,” says Manolis, “and you cannot take it back. Only the eddies inshore will carry you up again.”',
       ] },
       end: { title: 'The door opens', text: [
