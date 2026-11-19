@@ -581,9 +581,20 @@ export function portrait(id, o = {}) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" class="portrait"${o.size ? ` width="${o.size}" height="${o.size}"` : ''} role="img" aria-label="${c.name}">${c.draw()}</svg>`;
 }
 
-// Who is speaking in a line of in-game text, from the name it starts with ("Manolis: “…”"), or null.
-const SPEAKERS = [[/^(Old )?Manolis\b|^Pilot:/, 'manolis'], [/^Marousa\b|^Gunner:/, 'marousa'], [/^(Captain )?(Zuanne )?Barbaro\b/, 'barbaro'], [/^İbrahim Reis\b/, 'ibrahim']];
-export function speakerOf(text) {
+// Who is speaking in a line of text, from the name it starts with ("Manolis: “…”"), or null. Lines that name
+// an officer by job ("The carpenter has opinions…") need the side you serve, which decides who holds the post.
+const SPEAKERS = [[/^(Old )?Manolis\b|^Pilot:/, 'manolis'], [/^Marousa\b|^Gunner:/, 'marousa'], [/^(Captain )?(Zuanne )?Barbaro\b/, 'barbaro'], [/^İbrahim Reis\b/, 'ibrahim'],
+  [/^(Mastro )?Piero\b/, 'piero'], [/^(Usta )?Kemal\b/, 'kemal'], [/^Ser Alvise\b/, 'recruiter'], [/^Hüseyin Efendi\b/, 'secretary']];
+export function speakerOf(text, side) {
+  text = text.replace(/<[^>]+>/g, '');
   for (const [re, id] of SPEAKERS) if (re.test(text)) return id;
+  if (side && /^The carpenter\b/.test(text)) return officerFace('carpenter', side);
   return null;
 }
+// the face of the officer who holds a post (OFFICERS in fleet.js), for the side you serve
+export function officerFace(post, side) {
+  return { pilot: 'manolis', gunner: 'marousa', carpenter: side === 'ottoman' ? 'kemal' : 'piero', marines: side === 'ottoman' ? 'ibrahim' : 'barbaro' }[post] || null;
+}
+// the face of a pirate captain, by the name on her ship's spec
+const CAPTAINS = { 'Cutthroat Mags': 'mags', 'Captain Varga': 'varga', 'Yusra the Red': 'yusra', 'Silas Thorne': 'thorne', 'Dread Admiral Korrigan': 'korrigan', Korrigan: 'korrigan', 'Mags’s daughter': 'daughter' };
+export const captainFace = (name) => CAPTAINS[name] || null;
