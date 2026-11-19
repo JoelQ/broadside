@@ -2,7 +2,7 @@ import { HULLS, OFFICERS, HANDS } from './fleet.js';
 import { MISSIONS, ORDER, LEG_POOL } from './missions.js';
 import { STORY, NAMES, PORTS, SIDE_NAME } from './story.js';
 import { mulberry } from './geo.js';
-import { portrait, speakerOf, officerFace, captainFace } from './portraits.js';
+import { portrait, speakerOf, officerFace, captainFace, CAST } from './portraits.js';
 
 // The campaign: saved progress, the stable, officers, and the flow from briefing to cruise to port.
 // The engine (main.js) plays one leg at a time; this file decides which leg, and what happens between.
@@ -40,7 +40,13 @@ export const CAMP = {
     try { const s = JSON.parse(E.store.get(KEY) || 'null'); if (!s || s.v !== 1) return ''; return s.done ? `Campaign finished for ${SIDE_NAME[s.side]}` : `${s.side ? SIDE_NAME[s.side] + ' · ' : ''}next: ${MISSIONS[ORDER[s.stage]].title}`; } catch (e) { return ''; }
   },
   save() { const st = CAMP.st; st.gold = G.gold; st.ship = G.ship; st.fit = G.fit; st.stock = { ...G.player.stock }; E.store.set(KEY, JSON.stringify(st)); },
-  nextLine() { const st = CAMP.st; return st.done ? 'The war is over' : `Next: <b>${MISSIONS[ORDER[st.stage]].title}</b><br>${CAMP.hands()} hands${st.officers.length ? ' · ' + st.officers.length + ' officer' + (st.officers.length > 1 ? 's' : '') : ''}`; },
+  nextLine() { const st = CAMP.st; return CAMP.crewFaces() + (st.done ? 'The war is over' : `Next: <b>${MISSIONS[ORDER[st.stage]].title}</b><br>${CAMP.hands()} hands`); },
+  // your officers in port, as a row of faces; each names the officer and what they do
+  crewFaces() {
+    const st = CAMP.st, ids = st.officers.map((o) => [o, officerFace(o, st.side)]).filter(([, f]) => f);
+    if (!ids.length) return '';
+    return `<div class="crewfaces">${ids.map(([o, f]) => { const who = (STORY.officers[o] || {})[st.side] || {}; return `<span title="${(who.name || CAST[f].name).replace(/"/g, '')}: ${OFFICERS[o].does}">${portrait(f, { small: true })}</span>`; }).join('')}</div>`;
+  },
 
   // ---------- starting and resuming ----------
   begin(isNew) {
@@ -60,8 +66,9 @@ export const CAMP = {
   // ---------- telling the story: a page of text over the scene ----------
   tell(page, next, extra = '') {
     G.state = 'story'; E.setMode(null);
-    const paras = (page.text || []).map((t) => `<p>${t}</p>`).join('');
-    E.showScreen(`<div class="story"><div class="eyebrow">${page.eyebrow || ''}</div><h2>${page.title || ''}</h2>${paras}${extra}
+    const paras = (page.text || []).map((t) => `<p>${t}</p>`).join(''), c = CAST[page.who];
+    const head = `<div class="eyebrow">${page.eyebrow || ''}</div><h2>${page.title || ''}</h2>`;
+    E.showScreen(`<div class="story">${c ? `<div class="head"><figure class="face">${portrait(page.who)}<figcaption>${c.name}</figcaption></figure><div>${head}</div></div>` : head}${paras}${extra}
       <div class="rowc">${typeof next === 'string' && !next.startsWith('<') ? `<button class="btn big" data-act="${next}">${page.go || 'Continue'}</button>` : next}</div></div>`, 'dim');
   },
   text(key) { const m = STORY[key]; return (m && (m[CAMP.st.side] || m.both)) || {}; },
@@ -107,6 +114,7 @@ export const CAMP = {
     const run = CAMP.run, t = CAMP.text(run.key), leg = (t.legs || [])[run.i] || {};
     const obj = typeof def.objective === 'function' ? def.objective() : def.objective;
     const faces = [...new Set([...(def.faces || []), ...def.ships.filter((d) => d.side === 1).map((d) => captainFace(d.spec.captain))].filter(Boolean))];
+    run.faces = faces;
     return { faces, eyebrow: run.legs.length > 1 ? `${MISSIONS[run.key].title} · ${run.i + 1} of ${run.legs.length}` : MISSIONS[run.key].title, title: def.title, line: obj, hook: (STORY.legs[def.title] || {})[CAMP.livery()] || (STORY.legs[def.title] || {}).both || leg.hook || '' };
   },
   onOut(s, how) {
@@ -118,7 +126,7 @@ export const CAMP = {
     if (o !== 'won') {
       G.state = 'over'; run.lost++;
       const why = o === 'lost' ? `${p.spec.name} is lost` : o === 'overrun' ? 'Your deck is taken' : (G.sc.failText || 'The day is lost');
-      return E.showScreen(`<div class="banner bad"><div class="eyebrow">${MISSIONS[run.key].title} · ${run.legs[run.i].title}</div><h1>${why}</h1>
+      return E.showScreen(`<div class="banner bad">${E.faces(run.faces)}<div class="eyebrow">${MISSIONS[run.key].title} · ${run.legs[run.i].title}</div><h1>${why}</h1>
         <div class="loot">${run.i ? 'Try this fight again in the state you entered it, or begin the cruise afresh from port.' : 'The story waits for you.'}</div>
         <div class="rowc"><button class="btn big" data-act="camp:retry">Fight again</button>${run.i ? '<button class="btn" data-act="camp:remission">Restart the cruise</button>' : ''}<button class="btn sm" data-act="camp:abandon">${CAMP.st.stage ? 'Back to port' : 'Quit to title'}</button></div></div>`);
     }
@@ -221,7 +229,8 @@ export const CAMP = {
   },
   choose() {
     const c = STORY.choice;
-    CAMP.tell({ eyebrow: 'Afterwards', title: c.title, text: c.text }, `<button class="btn big" data-act="camp:side:venice">${c.venice}</button><button class="btn big" data-act="camp:side:ottoman">${c.ottoman}</button>`, CAMP.run.summary || '');
+    const pick = (side, who) => `<div class="pick"><figure class="face">${portrait(who)}<figcaption>${CAST[who].name}</figcaption></figure><button class="btn big" data-act="camp:side:${side}">${c[side]}</button></div>`;
+    CAMP.tell({ eyebrow: 'Afterwards', title: c.title, text: c.text }, `<div class="picks">${pick('venice', 'recruiter')}${pick('ottoman', 'secretary')}</div>`, CAMP.run.summary || '');
   },
   takeSide(side) {
     const st = CAMP.st;
@@ -231,7 +240,7 @@ export const CAMP = {
   ending() {
     const st = CAMP.st, e = STORY.ending[st.side], mm = Math.floor(st.stats.time / 60);
     G.state = 'story'; E.setMode(null); E.enterHarbor(); E.snapCamera();
-    CAMP.tell({ eyebrow: e.eyebrow, title: e.title, text: e.text, go: 'Back to the title' }, 'camp:title', `<p class="note">${mm} minutes in action. ${STORY.ending.note}</p>`);
+    CAMP.tell({ who: e.who, eyebrow: e.eyebrow, title: e.title, text: e.text, go: 'Back to the title' }, 'camp:title', `<p class="note">${mm} minutes in action. ${STORY.ending.note}</p>`);
   },
 
   act(a) {
