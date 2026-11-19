@@ -5,7 +5,7 @@ import { MISSIONS, LEG_POOL } from '../../src/missions.js';
 import { NAMES } from '../../src/story.js';
 import { HULLS, shipSpec } from '../../src/fleet.js';
 import { mulberry, scatterIslands } from '../../src/geo.js';
-import { Shape, roughen, segDist } from '../../src/coast.js';
+import { Shape, roughen, segDist, makeShoal } from '../../src/coast.js';
 import { LEGS, HULLS as PLAYER_HULLS } from '../balance/legs.mjs';
 
 export { PLAYER_HULLS };
@@ -61,14 +61,14 @@ export function scene(L, seed = 1) {
   const later = laterArrivals(def, ships);
   // forts are rocks in the water as far as ships are concerned
   for (const s of [...ships, ...later.added]) if (s.fixed) land.push({ x: s.x, z: s.z, r: s.B * 0.5 + 1, hit: s.B * 0.5 + 1, fort: s.id });
-  // coasts and moles (see coast.js): the same roughened outline and the same mole path the game builds
+  // coasts, moles and shoals (see coast.js): the same roughened outlines and the same mole path the game builds
   const coasts = (def.coasts || []).map((c) => ({ shape: new Shape(roughen(c.outline, c.rough ?? 14, c.seed || 7)) }));
   const moles = (def.moles || []).map((m) => ({ path: m.path, w: m.w, platforms: m.platforms || [], blocks: m.blocks || [] }));
   const routes = {};
   for (const [name, r] of Object.entries(L.routes || {})) if (Array.isArray(r)) routes[name] = r;
   return {
     name: L.name, title: leg.title, mission: L.mission, side: L.side, seed,
-    env: def.env || 'noon', wind: def.wind, player: def.player, land, coasts, moles, shoals: def.shoals || [], zones: def.zones || [],
+    env: def.env || 'noon', wind: def.wind, player: def.player, land, coasts, moles, shoals: (def.shoals || []).map(makeShoal), zones: def.zones || [],
     current: def.current || null, ships, arrivals: later.added, laterZones: later.zones, windShifts: later.winds, routes,
     objective: typeof def.objective === 'function' ? '' : def.objective || '',
   };

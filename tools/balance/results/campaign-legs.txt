@@ -1,165 +1,165 @@
 Campaign legs, 3 runs per cell (one scene per mission except missions 2 and 5)
 
+
 m0 Home waters
   route         sloop   brig  xebec  merch galley   flag
   guns           100%   100%   100%   100%   100%   100%
   hug            100%   100%   100%   100%   100%   100%
-  prep           100%   100%   100%   100%   100%   100%
+  prep           100%   100%   100%   100%    67%   100%
   ships that can win: sloop brig xebec merch galley flag · routes that win: guns hug prep
-  !! no ship is ever in doubt; route "guns" always works; route "hug" always works; route "prep" always works
+  !! no ship is ever in doubt; route "guns" always works; route "hug" always works
 
 m1V The run
   route         sloop   brig  xebec  merch galley   flag
-  guns             0%     0%     0%     0%     0%    33%
-  kite             0%     0%     0%     0%     0%    33%
-  run            100%   100%     0%    33%     0%   100%
-  shoals         100%     0%   100%     0%     0%     0%
-  boardBrig        0%    67%    67%    67%    67%    33%
-  ships that can win: sloop brig xebec merch galley flag · routes that win: run shoals boardBrig
+  guns             0%     0%     0%    67%     0%     0%
+  kite             0%     0%     0%    33%     0%    67%
+  run              0%    33%     0%    33%     0%    67%
+  shoals          67%     0%    67%     0%     0%     0%
+  boardBrig        0%   100%    67%    67%    67%    67%
+  ships that can win: sloop brig xebec merch galley flag · routes that win: guns kite run shoals boardBrig
 
 m1O The anchorage
   route         sloop   brig  xebec  merch galley   flag
-  guns             0%     0%     0%    67%     0%    33%
-  batter           0%     0%     0%    33%     0%     0%
-  direct           0%     0%     0%    33%     0%   100%
-  eastBurn        67%    67%    33%    33%     0%   100%
-  eastBoard        0%    33%     0%    67%     0%    67%
-  ships that can win: sloop brig merch flag · routes that win: guns direct eastBurn eastBoard
+  guns             0%     0%     0%   100%     0%    67%
+  batter           0%     0%     0%     0%     0%     0%
+  direct           0%     0%     0%    33%     0%    67%
+  eastBurn         0%    33%    33%   100%     0%   100%
+  eastBoard        0%    33%    33%    33%     0%   100%
+  ships that can win: merch flag · routes that win: guns direct eastBurn eastBoard
+  !! FEWER THAN 3 SHIPS CAN WIN
 
 m2 brothers
   route         sloop   brig  xebec  merch galley   flag
   guns             0%   100%   100%   100%   100%   100%
-  hug             33%   100%   100%   100%   100%   100%
-  burn             0%   100%   100%   100%   100%   100%
-  board            0%    67%   100%    67%   100%   100%
-  prep             0%    67%    67%    67%   100%   100%
+  hug              0%   100%   100%   100%   100%   100%
+  burn            33%   100%   100%    67%    33%   100%
+  board            0%    67%   100%    33%   100%    67%
+  prep             0%   100%   100%    67%   100%   100%
   ships that can win: brig xebec merch galley flag · routes that win: guns hug burn board prep
 
 m2 leeShore
   route         sloop   brig  xebec  merch galley   flag
-  guns            33%   100%    33%   100%     0%   100%
-  hug             67%   100%    67%   100%     0%   100%
-  burn           100%   100%   100%   100%     0%   100%
+  guns            33%   100%    67%   100%     0%   100%
+  hug             33%   100%    67%   100%     0%   100%
+  burn            67%   100%    67%   100%     0%   100%
   board            0%   100%   100%   100%   100%   100%
-  prep            33%   100%   100%   100%   100%   100%
+  prep           100%   100%   100%   100%   100%   100%
   ships that can win: sloop brig xebec merch galley flag · routes that win: guns hug burn board prep
-  !! no ship is ever in doubt
+  !! no ship is ever in doubt; route "prep" always works
 
 m2 coveRaid
   route         sloop   brig  xebec  merch galley   flag
-  guns             0%   100%   100%    67%    67%   100%
-  hug              0%    67%   100%    67%     0%   100%
-  burn             0%    33%   100%    33%     0%   100%
-  board            0%     0%    67%     0%   100%   100%
-  prep             0%    33%    33%    33%    67%   100%
+  guns             0%     0%   100%    67%    33%   100%
+  hug              0%     0%   100%    67%    33%   100%
+  burn            33%    67%   100%   100%    67%   100%
+  board            0%    33%   100%    33%   100%   100%
+  prep             0%     0%   100%    67%     0%   100%
   ships that can win: brig xebec merch galley flag · routes that win: guns hug burn board prep
 
 m2 landing
   route         sloop   brig  xebec  merch galley   flag
-  guns             0%     0%    67%    67%     0%   100%
-  hug              0%    33%    33%   100%     0%   100%
-  burn            33%   100%   100%   100%     0%   100%
+  guns             0%     0%     0%   100%     0%   100%
+  hug              0%     0%     0%   100%     0%   100%
+  burn            67%    67%   100%    67%     0%   100%
   board          100%   100%   100%   100%   100%   100%
-  prep           100%   100%   100%   100%   100%   100%
+  prep            67%   100%   100%   100%   100%   100%
   ships that can win: sloop brig xebec merch galley flag · routes that win: guns hug burn board prep
-  !! no ship is ever in doubt; route "board" always works; route "prep" always works
+  !! no ship is ever in doubt; route "board" always works
 
 m2 islets
   route         sloop   brig  xebec  merch galley   flag
   guns           100%   100%   100%   100%   100%   100%
   hug            100%   100%   100%   100%   100%   100%
-  burn            67%   100%   100%   100%   100%   100%
+  burn           100%   100%   100%   100%   100%   100%
   board          100%   100%   100%   100%   100%   100%
-  prep            67%   100%   100%   100%   100%   100%
+  prep           100%   100%   100%   100%   100%   100%
   ships that can win: sloop brig xebec merch galley flag · routes that win: guns hug burn board prep
-  !! no ship is ever in doubt; route "guns" always works; route "hug" always works; route "board" always works
+  !! no ship is ever in doubt; route "guns" always works; route "hug" always works; route "burn" always works; route "board" always works; route "prep" always works
 
 m2 falseColours
   route         sloop   brig  xebec  merch galley   flag
-  guns            67%    67%   100%   100%     0%   100%
-  hug             67%    33%    67%   100%     0%   100%
-  burn            33%   100%    67%   100%     0%   100%
-  board            0%    33%     0%     0%   100%   100%
-  prep            67%    33%     0%   100%     0%    33%
-  rakeBoard        0%    33%    67%    67%    67%   100%
+  guns            33%     0%   100%   100%     0%    67%
+  hug             33%     0%   100%   100%     0%    67%
+  burn           100%    67%   100%   100%     0%   100%
+  board            0%     0%    67%    33%   100%   100%
+  prep            33%    33%    67%   100%     0%   100%
+  rakeBoard        0%     0%     0%    33%   100%   100%
   ships that can win: sloop brig xebec merch galley flag · routes that win: guns hug burn board prep rakeBoard
 
 m3 Dead calm
   route         sloop   brig  xebec  merch galley   flag
-  spring           0%   100%    33%   100%     0%   100%
-  springSlip       0%   100%   100%   100%    67%   100%
-  guns             0%     0%     0%     0%     0%    67%
-  kite             0%     0%     0%    33%     0%   100%
-  board            0%     0%     0%     0%     0%    33%
-  prep             0%     0%     0%     0%     0%     0%
+  spring           0%   100%     0%   100%     0%   100%
+  springSlip       0%    67%   100%   100%    33%   100%
+  guns             0%     0%     0%     0%     0%     0%
+  kite             0%     0%     0%     0%     0%   100%
+  board            0%     0%     0%     0%     0%     0%
+  prep             0%     0%     0%     0%     0%    67%
   bow               -      -      -      -     0%      -
-  bowSlip           -      -      -      -     0%      -
-  ships that can win: brig xebec merch galley flag · routes that win: spring springSlip guns kite
+  bowSlip           -      -      -      -    33%      -
+  ships that can win: brig xebec merch flag · routes that win: spring springSlip kite prep
 
 m4V Up the strait
   route         sloop   brig  xebec  merch galley   flag
-  middle           0%    67%     0%    67%     0%     0%
-  westBurn       100%   100%    67%   100%    33%    33%
+  middle           0%   100%     0%    67%     0%     0%
+  westBurn        67%   100%   100%   100%     0%   100%
   eastBoard        0%     0%     0%     0%    67%     0%
   silence          0%     0%     0%   100%     0%   100%
-  guardFirst      67%     0%    33%    33%     0%    67%
+  guardFirst      33%     0%     0%    67%     0%     0%
   ships that can win: sloop brig xebec merch galley flag · routes that win: middle westBurn eastBoard silence guardFirst
 
 m4O Down the strait
   route         sloop   brig  xebec  merch galley   flag
-  anchor           0%     0%     0%     0%     0%    67%
-  guns             0%     0%     0%     0%     0%    67%
-  hug              0%    67%     0%     0%     0%   100%
-  burn             0%     0%     0%     0%     0%   100%
+  anchor           0%    33%     0%     0%     0%   100%
+  guns             0%     0%     0%    67%     0%   100%
+  hug              0%     0%     0%    67%     0%   100%
+  burn             0%    33%     0%     0%     0%    67%
   galleyFirst      0%    33%     0%    33%     0%   100%
-  board            0%    67%    67%    67%    67%   100%
-  boardHeavy       0%    33%    33%    67%    67%   100%
-  ships that can win: brig xebec merch galley flag · routes that win: anchor guns hug burn galleyFirst board boardHeavy
+  board            0%    67%    67%    67%     0%   100%
+  boardHeavy       0%   100%    33%    33%     0%   100%
+  ships that can win: brig xebec merch flag · routes that win: anchor guns hug burn galleyFirst board boardHeavy
 
 m5O The mole
   route         sloop   brig  xebec  merch galley   flag
   batter           0%     0%     0%   100%     0%   100%
-  eastBurn       100%   100%   100%   100%    33%   100%
-  eastStorm        0%   100%   100%   100%   100%   100%
-  storm            0%   100%   100%   100%    67%   100%
+  eastBurn       100%   100%   100%   100%    67%   100%
+  eastStorm        0%   100%   100%   100%   100%    67%
+  storm            0%   100%   100%   100%   100%   100%
   ships that can win: sloop brig xebec merch galley flag · routes that win: batter eastBurn eastStorm storm
   !! no ship is ever in doubt
 
 m5 The harbour
   route         sloop   brig  xebec  merch galley   flag
-  guns            67%    33%    67%   100%   100%   100%
-  kite            67%   100%   100%   100%     0%   100%
-  hug             67%   100%   100%   100%    67%   100%
-  board            0%     0%     0%     0%    33%    67%
-  prep             0%   100%    67%   100%    67%   100%
-  ships that can win: sloop brig xebec merch galley flag · routes that win: guns kite hug board prep
+  guns           100%   100%    67%   100%     0%   100%
+  kite           100%   100%   100%    67%     0%   100%
+  hug            100%   100%    67%   100%     0%   100%
+  board            0%    33%    67%    33%    33%   100%
+  prep            67%   100%   100%   100%    33%    67%
+  ships that can win: sloop brig xebec merch flag · routes that win: guns kite hug board prep
 
 m5O The flagship
   route         sloop   brig  xebec  merch galley   flag
-  guns            33%   100%    67%   100%     0%   100%
-  kite             0%    67%    67%   100%     0%   100%
-  hug             33%    33%    67%   100%     0%   100%
+  guns            67%   100%    33%   100%     0%   100%
+  kite             0%    67%    33%   100%     0%   100%
+  hug             67%   100%    33%   100%     0%   100%
   burn             0%     0%    33%   100%     0%   100%
-  prep            33%   100%     0%   100%     0%   100%
-  ships that can win: brig xebec merch flag · routes that win: guns kite hug burn prep
+  prep            33%   100%     0%   100%     0%    67%
+  ships that can win: sloop brig merch flag · routes that win: guns kite hug burn prep
 
 m5V The sortie
   route         sloop   brig  xebec  merch galley   flag
-  guns             0%     0%     0%     0%     0%    67%
-  burn           100%   100%   100%   100%    33%   100%
-  board            0%   100%    67%   100%    67%   100%
-  ships that can win: sloop brig xebec merch galley flag · routes that win: guns burn board
+  guns             0%     0%     0%     0%     0%     0%
+  burn            67%   100%   100%   100%    33%   100%
+  board            0%   100%   100%   100%   100%   100%
+  ships that can win: sloop brig xebec merch galley flag · routes that win: burn board
+  !! FEWER THAN 3 ROUTES WIN
 
 m5V The flagship
   route         sloop   brig  xebec  merch galley   flag
-  guns            67%   100%   100%   100%   100%   100%
+  guns           100%   100%    33%   100%    67%   100%
   kite           100%   100%   100%   100%     0%   100%
-  hug             67%   100%   100%   100%    33%   100%
+  hug            100%   100%    33%   100%    67%   100%
   burn           100%   100%   100%   100%     0%   100%
-  prep            67%   100%    67%   100%     0%   100%
+  prep            33%   100%     0%   100%     0%   100%
   ships that can win: sloop brig xebec merch galley flag · routes that win: guns kite hug burn prep
-  !! no ship is ever in doubt
 
-The straits and Candia legs (m4, m5) were re-run after the two places were rebuilt as coastlines (see docs/campaign.md, "Places").
-
-17 legs, 0 failing the three-ways rule
+17 legs, 2 failing the three-ways rule

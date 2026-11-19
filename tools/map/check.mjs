@@ -16,7 +16,7 @@ export function waterGrid(sc, B, D, box, land) {
   const free = new Uint8Array(nx * nz), clear = B;
   for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
     const x = box.x0 + i * CELL, z = box.z0 + j * CELL;
-    free[j * nx + i] = land.at(i, j) < -clear && !sc.shoals.some((s) => D > s.depth && Math.hypot(x - s.x, z - s.z) < s.r + clear * 0.5) ? 1 : 0;
+    free[j * nx + i] = land.at(i, j) < -clear && !sc.shoals.some((s) => D > s.depth && s.at(x, z) > -clear * 0.5) ? 1 : 0;
   }
   const cell = (p) => [Math.round((p.x - box.x0) / CELL), Math.round((p.z - box.z0) / CELL)];
   return { nx, nz, free, cell, at: (i, j) => i >= 0 && j >= 0 && i < nx && j < nz && free[j * nx + i] === 1 };
@@ -61,7 +61,7 @@ export function bounds(sc) {
   const xs = [sc.player.x], zs = [sc.player.z];
   const add = (x, z, r = 0) => { xs.push(x - r, x + r); zs.push(z - r, z + r); };
   for (const l of sc.land) add(l.x, l.z, l.r);
-  for (const s of sc.shoals) add(s.x, s.z, s.r);
+  for (const s of sc.shoals) { add(s.box[0], s.box[1]); add(s.box[2], s.box[3]); }
   for (const m of sc.moles) for (const [x, z] of m.path) add(x, z, m.w);
   for (const z of [...sc.zones, ...sc.laterZones]) add(z.x, z.z, z.r);
   for (const s of [...sc.ships, ...sc.arrivals]) { add(s.x, s.z, s.L); if (s.o.goTo) add(s.o.goTo[0], s.o.goTo[1]); }
@@ -74,7 +74,7 @@ export function check(sc) {
   const out = [], box = bounds(sc), depth = landDepth(sc), land = landGrid(depth, box);
   const say = (level, msg, at) => out.push({ level, msg, ...(at ? { at: [Math.round(at.x), Math.round(at.z)] } : {}) });
   const onLand = (p, pad = 0) => depth(p.x, p.z) > -pad;
-  const shoalFor = (p, D) => sc.shoals.find((s) => D > s.depth && dist(p, s) < s.r);
+  const shoalFor = (p, D) => sc.shoals.find((s) => D > s.depth && s.at(p.x, p.z) > 0);
   const hulls = PLAYER_HULLS.map(hullStats);
   const label = (s) => `${s.id} (${s.cls}${s.t ? `, arrives at ${s.t}s` : ''})`;
 

@@ -182,11 +182,11 @@ export function makeCoast(def) {
 
 // Circles inscribed along the shore, every few yards: together they are the edge a ship runs into.
 // Each is the largest circle that touches the shore at that point and stays on land.
-function shorePieces(shape, R) {
+function shorePieces(shape, R, far = 1150) {
   const out = [], p = shape.pts;
   for (let i = 0; i < shape.n; i++) {
     const a = p[i];
-    if (Math.hypot(a[0], a[1]) > 1150) continue;
+    if (Math.hypot(a[0], a[1]) > far) continue;
     const prev = p[(i - 1 + shape.n) % shape.n], next = p[(i + 1) % shape.n], tx = next[0] - prev[0], tz = next[1] - prev[1], tl = Math.hypot(tx, tz) || 1;
     const ix = -tz / tl, iz = tx / tl; // inward (the outline runs anticlockwise)
     let lo = 1.5, hi = R;
@@ -226,4 +226,42 @@ export function segDist(path, x, z) {
     best = Math.min(best, Math.hypot(a[0] + dx * t - x, a[1] + dz * t - z));
   }
   return best;
+}
+
+// ---------- a shoal ----------
+// A bank or a reef drawn as a shape, the way a coast is: def { outline: [[x, z, rough?], ...], depth, rough?, seed? }.
+// The outline is roughened into a ragged edge; a ship that draws more than `depth` sticks anywhere inside it.
+// A depth under 2 is a reef, which grounds anything. Returns plain numbers and the shape, so tools can use it:
+//   at(x, z): how far inside the bank a point is (negative outside), cheap far from it
+//   x, z: the point furthest inside, where the soundings are written; inner: how far inside that is
+//   pieces: circles inscribed along the edge, which the AI steers round as it does a coast
+export function makeShoal(def) {
+  if (def.shape) return def; // already made
+  if (!def.outline) throw new Error('a shoal is a shape: give it an outline (see makeShoal in coast.js)');
+  const o = def.outline, seed = def.seed ?? (Math.abs(Math.round(o[0][0] * 7 + o[0][1] * 13)) % 9973) + 1;
+  const shape = new Shape(roughen(o, def.rough ?? 8, seed, 6)), [x0, z0, x1, z1] = shape.box;
+  const at = (x, z) => {
+    const ox = Math.max(x0 - x, x - x1, 0), oz = Math.max(z0 - z, z - z1, 0);
+    return ox || oz ? Math.min(-Math.hypot(ox, oz), shape.sdf(x, z)) : shape.sdf(x, z);
+  };
+  let inner = -1e9, lx = (x0 + x1) / 2, lz = (z0 + z1) / 2;
+  const st = Math.max(3, Math.min(x1 - x0, z1 - z0) / 14);
+  for (let x = x0 + st / 2; x < x1; x += st) for (let z = z0 + st / 2; z < z1; z += st) { const d = shape.sdf(x, z); if (d > inner) { inner = d; lx = x; lz = z; } }
+  return { depth: def.depth, shape, box: shape.box, at, x: lx, z: lz, inner, area: Math.abs(area(shape.pts)), pieces: shorePieces(shape, 30, 1e9), name: def.name };
+}
+// an outline for a small rock or bank: centre, half-length, half-width, and the heading its length lies along
+// (0 runs north-south, as a ship's heading does). The roughening makes it ragged; author anything bigger by hand.
+export function oval(x, z, a, b, ang = 0, n = 9) {
+  const c = Math.cos(ang), s = Math.sin(ang);
+  return Array.from({ length: n }, (_, i) => { const t = (i / n) * Math.PI * 2, u = Math.cos(t) * a, v = Math.sin(t) * b; return [Math.round(x + u * s + v * c), Math.round(z + u * c - v * s)]; });
+}
+// an outline round a spine, for a spit, a bar or a reef running off a point: [[x, z, half-width], ...] from one
+// end to the other, with rounded ends. Most banks are this: a line the sea has laid down, wider in places.
+export function ribbon(spine) {
+  const n = spine.length, L = [], R = [], cap = (p, ux, uz, w, from) => { const out = []; for (let k = 1; k < 4; k++) { const a = from + (k / 4) * Math.PI, c = Math.cos(a), s = Math.sin(a); out.push([Math.round(p[0] + (ux * c - uz * s) * w), Math.round(p[1] + (uz * c + ux * s) * w)]); } return out.reverse(); };
+  const dir = (i) => { const a = spine[Math.max(0, i - 1)], b = spine[Math.min(n - 1, i + 1)], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [(b[0] - a[0]) / l, (b[1] - a[1]) / l]; };
+  for (let i = 0; i < n; i++) { const [x, z, w] = spine[i], [ux, uz] = dir(i); L.push([Math.round(x - uz * w), Math.round(z + ux * w)]); R.push([Math.round(x + uz * w), Math.round(z - ux * w)]); }
+  const [ex, ez] = dir(n - 1), [sx, sz] = dir(0);
+  // the caps turn from the left side round the end to the right side
+  return [...L, ...cap(spine[n - 1], -ez, ex, spine[n - 1][2], -Math.PI), ...R.reverse(), ...cap(spine[0], ez, -ex, spine[0][2], -Math.PI)];
 }

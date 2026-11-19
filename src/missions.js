@@ -1,10 +1,11 @@
 import { shipSpec } from './fleet.js';
 import { PLACES, narrowsCastles, KOULES, MOLE_HEAD, MOUTH, BASIN } from './maps.js';
+import { ribbon } from './coast.js';
 
 // Every campaign mission, as data the engine can build. Most missions are one scene that changes as it
 // goes (events on a clock, ships that wake, arrive or run); the pirate hunt and the finale are cruises of
 // several fights with a pause between. A leg is one scene. `build(c)` returns a scenario:
-//   env, wind { dir, str, steady }, islands [{ x, z, r }], seedIslands [seed, n], shoals [{ x, z, r, depth }],
+//   env, wind { dir, str, steady }, islands [{ x, z, r }], seedIslands [seed, n], shoals [{ outline, depth, rough? }] (see makeShoal in coast.js),
 //   current(x, z) -> [vx, vz], zones [{ name, x, z, r }], player { x, z, h, speed },
 //   ships [{ id, spec, side, x, z, h, o }], objective, tip, check(S) -> 'won' | 'failed' | null, events [{ t, fn(S) }]
 // Headings: 0 is +z ("north"), PI/2 is +x ("east"). wind.dir is where the wind blows to.
@@ -40,9 +41,13 @@ const theRun = {
     return {
       env: 'golden', wind: { dir: PI / 2 - 0.5, str: 1 },
       ...PLACES.candia({ burning: false, shoals: [
-        { x: 520, z: -300, r: 140, depth: 2.8 }, { x: 560, z: -60, r: 165, depth: 2.8 }, { x: 410, z: 130, r: 120, depth: 2.8 }, { x: 225, z: 70, r: 92, depth: 2.8 }, // the banks east of the harbour, the last of them off the head of the mole
-        { x: 610, z: -190, r: 30, depth: 1.4 }, { x: 480, z: 20, r: 28, depth: 1.4 }, { x: 330, z: -10, r: 24, depth: 1.4 }, // reefs among them
-        { x: -420, z: -90, r: 110, depth: 3.5 }, // a deeper bank to the west
+        // the banks east of the harbour: one broad bank running out from under the eastern walls and curling west to the head of the mole
+        { outline: [[132, 92], [150, 30], [200, -10], [255, -15], [300, 20], [350, 10], [392, -30], [400, -110], [392, -190], [375, -280], [400, -380], [450, -430], [520, -445], [600, -420],
+          [655, -340], [680, -240], [720, -130], [725, -40], [700, 50], [640, 110], [560, 170], [500, 230], [420, 262], [340, 250], [290, 190], [240, 155], [180, 140]], depth: 2.8, rough: 14 },
+        { outline: ribbon([[585, -215, 10], [610, -190, 16], [640, -172, 10]]), depth: 1.4 }, // reefs among them
+        { outline: ribbon([[460, 0, 9], [480, 20, 15], [505, 32, 8]]), depth: 1.4 },
+        { outline: ribbon([[312, -24, 8], [332, -8, 13], [350, 8, 7]]), depth: 1.4 },
+        { outline: [[-540, -60], [-500, -170], [-420, -205], [-330, -170], [-305, -90], [-340, -10], [-430, 25], [-510, 0]], depth: 3.5, rough: 14 }, // a deeper bank to the west
       ] }),
       player: { x: 330, z: -860, h: -0.3, speed: 8 },
       zones: [{ name: 'harbour', x: 36, z: 150, r: 60 }], // the harbour mouth, between the Koules and the mole battery
@@ -160,7 +165,12 @@ const POOL = {
     title: 'Among the islets',
     build: (c) => ({
       env: 'overcast', wind: { dir: c.rnd() * 6, str: 1 }, seedIslands: [5150, 9],
-      shoals: [{ x: -150, z: 200, r: 80, depth: 2.6 }, { x: 180, z: 330, r: 90, depth: 2.6 }, { x: 20, z: 480, r: 70, depth: 2.6 }, { x: -260, z: 420, r: 70, depth: 2.6 }],
+      shoals: [ // banks trailing off the islets
+        { outline: ribbon([[-215, 150, 40], [-150, 200, 62], [-90, 250, 38]]), depth: 2.6 },
+        { outline: ribbon([[110, 300, 45], [185, 325, 70], [255, 370, 40]]), depth: 2.6 },
+        { outline: ribbon([[-40, 500, 35], [20, 480, 55], [80, 470, 35]]), depth: 2.6 },
+        { outline: ribbon([[-300, 360, 35], [-260, 420, 55], [-240, 490, 30]]), depth: 2.6 },
+      ],
       player: { x: 0, z: -350, h: 0, speed: 7 },
       ships: [{ id: 'a', spec: pirate('sloop', 'Scavenger II', 'line', { captain: 'Mags’s daughter', ai: { range: 130 } }), side: 1, x: 40, z: 330, h: PI }],
       objective: 'A sloop that knows every rock here: run her down among the islets',
@@ -328,7 +338,10 @@ const flagDuel = (attacker) => ({
   title: 'The flagship',
   build(c) {
     return {
-      env: 'storm', wind: { dir: PI / 2, str: 1 }, ...PLACES.candia({ koules: true, shoals: [{ x: -300, z: 10, r: 70, depth: 3.5 }, { x: 330, z: -20, r: 80, depth: 3.5 }] }),
+      env: 'storm', wind: { dir: PI / 2, str: 1 }, ...PLACES.candia({ koules: true, shoals: [ // banks either side of the approach
+        { outline: [[-370, 40], [-350, -40], [-290, -62], [-235, -30], [-230, 40], [-280, 80]], depth: 3.5, rough: 12 },
+        { outline: [[250, -50], [300, -100], [380, -80], [410, -10], [370, 50], [290, 45]], depth: 3.5, rough: 12 },
+      ] }),
       player: { x: -40, z: -440, h: 0, speed: 6 },
       ships: [
         { id: 'flag', spec: shipSpec('flagship', c.foe, c.names.flag, 'line'), side: 1, x: 60, z: -20, h: PI, o: { crew: 0.7, hull: 0.65 } },
