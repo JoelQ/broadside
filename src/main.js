@@ -627,7 +627,7 @@ function startScenario(def, c) {
   showLegCard(c.card(def));
 }
 // the faces of whoever you are about to fight, above the card
-const faces = (ids) => (ids && ids.length ? `<div class="faces">${ids.map((id) => portrait(id)).join('')}</div>` : '');
+const faces = (ids, cls = '') => (ids && ids.length ? `<div class="faces ${cls}">${ids.map((id) => portrait(id)).join('')}</div>` : '');
 function showLegCard(h) {
   setMode(null); $('bars').classList.add('on');
   showScreen(`<div class="lower">${faces(h.faces)}<div class="eyebrow">${h.eyebrow}</div><h1>${h.title}</h1><div class="line">${h.line}</div>
@@ -1223,7 +1223,7 @@ function showResult() {
   const e = G.sc.foe, es = e.spec;
   if (o === 'lost' || o === 'overrun') {
     G.state = 'over';
-    return showScreen(`<div class="banner bad"><div class="eyebrow">${o === 'lost' ? 'Sunk by' : 'Boarded and taken by'} ${es.captain}</div><h1>${p.spec.name} lost</h1>
+    return showScreen(`<div class="banner bad">${faces([captainFace(es.captain)].filter(Boolean))}<div class="eyebrow">${o === 'lost' ? 'Sunk by' : 'Boarded and taken by'} ${es.captain}</div><h1>${p.spec.name} lost</h1>
       <div class="rowc"><button class="btn big" data-act="retry">Fight again</button><button class="btn sm" data-act="restart">New voyage</button></div></div>`);
   }
   G.state = 'result';
@@ -1239,7 +1239,7 @@ function showResult() {
   p.fire = 0; p.hull = Math.max(p.hull, p.hullMax * 0.35); p.sails = Math.max(p.sails, p.sailsMax * 0.5);
   sfx.coin();
   const last = G.level + 1 >= ENEMIES.length;
-  showScreen(`<div class="banner"><div class="eyebrow">${es.captain} is finished</div><h1>${es.name} ${cap ? 'taken' : o === 'struck' ? 'wrecked' : 'sunk'}</h1>
+  showScreen(`<div class="banner">${faces([captainFace(es.captain)].filter(Boolean), 'beaten')}<div class="eyebrow">${es.captain} is finished</div><h1>${es.name} ${cap ? 'taken' : o === 'struck' ? 'wrecked' : 'sunk'}</h1>
     <div class="gold">+${gold} g</div>${loot}
     <div class="rowc"><button class="btn big" data-act="${last ? 'final' : 'port'}">${last ? 'Sail home' : 'Make port'}</button></div></div>`, 'clear');
 }
@@ -1600,7 +1600,7 @@ G.step = (dt, n = 1) => { for (let i = 0; i < n; i++) update(dt); renderer.rende
 G.newAI = newAI;
 G.tick = (dt, n = 1) => { for (let i = 0; i < n; i++) update(dt); };
 G.world = world; G.view = { renderer, scene, camera };
-G.api = { aiApi, nearest, dropArcs, startScenario, showLegCard, showTitle: () => showTitle(), clearShips, world, strengthOf: (x) => strength(x), scene, restartSkirmish: () => restart(true),  addShip, beginScenario, beginBattle, shipOut, setTarget, foesOf, sep, relSpeed, hideScreen, showScreen, setMode, enterHarbor, snapCamera, buildPlayer, moor, playerSpec, renderPort: () => renderPort(), sfx, fx, floater, store, harbor, cutGrapples, hullSpec, updateAI, reach, inArc, hasGauge, strength: (s) => strength(s), rebuild: () => { if (G.player.arcs) dropArcs(G.player); scene.remove(G.player.group); G.player = null; buildPlayer(true); }, fire, act, tap, keys, startBoarding, boardSwivel, endBattle, toast, showPort: () => showPort(), prize };
+G.api = { faces, aiApi, nearest, dropArcs, startScenario, showLegCard, showTitle: () => showTitle(), clearShips, world, strengthOf: (x) => strength(x), scene, restartSkirmish: () => restart(true),  addShip, beginScenario, beginBattle, shipOut, setTarget, foesOf, sep, relSpeed, hideScreen, showScreen, setMode, enterHarbor, snapCamera, buildPlayer, moor, playerSpec, renderPort: () => renderPort(), sfx, fx, floater, store, harbor, cutGrapples, hullSpec, updateAI, reach, inArc, hasGauge, strength: (s) => strength(s), rebuild: () => { if (G.player.arcs) dropArcs(G.player); scene.remove(G.player.group); G.player = null; buildPlayer(true); }, fire, act, tap, keys, startBoarding, boardSwivel, endBattle, toast, showPort: () => showPort(), prize };
 CAMP.init(G, G.api); G.CAMP = CAMP;
 if (__PLAYTEST__) PT.install(G, G.api, CAMP);
 showTitle();
