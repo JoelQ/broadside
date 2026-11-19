@@ -277,10 +277,10 @@ Where the game differs from the proposal above, and why.
   in the finale is settled with guns.
 - **Touch.** New actions have buttons, but the campaign was built and tuned for the keyboard.
 
-### Places: the Dardanelles and Candia
+### Places: the Dardanelles, Candia and the coasts
 
-The straits and the finale are set in real places, drawn as land rather than as rows of round
-islands. Both live in `src/maps.js` and are shared by every leg set there.
+The straits, the finale, the powder run and three of the pirate fights are set in places drawn as
+land rather than as rows of round islands. They all live in `src/maps.js` and are shared by every leg set there.
 
 - **The Dardanelles.** A winding channel with the Narrows above the middle of the chart, about 300
   yards across, Kilitbahir on one shore and the Sultan's castle with the town of Çanakkale on the
@@ -304,6 +304,24 @@ islands. Both live in `src/maps.js` and are shared by every leg set there.
   zigzag up to the bastions from the camps on both flanks. The assault on the mole battery is made
   from outside; its dead ground is along the outside of its own mole. The harbour melee is fought
   inside the moles, and the moles stop shot as well as ships.
+
+- **Off Candia (the run).** The Venetian run ends at Candia itself: the same harbour as the
+  finale, earlier in the siege, with only a fire or two alight. The patrol lies off the harbour just
+  out of the Koules' reach (the Koules and the mole battery are scenery in this leg). East of the
+  harbour, under the sea walls, banks run out from the shore with reefs among them: the shoal
+  channel a small ship can use and a deep one cannot. Win by getting inside the moles.
+- **The anchorage.** A cove down the Cretan coast. The western headland runs out to the south-east
+  and its tip carries the small battery, a gorge wall and a watch tower on the ridge; it looks
+  south-west, the obvious approach. A beach at the head of the cove with a hamlet, a chapel, a jetty
+  and lighters. The eastern point is low, with a reef off it: the way in round the battery's back.
+- **The careenage.** A narrow inlet between steep headlands, rocks off both heads, a shelving beach
+  at its head. The pirates' consort is hove down on the beach for scraping, with their tents and a
+  cooking fire beside her; a lookout tower on the eastern head.
+- **A lee shore.** One long line of cliffs down the east of the chart, the gale blowing straight onto
+  it. The shore bends back into a bight between two headlands, with reefs off both and banks under
+  the cliff, so a ship embayed there must claw out past a headland.
+- **The landing.** A bay on an island's south coast with a fishing village above the beach. The
+  pirate lies at anchor off it, her boats drawn up on the sand and a house already burning.
 
 How a place is made (the same recipe will do for the other scenarios):
 

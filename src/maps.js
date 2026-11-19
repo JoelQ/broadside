@@ -1,6 +1,7 @@
 import { shipSpec } from './fleet.js';
 import { buildFortModel } from './fort.js';
-import { works, wall, tower, town, minaret, dome, campanile, mole, lantern, arsenal, yard, lighters, bastion, smoke, blaze, palazzo, basilica } from './works.js';
+import { works, wall, tower, town, minaret, dome, campanile, mole, lantern, arsenal, yard, lighters, bastion, smoke, blaze, palazzo, basilica, careened, tents } from './works.js';
+import { rowboat, barrel, crate } from './harbor.js';
 import { mulberry } from './geo.js';
 import { smoothPath } from './coast.js';
 import { shade } from './geo.js';
@@ -99,7 +100,8 @@ const strait = (opts = {}) => ({
 // for more than twenty years. The harbour itself was small and man-made: a basin closed by two moles, the
 // long western one ending in the Koules (Rocca a Mare), the eastern in a battery, with the arsenal's vaulted
 // sheds along the inner quay. Mount Juktas stands behind the city and Dia lies out to sea. On the day of
-// the assault the city is burning and the Ottoman trenches are dug right up to the bastions.
+// the assault the city is burning and the Ottoman trenches are dug right up to the bastions; earlier in the
+// siege (burning: false) only a fire or two is alight.
 const CITY_SHORE = [[-1700, 150, 0], [-1300, 160], [-1060, 190], [-930, 245, 10], [-860, 330], [-770, 392], [-700, 405, 2], [-560, 395, 4], [-430, 392, 2], [-330, 405, 0], [-270, 420, 0], [-210, 445, 0], [-60, 452, 0], [90, 450, 0], [230, 438, 0], [300, 410, 0], [420, 396, 2], [560, 400, 4], [700, 408, 2], [800, 392], [900, 322], [975, 240, 10], [1150, 180], [1700, 140, 0]];
 // the trace of the walls, from the sea at the west round the hill to the sea at the east
 const RING = [[-700, 402], [-770, 610], [-700, 830], [-500, 1010], [-200, 1090], [200, 1090], [500, 1010], [700, 830], [770, 610], [700, 404]];
@@ -167,7 +169,8 @@ const candia = (opts = {}) => ({
       dome(B, 300, g(300, 700), 700, 13); dome(B, -120, g(-120, 900), 900, 11);
       for (const [x, z, h] of [[-420, 620, 34], [380, 600, 36], [200, 860, 32], [-200, 640, 30], [520, 760, 28], [-520, 820, 28], [120, 980, 30]]) campanile(B, x, g(x, z), z, h, undefined, 1.6);
       // the siege: houses burning inside the walls, Ottoman trenches zigzagging up to the bastions, batteries and the camp
-      for (const [x, z] of [[-560, 760], [-430, 930], [480, 900], [-150, 1020], [610, 700], [-640, 650], [300, 1000]]) blaze(B, G, x, g(x, z), z, 2.2, rnd);
+      const fires = opts.burning === false ? [[-430, 930], [300, 1000]] : [[-560, 760], [-430, 930], [480, 900], [-150, 1020], [610, 700], [-640, 650], [300, 1000]];
+      for (const [x, z] of fires) blaze(B, G, x, g(x, z), z, 2.2, rnd);
       for (const side of [-1, 1]) for (let i = 0; i < 4; i++) {
         const x0 = side * (900 + i * 60), z0 = 560 + i * 170, pts = [];
         for (let k = 0; k < 6; k++) pts.push([x0 - side * k * 22 + (k % 2 ? side * 26 : -side * 26), z0 + k * 18]);
@@ -177,10 +180,112 @@ const candia = (opts = {}) => ({
       for (let i = 0; i < 40; i++) { const x = (i % 2 ? 1 : -1) * (1150 + ((i * 37) % 160)), z = 700 + ((i * 53) % 300), y = g(x, z); if (y > 2) B.cyl(0, 4.4, 4.6, i % 4 ? 0xe8dcc0 : 0xb3221a, x, y + 2.2, z, 8); }
       if (opts.extra) opts.extra(B, G, g);
     }, true);
-    for (const [x, z, sd] of [[-560, 760, 1], [-430, 930, 2], [480, 900, 3], [-150, 1020, 4], [610, 700, 5], [300, 1000, 6]]) smoke(group, x, world.ground(x, z) + 14, z, 150, [0.35, 0.12], sd);
+    for (const [x, z, sd] of opts.burning === false ? [[-430, 930, 2], [300, 1000, 6]] : [[-560, 760, 1], [-430, 930, 2], [480, 900, 3], [-150, 1020, 4], [610, 700, 5], [300, 1000, 6]]) smoke(group, x, world.ground(x, z) + 14, z, 150, [0.35, 0.12], sd);
     return group;
   },
 });
 
-export const PLACES = { strait, candia };
+// ---------- the anchorage ----------
+// A cove on the Cretan coast down from Candia, where a Venetian powder ship waits for dark. The western
+// headland runs out to the south-east and shelters the cove from the obvious approach; a small battery on
+// its tip looks south-west, the way a ship from Chania would come. Inside, a beach at the head of the cove
+// with a hamlet and a chapel above it, and a jetty the lighters use. The eastern point is low, with a reef off it.
+const COVE_SHORE = [[-1700, 330, 0], [-1100, 300], [-760, 255], [-520, 220], [-360, 192], [-250, 166], [-170, 146], [-112, 150, 5], [-76, 182, 3], // the western headland, out to its tip
+  [-56, 232], [-64, 292], [-46, 360], [-8, 418, 5], [60, 446, 3], [130, 440, 3], // its inner side, round to the beach at the head of the cove
+  [185, 402], [218, 346], [248, 292], [276, 258, 6], // the eastern side, down to the low point
+  [340, 266], [430, 300], [570, 330], [770, 342], [1000, 322], [1300, 300], [1700, 310, 0]];
+const anchorage = (opts = {}) => ({
+  coasts: [{ outline: [...COVE_SHORE, [1700, 1800, 0], [-1700, 1800, 0]], seed: 81, H: 58, rise: 80, beach: 7, scale: 140, dry: 0.7, trees: 0.6,
+    shape: flatten(70, 500, 70, 40, 4), clear: (x, z) => Math.abs(x - 70) < 95 && z > 430 && z < 560 }],
+  shoals: [
+    { x: 312, z: 222, r: 24, depth: 1.4 }, // the reef off the eastern point
+    { x: 70, z: 412, r: 46, depth: 2.2 }, // the shallows off the beach
+    ...(opts.shoals || []),
+  ],
+  works: (world) => works((B, G) => {
+    const g = (x, z) => world.ground(x, z);
+    // the battery's gorge wall and a watch tower on the ridge above it
+    wall(B, g, [[-122, 222], [-118, 244], [-92, 252], [-70, 240]], { h: 3.2, w: 2.2, towers: false });
+    tower(B, g, -196, 248, 4.5, 11);
+    // the hamlet above the beach, its chapel, and the jetty the lighters use
+    town(B, G, g, { seed: 82, n: 16, x: 70, z: 500, w: 150, d: 80, glass: 0x7d6a48 });
+    dome(B, 150, g(150, 478), 478, 4.2, 0xf2ece0, 0x6f8fb0);
+    wall(B, g, [[96, 452], [96, 410]], { h: 1.4, w: 5, towers: false, merlons: false, col: 0xa89a7a });
+    lighters(B, 96, 384, PI, 2, 5);
+    rowboat(B, 30, 442, 0.3, 0x5d4630); rowboat(B, 44, 446, -0.2, 0x8a3a2a);
+  }),
+});
+
+// ---------- the careenage ----------
+// A pirate's inlet: a narrow arm of water between steep headlands, open to the south and bending a little,
+// with a beach at its head. The xebec lies at anchor in the middle of it; on the beach her consort is hove
+// down on her side for scraping, with the crew's tents and cooking fire beside her.
+const INLET_SHORE = [[-1700, 270, 0], [-900, 240], [-600, 200], [-400, 150], [-260, 108], [-170, 92], [-118, 118, 5], // the western headland
+  [-96, 182], [-88, 250], [-72, 320], [-42, 378], [0, 414, 3], [50, 424, 3], [98, 408, 3], // the inlet's western side, to the beach at its head
+  [124, 350], [136, 282], [152, 212], [178, 150, 5], // its eastern side
+  [242, 110], [350, 116], [520, 166], [800, 226], [1200, 258], [1700, 268, 0]];
+const careenage = (opts = {}) => ({
+  coasts: [{ outline: [...INLET_SHORE, [1700, 1800, 0], [-1700, 1800, 0]], seed: 91, H: 64, rise: 45, beach: 5, scale: 110, dry: 0.75, trees: 0.4,
+    shape: flatten(50, 450, 60, 26, 2.6, 30), clear: (x, z) => Math.abs(x - 50) < 80 && z > 400 && z < 500 }],
+  shoals: [
+    { x: -150, z: 70, r: 26, depth: 1.4 }, { x: 205, z: 108, r: 22, depth: 1.4 }, // rocks off the heads
+    { x: 48, z: 392, r: 34, depth: 2.2 }, // the shelving beach
+    ...(opts.shoals || []),
+  ],
+  works: (world) => {
+    const group = works((B, G) => {
+      const g = (x, z) => world.ground(x, z), rnd = mulberry(91);
+      careened(B, 24, 420, 1.35, 0.55);
+      tents(B, g, 62, 448, 5, rnd);
+      for (let i = 0; i < 6; i++) barrel(B, 84 + (i % 3) * 1.6, g(84, 440), 438 + Math.floor(i / 3) * 1.6);
+      crate(B, 90, g(90, 444), 444, 1.5, 0.3); crate(B, 91, g(90, 444) + 1.5, 444.3, 1.1, 0.8);
+      rowboat(B, 70, 422, 0.4, 0x6a3a26); rowboat(B, 6, 416, -0.5, 0x3c3a36);
+      tower(B, g, 170, 168, 3.6, 8, 0x9a8a6a); // a lookout on the eastern head
+    });
+    smoke(group, 48, world.ground(48, 454) + 1, 454, 45, [0.3, 0.1], 9, 0.25); // the cooking fire
+    return group;
+  },
+});
+
+// ---------- a lee shore ----------
+// One long line of cliffs down the east of the chart, with the gale blowing straight onto it. The shore bends
+// back into a bight between two headlands, so a ship embayed there must claw out past one of them; reefs lie off
+// both, and banks along the foot of the cliff. A ruined watch tower stands on the northern head.
+const CLIFF = [[470, -1700, 0], [430, -1100], [380, -760], [300, -560], [236, -478, 6], [262, -420], [320, -330], [372, -200], [398, -60], [400, 70], [380, 200], [330, 330], [262, 420], [214, 474, 6],
+  [258, 540], [330, 640], [390, 820], [430, 1100], [470, 1700, 0]];
+const leeShore = () => ({
+  coasts: [{ outline: [...CLIFF, [1800, 1700, 0], [1800, -1700, 0]], seed: 71, rough: 18, H: 72, rise: 22, beach: 1.5, scale: 80, dry: 0.5, trees: 0.25 }],
+  shoals: [
+    { x: 196, z: -486, r: 30, depth: 1.4 }, { x: 172, z: 486, r: 28, depth: 1.4 }, // reefs off the headlands
+    { x: 300, z: -230, r: 55, depth: 3.2 }, { x: 330, z: 30, r: 60, depth: 3.2 }, { x: 300, z: 260, r: 55, depth: 3.2 }, // banks under the cliff
+  ],
+  works: (world) => works((B) => {
+    const g = (x, z) => world.ground(x, z);
+    tower(B, g, 262, 492, 4, 9, 0x9a8f7a); B.box(5, 3, 2, 0x9a8f7a, 270, g(270, 498) + 1, 498, 0, 0.4); // the ruined tower
+  }),
+});
+
+// ---------- the landing ----------
+// A bay on an island's south coast, with a fishing village above the beach. The pirate lies at anchor off it;
+// her boats are drawn up on the sand and a house is already burning.
+const BAY_SHORE = [[-1700, 330, 0], [-900, 300], [-560, 262], [-380, 212], [-300, 182, 8], [-240, 214], [-150, 262], [-60, 290, 4], [40, 300, 3], [130, 292, 4], [210, 270], [280, 236], [332, 200, 8],
+  [420, 230], [650, 280], [1000, 300], [1700, 320, 0]];
+const landing = () => ({
+  coasts: [{ outline: [...BAY_SHORE, [1700, 1800, 0], [-1700, 1800, 0]], seed: 61, H: 52, rise: 110, beach: 12, scale: 160, dry: 0.6, trees: 0.7,
+    shape: flatten(30, 380, 120, 50, 4), clear: (x, z) => Math.abs(x - 30) < 140 && z > 300 && z < 450 }],
+  shoals: [{ x: -300, z: 140, r: 30, depth: 1.4 }, { x: 340, z: 160, r: 28, depth: 1.4 }], // rocks off the points
+  works: (world) => {
+    const group = works((B, G) => {
+      const g = (x, z) => world.ground(x, z), rnd = mulberry(61);
+      town(B, G, g, { seed: 62, n: 34, x: 30, z: 385, w: 230, d: 90, glass: 0xffd98a });
+      campanile(B, 90, g(90, 410), 410, 16);
+      for (const [x, ry] of [[-30, 0.2], [-14, -0.3], [8, 0.1]]) rowboat(B, x, 298, ry, 0x4a3a2a); // her boats, drawn up on the sand
+      blaze(B, G, -40, g(-40, 372), 372, 1.6, rnd);
+    }, true);
+    smoke(group, -40, world.ground(-40, 372) + 6, 372, 90, [-0.3, 0.4], 7, 0.6);
+    return group;
+  },
+});
+
+export const PLACES = { strait, candia, anchorage, careenage, leeShore, landing };
 export { narrowsCastles };

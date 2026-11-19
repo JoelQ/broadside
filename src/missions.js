@@ -30,25 +30,26 @@ const home = {
 };
 
 // ---------- 1. Powder for Candia ----------
-const candiaCoast = (z) => [-30, 190, 410, 630].map((x, i) => ({ x, z: z + (i % 2) * 30, r: 135 }));
-// Venice: one run from the open sea to the harbour. A galliot keeps the picket; the patrol lies off the harbour
-// and does not stir until it hears guns or sees you. Shoal banks inshore, and reefs among them that ground anything.
+// Venice: one run from the open sea into Candia harbour (see maps.js). A galliot keeps the picket; the patrol
+// lies off the harbour, just out of reach of the Koules, and does not stir until it hears guns or sees you.
+// East of the harbour, under the sea walls, banks run out from the shore with reefs among them that ground anything.
 const theRun = {
   title: 'The run',
   build(c) {
-    const near = (S, id, r) => Math.hypot(S.p.pos.x - S.by[id].pos.x, S.p.pos.z - S.by[id].pos.z) < r, patrol = [70, 190];
+    const near = (S, id, r) => Math.hypot(S.p.pos.x - S.by[id].pos.x, S.p.pos.z - S.by[id].pos.z) < r, patrol = [40, -200];
     return {
-      env: 'golden', wind: { dir: PI / 2 - 0.5, str: 1 }, islands: candiaCoast(800),
-      shoals: [
-        { x: 500, z: 50, r: 160, depth: 2.8 }, { x: 610, z: 300, r: 215, depth: 2.8 }, { x: 520, z: 540, r: 150, depth: 2.8 }, { x: -340, z: 300, r: 115, depth: 3.5 },
-        { x: 585, z: 175, r: 34, depth: 1.4 }, { x: 470, z: 420, r: 30, depth: 1.4 }, { x: 150, z: 560, r: 30, depth: 1.4 },
-      ],
-      player: { x: 0, z: -720, h: 0, speed: 8 },
-      zones: [{ name: 'harbour', x: 300, z: 640, r: 75 }],
+      env: 'golden', wind: { dir: PI / 2 - 0.5, str: 1 },
+      ...PLACES.candia({ burning: false, shoals: [
+        { x: 520, z: -300, r: 140, depth: 2.8 }, { x: 560, z: -60, r: 165, depth: 2.8 }, { x: 410, z: 130, r: 120, depth: 2.8 }, { x: 225, z: 70, r: 92, depth: 2.8 }, // the banks east of the harbour, the last of them off the head of the mole
+        { x: 610, z: -190, r: 30, depth: 1.4 }, { x: 480, z: 20, r: 28, depth: 1.4 }, { x: 330, z: -10, r: 24, depth: 1.4 }, // reefs among them
+        { x: -420, z: -90, r: 110, depth: 3.5 }, // a deeper bank to the west
+      ] }),
+      player: { x: 330, z: -860, h: -0.3, speed: 8 },
+      zones: [{ name: 'harbour', x: 36, z: 150, r: 60 }], // the harbour mouth, between the Koules and the mole battery
       ships: [
-        { id: 'picket', spec: shipSpec('galliot', c.foe, c.names.picket, 'line'), side: 1, x: 60, z: -260, h: PI },
-        { id: 'heavy', spec: shipSpec('merchantman', c.foe, c.names.heavy, 'line', { ai: { reckless: 0.8, range: 130 } }), side: 1, x: -60, z: 240, h: PI / 2, o: { idle: true } },
-        { id: 'brig', spec: shipSpec('brig', c.foe, c.names.brig, 'line', { ai: { reckless: 0.8, range: 90 } }), side: 1, x: 190, z: 330, h: -PI / 2, o: { idle: true } },
+        { id: 'picket', spec: shipSpec('galliot', c.foe, c.names.picket, 'line'), side: 1, x: 200, z: -420, h: PI },
+        { id: 'heavy', spec: shipSpec('merchantman', c.foe, c.names.heavy, 'line', { ai: { reckless: 0.8, range: 130 } }), side: 1, x: -100, z: -240, h: PI / 2, o: { idle: true } },
+        { id: 'brig', spec: shipSpec('brig', c.foe, c.names.brig, 'line', { ai: { reckless: 0.8, range: 90 } }), side: 1, x: 170, z: -170, h: -PI / 2, o: { idle: true } },
       ],
       objective: () => { const S = c.S; if (!S) return ''; return S.flag.alarm ? 'The patrol is under way. Reach the harbour, beat the patrol, or take one of them and sail in under her colours' : S.flag.seen ? 'The picket is rowing to warn the patrol: catch her, or be quick' : 'Bring the powder into Candia. The patrol off the harbour has not seen you yet'; },
       tip: 'The pale water is shoal: a ship that draws less than you floats over it, one that draws more sticks. Rocks in the water are reef, and nothing floats over those.',
@@ -67,15 +68,14 @@ const theRun = {
     };
   },
 };
-const cove = (c) => ({ islands: [{ x: -180, z: 300, r: 150 }, { x: 215, z: 340, r: 125 }, { x: 0, z: 560, r: 200 }] });
-// Ottomans: one approach. A guard ship outside the cove, the powder ship at anchor inside under her battery.
+// Ottomans: one approach. A guard ship outside the cove (see maps.js), the powder ship at anchor inside under her battery.
 // At dark she weighs and runs for the open sea; if she gets clear, the powder reaches Candia.
 const theCove = {
   title: 'The anchorage',
   build(c) {
     const exit = [840, -60];
     return {
-      env: 'dusk', wind: { dir: 0.5, str: 0.8 }, ...cove(c),
+      env: 'dusk', wind: { dir: 0.5, str: 0.8 }, ...PLACES.anchorage(),
       player: { x: -200, z: -620, h: 0.3, speed: 7 },
       ships: [
         { id: 'guard', spec: shipSpec('brig', c.foe, c.names.brig, 'line'), side: 1, x: -30, z: -60, h: PI, o: { idle: true } },
@@ -120,8 +120,7 @@ const POOL = {
   leeShore: {
     title: 'A lee shore',
     build: (c) => ({
-      env: 'storm', wind: { dir: PI / 2, str: 1.6, steady: true }, islands: [-380, -130, 130, 380].map((z) => ({ x: 430, z, r: 140 })),
-      shoals: [{ x: 270, z: -250, r: 60, depth: 3.2 }, { x: 280, z: 0, r: 60, depth: 3.2 }, { x: 270, z: 250, r: 60, depth: 3.2 }],
+      env: 'storm', wind: { dir: PI / 2, str: 1.6, steady: true }, ...PLACES.leeShore(),
       player: { x: -60, z: -300, h: 0, speed: 8 },
       ships: [{ id: 'a', spec: pirate('brig', 'Black Tide', 'line', { captain: 'Captain Varga', ai: { plan: 'chain', reckless: 0.5 } }), side: 1, x: -260, z: 250, h: PI }],
       objective: 'A gale, and rocks under your lee: finish the Black Tide without going ashore',
@@ -132,7 +131,7 @@ const POOL = {
   coveRaid: {
     title: 'The careenage',
     build: (c) => ({
-      env: 'golden', wind: { dir: 0.5, str: 0.9 }, ...cove(c),
+      env: 'golden', wind: { dir: 0.5, str: 0.9 }, ...PLACES.careenage(),
       player: { x: 150, z: -470, h: -0.2, speed: 7 },
       ships: [
         { id: 'a', spec: pirate('xebec', 'Red Sirocco', 'line', { captain: 'Yusra the Red', ai: { cuts: 0.6 } }), side: 1, x: 25, z: 250, h: PI / 2, o: { crew: 0.6, anchored: true } },
@@ -147,9 +146,9 @@ const POOL = {
   landing: {
     title: 'The landing',
     build: (c) => ({
-      env: 'dusk', wind: { dir: -0.6, str: 1 }, islands: [{ x: 60, z: 430, r: 190 }],
+      env: 'dusk', wind: { dir: -0.6, str: 1 }, ...PLACES.landing(),
       player: { x: -120, z: -480, h: 0.2, speed: 7 },
-      ships: [{ id: 'a', spec: pirate('merchantman', 'Widow’s Lament', 'line', { captain: 'Silas Thorne', ai: { cuts: 0.75 } }), side: 1, x: 10, z: 215, h: PI / 2, o: { crew: 0.45, anchored: true } }],
+      ships: [{ id: 'a', spec: pirate('merchantman', 'Widow’s Lament', 'line', { captain: 'Silas Thorne', ai: { cuts: 0.75 } }), side: 1, x: 10, z: 175, h: PI / 2, o: { crew: 0.45, anchored: true } }],
       objective: () => (c.S && c.S.flag.back ? 'Her boats are back aboard: finish the Widow’s Lament' : 'Thorne’s men are ashore in the village: strike before the boats come back'),
       tip: 'She is at anchor with fewer than half her men aboard. That will not last.',
       events: [{ t: 110, fn: (S) => { const a = S.by.a; if (a.out) return; S.flag.back = true; a.crew = Math.max(a.crew, a.crewMax * 0.9); if (a.anchored) a.weighT = 3; S.say('Her boats are back: she is manned again, and weighing'); } }],

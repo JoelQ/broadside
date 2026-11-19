@@ -20,7 +20,7 @@ export const LEGS = [
   { name: 'm0 Home waters', mission: 'm0', leg: 0, side: null, routes: { guns, hug, prep } },
   { name: 'm1V The run', mission: 'm1', leg: 0, side: V, routes: {
     guns, kite, run: run('harbour'),
-    shoals: [{ go: [520, 20], r: 50 }, { go: [520, 200], r: 45 }, { go: [660, 300], r: 50 }, { go: [540, 540], r: 50 }, ...run('harbour')],
+    shoals: [{ go: [470, -430], r: 50 }, { go: [470, -170], r: 45 }, { go: [390, 110], r: 45 }, { go: [200, 55], r: 40 }, { go: [115, 75], r: 35 }, ...run('harbour')],
     boardBrig: [{ kill: 'brig', move: 'duel', ammo: 'combo', board: 'rush' }],
   } },
   { name: 'm1O The anchorage', mission: 'm1', leg: 0, side: O, routes: {

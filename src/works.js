@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Batch, GLOW, SOLID, shade, mulberry } from './geo.js';
+import { Batch, GLOW, SOLID, shade, mulberry, xf } from './geo.js';
 import { barrel, crate, rowboat } from './harbor.js';
 
 // Shore works: the stone and timber a map is built from. Each takes a Batch (B, plus G for lit
@@ -253,13 +253,32 @@ export function lighters(B, x, z, ry, n = 3, seed = 3) {
   rowboat(B, x - 14, z + 26, ry + 0.8, 0x8a3a2a);
 }
 
+// a hull hove down on a beach for scraping: heeled over on her side, masts struck to stumps, tackles to the shore
+export function careened(B, x, z, ry, heel = 0.5) {
+  B.at(x, 0.4, z, ry, () => {
+    const old = B.base; B.base = old.clone().multiply(xf(0, 0, 0, 0, 0, -heel)); if (B.twin) B.twin.base = B.base;
+    const rr = [], hull = 0x4a3a2c;
+    for (let k = 0; k <= 10; k++) { const u = k / 10, hw = 3.4 * Math.sin(Math.PI * (0.05 + u * 0.9)) ** 0.5, zz = (u - 0.5) * 26, sh = 2.6 + Math.abs(u - 0.5) * 1.6; rr.push([[-hw, sh, zz], [-hw * 0.85, -0.6, zz], [0, -1.8, zz], [hw * 0.85, -0.6, zz], [hw, sh, zz]]); }
+    B.loft(rr, [hull, 0x6b5a3a, 0x6b5a3a, hull]); // the bottom she shows is foul with weed
+    B.box(6, 0.2, 22, PLANK, 0, 2.4, 0);
+    for (const mz of [5, -4]) B.bar([0, 2.4, mz], [0, 9, mz], 0.3, WOOD, 5);
+    B.base = old; if (B.twin) B.twin.base = old;
+    for (const mz of [5, -4]) B.bar([-8.5 * Math.sin(heel), 8.5 * Math.cos(heel), mz], [-22, 0.6, mz * 1.3], 0.06, 0x2a2218, 3);
+    for (const mz of [5, -4]) B.cyl(0.35, 0.35, 2.2, WOOD, -22, 1, mz * 1.3, 5); // the posts the tackles are made fast to
+  });
+}
+// a camp of tents on the shore
+export function tents(B, ground, x, z, n = 5, rnd = Math.random) {
+  for (let i = 0; i < n; i++) { const tx = x + (rnd() - 0.5) * 34, tz = z + (rnd() - 0.5) * 16, y = ground(tx, tz); if (y > 1) B.cyl(0, 3.4, 3.8, i % 3 ? 0xe2d6b8 : 0x9a3a2a, tx, y + 1.8, tz, 7); }
+}
+
 // ---------- a city under siege ----------
 // smoke standing over a fire: puffs stacked and drifting downwind, in one translucent mesh
 const SMOKE = new THREE.MeshLambertMaterial({ color: 0x2b2826, transparent: true, opacity: 0.32, depthWrite: false, flatShading: true });
-export function smoke(group, x, y, z, h = 90, lean = [0.35, 0.1], seed = 1) {
+export function smoke(group, x, y, z, h = 90, lean = [0.35, 0.1], seed = 1, size = 1) {
   const rnd = mulberry(seed), S = new Batch(), blob = new THREE.IcosahedronGeometry(1, 1);
   for (let i = 0; i < 26; i++) {
-    const k = Math.pow(i / 25, 0.8), r = 4 + k * 26 + rnd() * 6, yy = y + 2 + k * h + (rnd() - 0.5) * 8, d = k * k * h, sp = 4 + k * 22;
+    const k = Math.pow(i / 25, 0.8), r = (4 + k * 26 + rnd() * 6) * size, yy = y + 2 + k * h + (rnd() - 0.5) * 8 * size, d = k * k * h, sp = (4 + k * 22) * size;
     S.add(blob, 0xffffff, new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(rnd() * 3, rnd() * 3, rnd() * 3)).setPosition(x + lean[0] * d + (rnd() - 0.5) * sp, yy, z + lean[1] * d + (rnd() - 0.5) * sp).scale(new THREE.Vector3(r, r * (0.6 + rnd() * 0.3), r * (0.8 + rnd() * 0.4))));
   }
   const m = S.mesh(SMOKE); m.renderOrder = 4; group.add(m);
