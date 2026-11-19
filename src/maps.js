@@ -113,8 +113,8 @@ const moleDef = (pts, w, bends) => ({
   platforms: bends.map((i) => { const [x, z] = pts[i], dx = x - BASIN[0], dz = z - BASIN[1], d = Math.hypot(dx, dz); return [x + (dx / d) * w * 0.55, z + (dz / d) * w * 0.55, w * 0.62]; }),
 });
 const MOLES = [
-  moleDef([[-300, 412], [-300, 280], [-270, 172], [-170, 124], [-62, 108]], 19, [1, 2, 3]), // the long western mole to the Koules
-  moleDef([[318, 404], [312, 280], [272, 166], [196, 130], [128, 124]], 18, [1, 2]), // the eastern mole, the lantern on it
+  { ...moleDef([[-300, 412], [-300, 280], [-270, 172], [-170, 124], [-62, 108]], 19, [1, 2, 3]), blocks: [[KOULES[0], KOULES[1], 15], ...[[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => [KOULES[0] + a * 11, KOULES[1] + b * 11, 9])] }, // the long western mole to the Koules
+  { ...moleDef([[318, 404], [312, 280], [272, 166], [196, 130], [128, 124]], 18, [1, 2]), blocks: [[MOLE_HEAD[0], MOLE_HEAD[1], 12]] }, // the eastern mole, the lantern on it, the battery on its head
 ];
 const candiaGround = (x, z, y) => {
   if (y <= 1) return y;

@@ -317,6 +317,7 @@ export class World {
     this.moles.push(m);
     for (const p of molePieces(m.path, m.w)) this.addPiece(p);
     for (const [x, z, r] of m.platforms || []) this.addPiece({ x, z, r });
+    for (const [x, z, r] of m.blocks || []) this.addPiece({ x, z, r }); // a fort on its head: solid to ships, but shot meets the fort itself
   }
   addPiece(p) { const k = Math.floor(p.x / 60) * 4099 + Math.floor(p.z / 60); let c = this.pieceGrid.get(k); if (!c) this.pieceGrid.set(k, (c = [])); c.push(p); this.pieces.push(p); }
   // shore circles within r of a point
