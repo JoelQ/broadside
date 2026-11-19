@@ -1,7 +1,7 @@
 import { wrap, clamp } from './ship.js';
 import { rng } from './rng.js';
 
-const SHORE = [];
+const SHORE = [], BANK = [];
 // Pirate captain: picks ammo, steers for a broadside (or a boarding), fires when the arc bears.
 export function updateAI(ai, me, foe, world, dt, api) {
   const P = me.spec.ai || DEFAULT;
@@ -116,36 +116,20 @@ export function updateAI(ai, me, foe, world, dt, api) {
   }
   // a coast or a mole: many circles along one shore. Find the nearest heading that clears all of them,
   // keeping to the side she chose last time so she does not dither at a headland
-  if (world.pieces && world.pieces.length) {
-    const near = world.shoreNear(me.pos.x, me.pos.z, look + 60, SHORE), cut = [];
-    for (const p of near) {
-      const ix = p.x - me.pos.x, iz = p.z - me.pos.z, id = Math.hypot(ix, iz), c = Math.asin(clamp((p.r + 22) / Math.max(id, p.r + 22.01), 0, 1));
-      if (id - p.r > look + 20) continue;
-      const rel = wrap(Math.atan2(ix, iz) - desired);
-      cut.push([rel - c, rel + c]);
-    }
-    if (cut.length) {
-      const free = (a) => !cut.some((q) => a > q[0] && a < q[1]);
-      if (!free(0)) {
-        let l = 0, r = 0;
-        for (let g = 0; g < 40 && !free(l); g++) l = Math.max(...cut.filter((q) => l > q[0] - 1e-6 && l < q[1]).map((q) => q[1])) + 1e-4;
-        for (let g = 0; g < 40 && !free(r); g++) r = Math.min(...cut.filter((q) => r > q[0] && r < q[1] + 1e-6).map((q) => q[0])) - 1e-4;
-        const pick = ai.shoreSide && ai.shoreT > 0 ? ai.shoreSide : Math.abs(l) < Math.abs(r) ? 1 : -1;
-        ai.shoreSide = pick; ai.shoreT = 3;
-        desired += pick > 0 ? Math.min(l + 0.12, Math.PI) : Math.max(r - 0.12, -Math.PI);
-      }
-    }
-    ai.shoreT = (ai.shoreT || 0) - dt;
-  }
-  // shoal water she cannot float in: steer round it, unless her blood is up in a chase and she looks too late
+  if (world.pieces && world.pieces.length) desired = steerClear(ai, 'shore', me, desired, world.shoreNear(me.pos.x, me.pos.z, look + 60, SHORE), 22, look + 20, dt);
+  // shoal water she cannot float in: the same, round the circles along the edge of each bank she would stick on,
+  // unless her blood is up in a chase and she looks too late
   const hot = P.reckless && dist > range * 1.1 ? 1 - P.reckless : 1;
-  for (const sh of world.shoals) {
-    if (me.spec.D <= sh.depth || me.anchored) continue;
-    const ix = sh.x - me.pos.x, iz = sh.z - me.pos.z, id = Math.hypot(ix, iz);
-    if (id > sh.r + (look + 20) * hot) continue;
-    const rel = wrap(Math.atan2(ix, iz) - desired);
-    const clear = Math.asin(clamp((sh.r + 18) / Math.max(id, sh.r + 18.01), 0, 1));
-    if (Math.abs(rel) < clear) desired -= (rel >= 0 ? 1 : -1) * (clear - Math.abs(rel) + 0.15);
+  if (world.shoals.length && !me.anchored) {
+    BANK.length = 0;
+    const reach = (look + 20) * hot;
+    for (const sh of world.shoals) {
+      if (me.spec.D <= sh.depth) continue;
+      const [x0, z0, x1, z1] = sh.box, ox = Math.max(x0 - me.pos.x, me.pos.x - x1, 0), oz = Math.max(z0 - me.pos.z, me.pos.z - z1, 0);
+      if (Math.hypot(ox, oz) > reach + 40) continue;
+      for (const p of sh.pieces) if (Math.hypot(p.x - me.pos.x, p.z - me.pos.z) - p.r < reach + 20) BANK.push(p);
+    }
+    desired = steerClear(ai, 'bank', me, desired, BANK, 18, reach, dt);
   }
   if (me.backOff) desired = Math.atan2(me.backOff[0] - me.pos.x, me.backOff[1] - me.pos.z);
   const edge = Math.hypot(me.pos.x, me.pos.z);
@@ -183,3 +167,29 @@ export function steerTo(me, x, z, world) {
 }
 
 export const newAI = () => ({ think: 0, side: 1, wantBoard: false, fireDelay: 2, grapple: 0 });
+
+// The nearest heading to `desired` that clears every circle by `margin`, looking `reach` ahead. She keeps to
+// the side she chose for a few seconds (memory under `key`), so she does not dither at a headland.
+function steerClear(ai, key, me, desired, pieces, margin, reach, dt) {
+  const cut = [];
+  for (const p of pieces) {
+    const ix = p.x - me.pos.x, iz = p.z - me.pos.z, id = Math.hypot(ix, iz), c = Math.asin(clamp((p.r + margin) / Math.max(id, p.r + margin + 0.01), 0, 1));
+    if (id - p.r > reach) continue;
+    const rel = wrap(Math.atan2(ix, iz) - desired);
+    cut.push([rel - c, rel + c]);
+  }
+  const side = key + 'Side', T = key + 'T';
+  if (cut.length) {
+    const free = (a) => !cut.some((q) => a > q[0] && a < q[1]);
+    if (!free(0)) {
+      let l = 0, r = 0;
+      for (let g = 0; g < 40 && !free(l); g++) l = Math.max(...cut.filter((q) => l > q[0] - 1e-6 && l < q[1]).map((q) => q[1])) + 1e-4;
+      for (let g = 0; g < 40 && !free(r); g++) r = Math.min(...cut.filter((q) => r > q[0] && r < q[1] + 1e-6).map((q) => q[0])) - 1e-4;
+      const pick = ai[side] && ai[T] > 0 ? ai[side] : Math.abs(l) < Math.abs(r) ? 1 : -1;
+      ai[side] = pick; ai[T] = 3;
+      desired += pick > 0 ? Math.min(l + 0.12, Math.PI) : Math.max(r - 0.12, -Math.PI);
+    }
+  }
+  ai[T] = (ai[T] || 0) - dt;
+  return desired;
+}

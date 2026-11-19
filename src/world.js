@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { mulberry, scatterIslands } from './geo.js';
+import { mulberry, scatterIslands, clamp } from './geo.js';
 import { makeIsland } from './land.js';
 import { rng } from './rng.js';
-import { makeCoast, molePieces, segDist } from './coast.js';
+import { makeCoast, molePieces, segDist, makeShoal } from './coast.js';
 
 // ---------- shared wave model (JS + GLSL stay in sync) ----------
 const RAW_WAVES = [
@@ -197,6 +197,46 @@ const labelTexture = (txt, danger) => canvasTex(128, (x, n) => {
   x.fillStyle = danger ? '#ff8a7a' : '#f6ecc8'; x.fillText(txt, n / 2, n / 2);
 });
 
+// A bank seen through the water, drawn from its shape: a grid over it whose colour and alpha follow how far
+// inside the edge each point is, bright sand in the middle fading out a little past the edge.
+function bankGeometry(s) {
+  const [x0, z0, x1, z1] = s.box, pad = clamp(s.inner * 0.3, 4, 14), st = clamp(Math.sqrt(s.area) / 22, 3, 8);
+  const nx = Math.ceil((x1 - x0 + pad * 2) / st), nz = Math.ceil((z1 - z0 + pad * 2) / st), X0 = x0 - pad, Z0 = z0 - pad;
+  const A = new Float32Array((nx + 1) * (nz + 1)), sm = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+  for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) {
+    const d = s.at(X0 + i * st, Z0 + j * st), t = d / Math.max(s.inner, 1);
+    A[j * (nx + 1) + i] = d < 0 ? 0.38 * sm(-pad, 0, d) : 0.38 + 0.37 * Math.min(1, t / 0.3) + 0.25 * clamp((t - 0.3) / 0.7, 0, 1);
+  }
+  const pos = [], col = [];
+  const v = (i, j) => { const a = A[j * (nx + 1) + i], k = clamp((a - 0.75) / 0.25, 0, 1); pos.push(X0 + i * st, 0, Z0 + j * st); col.push(1, 1 - 0.02 * k, 1 - 0.16 * k, a); };
+  for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
+    if (!(A[j * (nx + 1) + i] || A[j * (nx + 1) + i + 1] || A[(j + 1) * (nx + 1) + i] || A[(j + 1) * (nx + 1) + i + 1])) continue;
+    v(i, j); v(i, j + 1); v(i + 1, j); v(i + 1, j); v(i, j + 1); v(i + 1, j + 1);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 4));
+  return g;
+}
+// broken water along a closed outline (anticlockwise): a band `out` yards outside it and `inn` inside
+function edgeGeometry(pts, out, inn) {
+  const n = pts.length, pos = [], uv = [], idx = [];
+  let run = 0;
+  for (let i = 0; i <= n; i++) {
+    const p = pts[i % n], a = pts[(i - 1 + n) % n], b = pts[(i + 1) % n], tx = b[0] - a[0], tz = b[1] - a[1], l = Math.hypot(tx, tz) || 1;
+    if (i) run += Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]);
+    const ox = tz / l, oz = -tx / l; // outward
+    pos.push(p[0] + ox * out, 0, p[1] + oz * out, p[0] - ox * inn, 0, p[1] - oz * inn);
+    uv.push(run / 40, 0, run / 40, 0.12);
+    if (i) { const k = i * 2; idx.push(k - 2, k - 1, k, k, k - 1, k + 1); }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  return g;
+}
+
 export class World {
   constructor(scene) {
     this.scene = scene;
@@ -351,26 +391,29 @@ export class World {
     this.islandGroup.add(makeIsland(o.r, isl.h, rnd, o.x, o.z, o.opts || {}));
     return isl;
   }
-  // shoals: [{x, z, r, depth}]. A ship drawing more than `depth` sticks there. Pale water and a line of
-  // broken water mark every bank; a reef (depth under 2) shows rocks and grounds anything. With the
-  // pilot aboard each bank is sounded: its depth is written on it, red where your ship would stick.
+  // shoals: [{ outline, depth }], each a shape (see makeShoal in coast.js). A ship drawing more than `depth` sticks
+  // anywhere inside. Pale water and a line of broken water along the edge mark every bank; a reef (depth under 2)
+  // shows rocks and grounds anything. With the pilot aboard each bank is sounded: its depth is written on it,
+  // red where your ship would stick.
   setShoals(list, marked, draught = 0) {
     for (const m of this.shoalGroup.children) { if (m.geometry) m.geometry.dispose(); }
-    this.shoalGroup.clear(); this.shoals = list; this.shoalRings = [];
-    for (const s of list) {
-      const reef = s.depth < 2, g = new THREE.CircleGeometry(s.r * 1.12, 36); g.rotateX(-Math.PI / 2);
-      const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: this.tex.bank, color: reef ? 0xb8d8c0 : 0x9fe8d6, transparent: true, opacity: reef ? 0.75 : 0.6, depthWrite: false, depthTest: false, fog: false }));
-      m.position.set(s.x, 0.9, s.z); m.renderOrder = 1; this.shoalGroup.add(m);
+    this.shoalGroup.clear(); this.shoals = list.map(makeShoal); this.shoalRings = [];
+    this.tex.foam.wrapS = this.tex.foam.wrapT = THREE.RepeatWrapping;
+    for (const s of this.shoals) {
+      const reef = s.depth < 2, m = new THREE.Mesh(bankGeometry(s), new THREE.MeshBasicMaterial({ vertexColors: true, color: reef ? 0xb8d8c0 : 0x9fe8d6, transparent: true, opacity: reef ? 0.75 : 0.6, depthWrite: false, depthTest: false, fog: false }));
+      m.position.y = 0.9; m.renderOrder = 1; this.shoalGroup.add(m);
       const danger = marked && draught > s.depth;
-      const rg = new THREE.RingGeometry(s.r - 3, s.r + 2, 48); rg.rotateX(-Math.PI / 2);
-      const r = new THREE.Mesh(rg, new THREE.MeshBasicMaterial({ map: this.tex.foam, color: 0xffffff, transparent: true, opacity: 0.7, depthWrite: false, depthTest: false, fog: false }));
-      r.position.set(s.x, 1, s.z); r.renderOrder = 2; r.userData.ph = Math.random() * 6; this.shoalGroup.add(r); this.shoalRings.push(r);
+      const r = new THREE.Mesh(edgeGeometry(s.shape.pts, 2, 3), new THREE.MeshBasicMaterial({ map: this.tex.foam, color: 0xffffff, transparent: true, opacity: 0.7, depthWrite: false, depthTest: false, fog: false }));
+      r.position.y = 1; r.renderOrder = 2; r.userData.ph = Math.random() * 6; this.shoalGroup.add(r); this.shoalRings.push(r);
       if (reef) {
         const rnd = mulberry(Math.round(s.x * 3 + s.z * 7)), mat = new THREE.MeshStandardMaterial({ color: 0x4a4038, roughness: 1, flatShading: true });
-        for (let i = 0; i < Math.round(s.r / 6); i++) {
-          const a = rnd() * 6.28, d = Math.sqrt(rnd()) * s.r * 0.85, k = 1.5 + rnd() * 3;
-          const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(k, 0), mat);
-          rock.position.set(s.x + Math.sin(a) * d, -k * 0.35, s.z + Math.cos(a) * d); rock.scale.y = 0.6; rock.rotation.y = rnd() * 6;
+        const [x0, z0, x1, z1] = s.box, want = Math.round(Math.sqrt(s.area / Math.PI) / 6 * Math.max(1, Math.sqrt(s.area / Math.PI) / Math.max(4, s.inner) / 1.6));
+        for (let i = 0, tries = 0; i < want && tries < want * 30; tries++) {
+          const x = x0 + rnd() * (x1 - x0), z = z0 + rnd() * (z1 - z0);
+          if (s.at(x, z) < 2) continue;
+          i++;
+          const k = 1.5 + rnd() * 3, rock = new THREE.Mesh(new THREE.DodecahedronGeometry(k, 0), mat);
+          rock.position.set(x, -k * 0.35, z); rock.scale.y = 0.6; rock.rotation.y = rnd() * 6;
           this.shoalGroup.add(rock);
         }
       }
@@ -426,7 +469,7 @@ export class World {
     pos.needsUpdate = col.needsUpdate = true;
   }
   shoalAt(x, z, draught) {
-    for (const s of this.shoals) if (draught > s.depth && Math.hypot(x - s.x, z - s.z) < s.r) return s;
+    for (const s of this.shoals) if (draught > s.depth && s.at(x, z) > 0) return s;
     return null;
   }
 

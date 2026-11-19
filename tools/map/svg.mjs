@@ -34,6 +34,13 @@ export function svg(sc, findings = [], { width = 1100 } = {}) {
     }
   }
 
+  // banks: their ragged shapes, pale water, deeper the darker; a reef (under 2 deep) grounds anything. Drawn under the land, which hides
+  // whatever of a bank runs under the shore; the soundings are written after the land
+  for (const s of [...sc.shoals].sort((a, c) => c.depth - a.depth)) {
+    const reef = s.depth < 2, col = reef ? '#b9a877' : s.depth < 3 ? '#5fa8a8' : '#3f8592';
+    const d = s.shape.pts.map(([x, z], i) => `${i ? 'L' : 'M'}${X(x)},${Y(z)}`).join('') + 'Z';
+    o.push(`<path d="${d}" fill="${col}" fill-opacity="${reef ? 0.75 : 0.5}" stroke="#d8f2ee" stroke-opacity="0.5" stroke-width="${px(1)}" stroke-dasharray="${px(4)} ${px(3)}"/>`);
+  }
   // coasts: the roughened shore the game builds, a band of beach and the land behind it
   for (const c of sc.coasts) {
     const d = c.shape.pts.map(([x, z], i) => `${i ? 'L' : 'M'}${X(x)},${Y(z)}`).join('') + 'Z';
@@ -44,18 +51,13 @@ export function svg(sc, findings = [], { width = 1100 } = {}) {
     o.push(`<polyline points="${m.path.map(([x, z]) => `${X(x)},${Y(z)}`).join(' ')}" fill="none" stroke="#a49a80" stroke-width="${f(m.w)}" stroke-linecap="round" stroke-linejoin="round"/>`);
     for (const [x, z, r] of [...m.platforms, ...m.blocks]) o.push(`<circle cx="${X(x)}" cy="${Y(z)}" r="${f(r)}" fill="#a49a80"/>`);
   }
-  // banks: pale water, deeper the darker; a reef (under 2 deep) grounds anything
-  for (const s of [...sc.shoals].sort((a, c) => c.depth - a.depth)) {
-    const reef = s.depth < 2, col = reef ? '#b9a877' : s.depth < 3 ? '#5fa8a8' : '#3f8592';
-    o.push(`<circle cx="${X(s.x)}" cy="${Y(s.z)}" r="${f(s.r)}" fill="${col}" fill-opacity="${reef ? 0.75 : 0.5}" stroke="#d8f2ee" stroke-opacity="0.5" stroke-width="${px(1)}" stroke-dasharray="${px(4)} ${px(3)}"/>`);
-    text(X(s.x), Y(s.z) + px(4), reef ? `reef ${s.depth}` : s.depth.toFixed(1), 11, reef ? '#3b2f17' : '#e8fffb');
-  }
   // land: what you see, and inside it the line a ship hits
   for (const l of sc.land) {
     if (l.fort) continue;
     o.push(`<circle cx="${X(l.x)}" cy="${Y(l.z)}" r="${f(l.r)}" fill="#d8c690"/>`);
     o.push(`<circle cx="${X(l.x)}" cy="${Y(l.z)}" r="${f(l.hit)}" fill="#55813c" stroke="#3a5a29" stroke-width="${px(1)}"/>`);
   }
+  for (const s of sc.shoals) { const reef = s.depth < 2; text(X(s.x), Y(s.z) + px(4), reef ? `reef ${s.depth}` : s.depth.toFixed(1), 11, reef ? '#3b2f17' : '#e8fffb'); }
   // zones
   for (const z of [...sc.zones, ...sc.laterZones]) {
     o.push(`<circle cx="${X(z.x)}" cy="${Y(z.z)}" r="${f(z.r)}" fill="#f2c14e" fill-opacity="0.12" stroke="#f2c14e" stroke-width="${px(2)}" stroke-dasharray="${px(8)} ${px(5)}"/>`);

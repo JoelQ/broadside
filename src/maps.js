@@ -3,7 +3,7 @@ import { buildFortModel } from './fort.js';
 import { works, wall, tower, town, minaret, dome, campanile, mole, lantern, arsenal, yard, lighters, bastion, smoke, blaze, palazzo, basilica, careened, tents } from './works.js';
 import { rowboat, barrel, crate } from './harbor.js';
 import { mulberry } from './geo.js';
-import { smoothPath } from './coast.js';
+import { smoothPath, ribbon } from './coast.js';
 import { shade } from './geo.js';
 
 // Places: the land, water and works a mission's fights are set in, as data a scenario spreads into
@@ -14,7 +14,9 @@ import { shade } from './geo.js';
 //   1. Author the shore as a few dozen points; let roughen() make it irregular. Keep rough at 0
 //      where a straight edge means something (a quay, a castle's footing).
 //   2. Give the water its rules from the same points: the current follows the channel, shoals sit
-//      off the points and in the slack water, forts stand where the shore commands a passage.
+//      off the points and in the slack water, forts stand where the shore commands a passage. A shoal
+//      is a shape too: most are a ribbon() along a spine (a spit trailing down-current, a reef running
+//      off a point, a bank under a cliff); a broad bank is an outline like a coast's.
 //   3. Flatten the ground where a town stands (shape), keep trees off it (clear), then build the town.
 //   4. Only add works that tell you something about the fight: a mole you can hide behind, the
 //      castle whose arc you are about to cross, the yard where the ship you came to burn is lying.
@@ -61,12 +63,17 @@ const strait = (opts = {}) => ({
   current: straitCurrent,
   wind: { dir: PI - 1.4, str: 1, steady: true }, // off the European hills, across the channel: a reach up the strait, close-hauled into the bay
   shoals: [
-    { x: -282, z: -652, r: 24, depth: 1.4 }, { x: 272, z: -655, r: 22, depth: 1.4 }, // rocks off the capes
-    { x: 390, z: -420, r: 55, depth: 2.8 }, { x: -340, z: -430, r: 42, depth: 2.8 }, // the spits in the bays inside the mouth
-    { x: -228, z: -232, r: 30, depth: 2.8 }, { x: 245, z: -215, r: 30, depth: 2.8 }, // the slack water below the castles
-    { x: -190, z: 60, r: 30, depth: 2.8 }, { x: 222, z: 95, r: 34, depth: 2.8 },
-    { x: -262, z: 330, r: 22, depth: 1.4 }, { x: 118, z: 350, r: 20, depth: 1.4 }, // reefs off the points at the bend
-    { x: -300, z: 118, r: 30, depth: 2.8 }, // the bank at the mouth of the bay where the flagship lies
+    { outline: ribbon([[-298, -634, 9], [-282, -652, 14], [-264, -674, 9]]), depth: 1.4 }, // rocks running out off the capes
+    { outline: ribbon([[288, -642, 9], [272, -656, 13], [256, -674, 8]]), depth: 1.4 },
+    { outline: ribbon([[-392, -400, 16], [-362, -420, 26], [-328, -442, 22], [-304, -462, 11]]), depth: 2.8 }, // the spits in the bays inside the mouth, trailing down-stream
+    { outline: ribbon([[440, -385, 20], [405, -405, 34], [372, -432, 30], [352, -466, 16]]), depth: 2.8 },
+    { outline: ribbon([[-282, -262, 12], [-250, -232, 24], [-222, -200, 13]]), depth: 2.8 }, // the slack water below the castles
+    { outline: ribbon([[300, -262, 13], [262, -222, 26], [228, -186, 13]]), depth: 2.8 },
+    { outline: ribbon([[-200, 28, 11], [-190, 60, 26], [-214, 90, 11]]), depth: 2.8 }, // and above them, off the points
+    { outline: ribbon([[198, 55, 12], [200, 95, 24], [222, 134, 12]]), depth: 2.8 },
+    { outline: ribbon([[-276, 328, 8], [-258, 332, 12], [-240, 338, 7]]), depth: 1.4 }, // reefs off the points at the bend
+    { outline: ribbon([[130, 344, 8], [114, 352, 11], [98, 360, 6]]), depth: 1.4 },
+    { outline: ribbon([[-322, 94, 11], [-302, 114, 22], [-286, 134, 10]]), depth: 2.8 }, // the bar at the mouth of the bay where the flagship lies
     ...(opts.shoals || []),
   ],
   works: (world) => works((B, G) => {
@@ -136,8 +143,14 @@ const candia = (opts = {}) => ({
   ],
   moles: MOLES,
   shoals: [
-    { x: -520, z: 345, r: 40, depth: 1.4 }, { x: -650, z: 330, r: 55, depth: 2.8 }, { x: 520, z: 345, r: 40, depth: 1.4 }, { x: 640, z: 320, r: 60, depth: 2.8 }, // the rocks under the walls
-    { x: 360, z: 290, r: 34, depth: 2.6 }, { x: -380, z: 300, r: 34, depth: 2.6 }, // the banks outside the moles' roots
+    // under the sea walls: a ledge of rocks along the foot of each, and a bank off its outer bastion
+    { outline: ribbon([[-575, 372, 12], [-540, 352, 22], [-500, 348, 20], [-466, 362, 10]]), depth: 1.4 },
+    { outline: ribbon([[-728, 356, 18], [-680, 330, 38], [-622, 326, 28], [-590, 340, 12]]), depth: 2.8 },
+    { outline: ribbon([[466, 364, 10], [500, 350, 20], [540, 346, 22], [576, 368, 12]]), depth: 1.4 },
+    { outline: ribbon([[590, 342, 12], [628, 320, 30], [680, 320, 40], [730, 352, 18]]), depth: 2.8 },
+    // silt in the corner each mole makes with the shore
+    { outline: [[-312, 392], [-314, 320], [-342, 290], [-392, 282], [-418, 318], [-408, 372], [-372, 394]], depth: 2.6 },
+    { outline: [[324, 396], [322, 300], [342, 266], [378, 262], [404, 300], [420, 352], [400, 392]], depth: 2.6 },
     ...(opts.shoals || []),
   ],
   works: (world) => {
@@ -198,8 +211,8 @@ const anchorage = (opts = {}) => ({
   coasts: [{ outline: [...COVE_SHORE, [1700, 1800, 0], [-1700, 1800, 0]], seed: 81, H: 58, rise: 80, beach: 7, scale: 140, dry: 0.7, trees: 0.6,
     shape: flatten(70, 500, 70, 40, 4), clear: (x, z) => Math.abs(x - 70) < 95 && z > 430 && z < 560 }],
   shoals: [
-    { x: 312, z: 222, r: 24, depth: 1.4 }, // the reef off the eastern point
-    { x: 70, z: 412, r: 46, depth: 2.2 }, // the shallows off the beach
+    { outline: ribbon([[290, 245, 9], [312, 222, 14], [334, 200, 8]]), depth: 1.4 }, // the reef running off the eastern point
+    { outline: ribbon([[5, 410, 12], [45, 410, 30], [95, 410, 32], [145, 402, 18], [172, 390, 8]]), depth: 2.2 }, // the shallows off the beach
     ...(opts.shoals || []),
   ],
   works: (world) => works((B, G) => {
@@ -228,8 +241,9 @@ const careenage = (opts = {}) => ({
   coasts: [{ outline: [...INLET_SHORE, [1700, 1800, 0], [-1700, 1800, 0]], seed: 91, H: 64, rise: 45, beach: 5, scale: 110, dry: 0.75, trees: 0.4,
     shape: flatten(50, 450, 60, 26, 2.6, 30), clear: (x, z) => Math.abs(x - 50) < 80 && z > 400 && z < 500 }],
   shoals: [
-    { x: -150, z: 70, r: 26, depth: 1.4 }, { x: 205, z: 108, r: 22, depth: 1.4 }, // rocks off the heads
-    { x: 48, z: 392, r: 34, depth: 2.2 }, // the shelving beach
+    { outline: ribbon([[-135, 95, 9], [-150, 72, 15], [-160, 48, 8]]), depth: 1.4 }, // rocks running off the heads
+    { outline: ribbon([[190, 128, 8], [205, 108, 13], [222, 90, 7]]), depth: 1.4 },
+    { outline: ribbon([[18, 400, 13], [48, 393, 30], [80, 397, 13]]), depth: 2.2 }, // the shelving beach
     ...(opts.shoals || []),
   ],
   works: (world) => {
@@ -256,8 +270,11 @@ const CLIFF = [[470, -1700, 0], [430, -1100], [380, -760], [300, -560], [236, -4
 const leeShore = () => ({
   coasts: [{ outline: [...CLIFF, [1800, 1700, 0], [1800, -1700, 0]], seed: 71, rough: 18, H: 72, rise: 22, beach: 1.5, scale: 80, dry: 0.5, trees: 0.25 }],
   shoals: [
-    { x: 196, z: -486, r: 30, depth: 1.4 }, { x: 172, z: 486, r: 28, depth: 1.4 }, // reefs off the headlands
-    { x: 300, z: -230, r: 55, depth: 3.2 }, { x: 330, z: 30, r: 60, depth: 3.2 }, { x: 300, z: 260, r: 55, depth: 3.2 }, // banks under the cliff
+    { outline: ribbon([[225, -482, 10], [198, -488, 17], [168, -494, 9]]), depth: 1.4 }, // reefs running off the headlands
+    { outline: ribbon([[205, 478, 10], [176, 486, 16], [146, 494, 8]]), depth: 1.4 },
+    { outline: ribbon([[290, -290, 18], [305, -230, 48], [325, -170, 22]]), depth: 3.2 }, // banks along the foot of the cliff
+    { outline: ribbon([[345, -40, 22], [335, 30, 55], [345, 95, 24]]), depth: 3.2 },
+    { outline: ribbon([[325, 200, 22], [300, 260, 48], [278, 318, 20]]), depth: 3.2 },
   ],
   works: (world) => works((B) => {
     const g = (x, z) => world.ground(x, z);
@@ -273,7 +290,10 @@ const BAY_SHORE = [[-1700, 330, 0], [-900, 300], [-560, 262], [-380, 212], [-300
 const landing = () => ({
   coasts: [{ outline: [...BAY_SHORE, [1700, 1800, 0], [-1700, 1800, 0]], seed: 61, H: 52, rise: 110, beach: 12, scale: 160, dry: 0.6, trees: 0.7,
     shape: flatten(30, 380, 120, 50, 4), clear: (x, z) => Math.abs(x - 30) < 140 && z > 300 && z < 450 }],
-  shoals: [{ x: -300, z: 140, r: 30, depth: 1.4 }, { x: 340, z: 160, r: 28, depth: 1.4 }], // rocks off the points
+  shoals: [ // rocks running off the points
+    { outline: ribbon([[-298, 170, 10], [-300, 140, 17], [-306, 110, 9]]), depth: 1.4 },
+    { outline: ribbon([[336, 185, 9], [340, 160, 16], [346, 132, 8]]), depth: 1.4 },
+  ],
   works: (world) => {
     const group = works((B, G) => {
       const g = (x, z) => world.ground(x, z), rnd = mulberry(61);
