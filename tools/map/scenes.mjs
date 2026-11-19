@@ -5,6 +5,7 @@ import { MISSIONS, LEG_POOL } from '../../src/missions.js';
 import { NAMES } from '../../src/story.js';
 import { HULLS, shipSpec } from '../../src/fleet.js';
 import { mulberry, scatterIslands } from '../../src/geo.js';
+import { Shape, roughen, segDist } from '../../src/coast.js';
 import { LEGS, HULLS as PLAYER_HULLS } from '../balance/legs.mjs';
 
 export { PLAYER_HULLS };
@@ -60,11 +61,14 @@ export function scene(L, seed = 1) {
   const later = laterArrivals(def, ships);
   // forts are rocks in the water as far as ships are concerned
   for (const s of [...ships, ...later.added]) if (s.fixed) land.push({ x: s.x, z: s.z, r: s.B * 0.5 + 1, hit: s.B * 0.5 + 1, fort: s.id });
+  // coasts and moles (see coast.js): the same roughened outline and the same mole path the game builds
+  const coasts = (def.coasts || []).map((c) => ({ shape: new Shape(roughen(c.outline, c.rough ?? 14, c.seed || 7)) }));
+  const moles = (def.moles || []).map((m) => ({ path: m.path, w: m.w, platforms: m.platforms || [], blocks: m.blocks || [] }));
   const routes = {};
   for (const [name, r] of Object.entries(L.routes || {})) if (Array.isArray(r)) routes[name] = r;
   return {
     name: L.name, title: leg.title, mission: L.mission, side: L.side, seed,
-    env: def.env || 'noon', wind: def.wind, player: def.player, land, shoals: def.shoals || [], zones: def.zones || [],
+    env: def.env || 'noon', wind: def.wind, player: def.player, land, coasts, moles, shoals: def.shoals || [], zones: def.zones || [],
     current: def.current || null, ships, arrivals: later.added, laterZones: later.zones, windShifts: later.winds, routes,
     objective: typeof def.objective === 'function' ? '' : def.objective || '',
   };
@@ -77,3 +81,19 @@ export function scenes(filter, seed) {
 }
 
 export const hullStats = (h) => ({ hull: h, L: HULLS[h].L, B: HULLS[h].B, D: HULLS[h].D });
+
+// How far inside land a point is: positive on land, negative at sea (the distance to the nearest shore,
+// as far as it matters). Round islands count from the line a ship hits; forts are left out, since ships
+// sail right up to them. Coasts count from the shore; moles from their edge, with gun platforms and the
+// forts on their heads.
+export function landDepth(sc) {
+  const circles = sc.land.filter((l) => !l.fort);
+  for (const m of sc.moles) for (const [x, z, r] of [...m.platforms, ...m.blocks]) circles.push({ x, z, hit: r });
+  return (x, z) => {
+    let d = -1e9;
+    for (const l of circles) d = Math.max(d, l.hit - Math.hypot(x - l.x, z - l.z));
+    for (const c of sc.coasts) d = Math.max(d, c.shape.sdf(x, z));
+    for (const m of sc.moles) d = Math.max(d, m.w / 2 - segDist(m.path, x, z));
+    return d;
+  };
+}

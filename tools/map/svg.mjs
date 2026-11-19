@@ -1,4 +1,4 @@
-// Draws a leg from above as an SVG: land, banks by depth, zones, ships with their headings, the wind,
+// Draws a leg from above as an SVG: land (islands, coasts, moles), banks by depth, zones, ships with their headings, the wind,
 // the current, the balance routes, and anything the checker found. North (+z) is up, east (+x) right.
 import { bounds } from './check.mjs';
 
@@ -34,6 +34,16 @@ export function svg(sc, findings = [], { width = 1100 } = {}) {
     }
   }
 
+  // coasts: the roughened shore the game builds, a band of beach and the land behind it
+  for (const c of sc.coasts) {
+    const d = c.shape.pts.map(([x, z], i) => `${i ? 'L' : 'M'}${X(x)},${Y(z)}`).join('') + 'Z';
+    o.push(`<path d="${d}" fill="#55813c" stroke="#d8c690" stroke-width="${f(Math.max(6, px(3)))}" stroke-linejoin="round"/>`);
+  }
+  // moles: the walkway at its true width, gun platforms and the forts on their heads
+  for (const m of sc.moles) {
+    o.push(`<polyline points="${m.path.map(([x, z]) => `${X(x)},${Y(z)}`).join(' ')}" fill="none" stroke="#a49a80" stroke-width="${f(m.w)}" stroke-linecap="round" stroke-linejoin="round"/>`);
+    for (const [x, z, r] of [...m.platforms, ...m.blocks]) o.push(`<circle cx="${X(x)}" cy="${Y(z)}" r="${f(r)}" fill="#a49a80"/>`);
+  }
   // banks: pale water, deeper the darker; a reef (under 2 deep) grounds anything
   for (const s of [...sc.shoals].sort((a, c) => c.depth - a.depth)) {
     const reef = s.depth < 2, col = reef ? '#b9a877' : s.depth < 3 ? '#5fa8a8' : '#3f8592';

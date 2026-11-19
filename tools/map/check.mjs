@@ -1,7 +1,7 @@
 // Checks a leg's layout for the mistakes that are easy to make by hand and only show once you sail
 // there: ships that start on land or aground, zones on land, and places a hull can't get to.
 // Each finding is { level: 'error' | 'warn' | 'note', msg, at?: [x, z] }. Errors fail the command.
-import { PLAYER_HULLS, hullStats } from './scenes.mjs';
+import { PLAYER_HULLS, hullStats, landDepth } from './scenes.mjs';
 
 const CELL = 8; // metres per cell of the reachability grid
 
@@ -11,18 +11,21 @@ const where = (p) => `(${Math.round(p.x)}, ${Math.round(p.z)})`;
 
 // A grid of where a ship of this beam and draught can be. A ship keeps a beam's width off the land and
 // off any bank she would stick on, which is about what she needs to turn and to pass another ship.
-export function waterGrid(sc, B, D, box) {
+export function waterGrid(sc, B, D, box, land) {
   const nx = Math.ceil((box.x1 - box.x0) / CELL) + 1, nz = Math.ceil((box.z1 - box.z0) / CELL) + 1;
-  const free = new Uint8Array(nx * nz).fill(1), clear = B;
-  const stamp = (cx, cz, r) => {
-    const i0 = Math.max(0, Math.floor((cx - r - box.x0) / CELL)), i1 = Math.min(nx - 1, Math.ceil((cx + r - box.x0) / CELL));
-    const j0 = Math.max(0, Math.floor((cz - r - box.z0) / CELL)), j1 = Math.min(nz - 1, Math.ceil((cz + r - box.z0) / CELL));
-    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) if (Math.hypot(box.x0 + i * CELL - cx, box.z0 + j * CELL - cz) < r) free[j * nx + i] = 0;
-  };
-  for (const l of sc.land) stamp(l.x, l.z, l.hit + clear);
-  for (const s of sc.shoals) if (D > s.depth) stamp(s.x, s.z, s.r + clear * 0.5);
+  const free = new Uint8Array(nx * nz), clear = B;
+  for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
+    const x = box.x0 + i * CELL, z = box.z0 + j * CELL;
+    free[j * nx + i] = land.at(i, j) < -clear && !sc.shoals.some((s) => D > s.depth && Math.hypot(x - s.x, z - s.z) < s.r + clear * 0.5) ? 1 : 0;
+  }
   const cell = (p) => [Math.round((p.x - box.x0) / CELL), Math.round((p.z - box.z0) / CELL)];
   return { nx, nz, free, cell, at: (i, j) => i >= 0 && j >= 0 && i < nx && j < nz && free[j * nx + i] === 1 };
+}
+// how far inside land each cell of the grid is, worked out once and shared by every hull
+function landGrid(depth, box) {
+  const nx = Math.ceil((box.x1 - box.x0) / CELL) + 1, nz = Math.ceil((box.z1 - box.z0) / CELL) + 1, d = new Float32Array(nx * nz);
+  for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) d[j * nx + i] = depth(box.x0 + i * CELL, box.z0 + j * CELL);
+  return { at: (i, j) => d[j * nx + i] };
 }
 
 // every cell reachable from a start, by flood fill; a start just inside a margin snaps to open water
@@ -59,6 +62,7 @@ export function bounds(sc) {
   const add = (x, z, r = 0) => { xs.push(x - r, x + r); zs.push(z - r, z + r); };
   for (const l of sc.land) add(l.x, l.z, l.r);
   for (const s of sc.shoals) add(s.x, s.z, s.r);
+  for (const m of sc.moles) for (const [x, z] of m.path) add(x, z, m.w);
   for (const z of [...sc.zones, ...sc.laterZones]) add(z.x, z.z, z.r);
   for (const s of [...sc.ships, ...sc.arrivals]) { add(s.x, s.z, s.L); if (s.o.goTo) add(s.o.goTo[0], s.o.goTo[1]); }
   for (const r of Object.values(sc.routes)) for (const st of r) if (Array.isArray(st.go)) add(st.go[0], st.go[1]);
@@ -67,9 +71,9 @@ export function bounds(sc) {
 }
 
 export function check(sc) {
-  const out = [], box = bounds(sc);
+  const out = [], box = bounds(sc), depth = landDepth(sc), land = landGrid(depth, box);
   const say = (level, msg, at) => out.push({ level, msg, ...(at ? { at: [Math.round(at.x), Math.round(at.z)] } : {}) });
-  const onLand = (p, pad = 0) => sc.land.find((l) => !l.fort && dist(p, l) < l.hit + pad);
+  const onLand = (p, pad = 0) => depth(p.x, p.z) > -pad;
   const shoalFor = (p, D) => sc.shoals.find((s) => D > s.depth && dist(p, s) < s.r);
   const hulls = PLAYER_HULLS.map(hullStats);
   const label = (s) => `${s.id} (${s.cls}${s.t ? `, arrives at ${s.t}s` : ''})`;
@@ -100,7 +104,7 @@ export function check(sc) {
 
   // where each hull can get to from the player's start
   const reach = {};
-  for (const h of hulls) reach[h.hull] = flood(waterGrid(sc, h.B, h.D, box), p);
+  for (const h of hulls) reach[h.hull] = flood(waterGrid(sc, h.B, h.D, box, land), p);
   const who = (q, r) => hulls.filter((h) => reach[h.hull] && reach[h.hull](q, r)).map((h) => h.hull);
   const can = (list) => (list.length === hulls.length ? 'every hull' : list.length ? list.join(', ') : 'no hull');
   for (const z of [...sc.zones, ...sc.laterZones]) {
@@ -122,7 +126,7 @@ export function check(sc) {
   }
   // where the ships are sent
   for (const s of all) if (s.o.goTo && !s.fixed) {
-    const g = flood(waterGrid(sc, s.B, s.D, box), s), q = pt(s.o.goTo);
+    const g = flood(waterGrid(sc, s.B, s.D, box, land), s), q = pt(s.o.goTo);
     if (g && !g(q, 40)) say('warn', `${label(s)} is sent to ${where(q)} but can't get there`, q);
   }
   return out;
