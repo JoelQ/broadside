@@ -1,6 +1,7 @@
 import { wrap, clamp } from './ship.js';
 import { rng } from './rng.js';
 
+const SHORE = [];
 // Pirate captain: picks ammo, steers for a broadside (or a boarding), fires when the arc bears.
 export function updateAI(ai, me, foe, world, dt, api) {
   const P = me.spec.ai || DEFAULT;
@@ -112,6 +113,29 @@ export function updateAI(ai, me, foe, world, dt, api) {
     const rel = wrap(Math.atan2(ix, iz) - desired);
     const clear = Math.asin(clamp((isl.r + 24) / Math.max(id, isl.r + 24.01), 0, 1));
     if (Math.abs(rel) < clear) desired -= (rel >= 0 ? 1 : -1) * (clear - Math.abs(rel) + 0.15);
+  }
+  // a coast or a mole: many circles along one shore. Find the nearest heading that clears all of them,
+  // keeping to the side she chose last time so she does not dither at a headland
+  if (world.pieces && world.pieces.length) {
+    const near = world.shoreNear(me.pos.x, me.pos.z, look + 60, SHORE), cut = [];
+    for (const p of near) {
+      const ix = p.x - me.pos.x, iz = p.z - me.pos.z, id = Math.hypot(ix, iz), c = Math.asin(clamp((p.r + 22) / Math.max(id, p.r + 22.01), 0, 1));
+      if (id - p.r > look + 20) continue;
+      const rel = wrap(Math.atan2(ix, iz) - desired);
+      cut.push([rel - c, rel + c]);
+    }
+    if (cut.length) {
+      const free = (a) => !cut.some((q) => a > q[0] && a < q[1]);
+      if (!free(0)) {
+        let l = 0, r = 0;
+        for (let g = 0; g < 40 && !free(l); g++) l = Math.max(...cut.filter((q) => l > q[0] - 1e-6 && l < q[1]).map((q) => q[1])) + 1e-4;
+        for (let g = 0; g < 40 && !free(r); g++) r = Math.min(...cut.filter((q) => r > q[0] && r < q[1] + 1e-6).map((q) => q[0])) - 1e-4;
+        const pick = ai.shoreSide && ai.shoreT > 0 ? ai.shoreSide : Math.abs(l) < Math.abs(r) ? 1 : -1;
+        ai.shoreSide = pick; ai.shoreT = 3;
+        desired += pick > 0 ? Math.min(l + 0.12, Math.PI) : Math.max(r - 0.12, -Math.PI);
+      }
+    }
+    ai.shoreT = (ai.shoreT || 0) - dt;
   }
   // shoal water she cannot float in: steer round it, unless her blood is up in a chase and she looks too late
   const hot = P.reckless && dist > range * 1.1 ? 1 - P.reckless : 1;

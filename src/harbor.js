@@ -8,7 +8,7 @@ const STONE = 0x8d8676, WOOD = 0x6b4a2c, DARK = 0x3a2412, IRON = 0x1c1c1e, LAMP 
 const QY = 2.2; // top of the quay
 
 // a gabled roof over a w x d footprint whose eaves sit at height y; the ridge runs along x unless `front`
-function roof(B, w, d, y, rh, colour, wall, front) {
+export function roof(B, w, d, y, rh, colour, wall, front) {
   const ov = 0.55, a = front ? d / 2 + ov : w / 2 + ov, b = front ? w / 2 : d / 2;
   const p = (along, across, up) => (front ? [across, y + up, along] : [along, y + up, across]);
   for (const s of [-1, 1]) {
@@ -16,7 +16,7 @@ function roof(B, w, d, y, rh, colour, wall, front) {
     B.tri(p(s * (a - ov), -b, 0), p(s * (a - ov), b, 0), p(s * (a - ov), 0, rh * (b / (b + ov))), wall);
   }
 }
-function house(B, G, w, h, d, wall, roofCol, o = {}) {
+export function house(B, G, w, h, d, wall, roofCol, o = {}) {
   const rows = o.rows || 1, door = o.door !== false, trim = o.trim || shade(roofCol, 0.75), n = Math.max(2, Math.round(w / 3)), mid = Math.floor(n / 2);
   B.box(w + 0.4, 4.5, d + 0.4, shade(STONE, 0.85), 0, -1.75, 0); // footing, deep enough for a slope
   B.box(w, h, d, wall, 0, h / 2, 0);
@@ -24,7 +24,7 @@ function house(B, G, w, h, d, wall, roofCol, o = {}) {
   roof(B, w, d, h, rh, roofCol, wall, o.front);
   if (o.chimney !== false) { B.box(0.9, rh + 1.2, 0.9, shade(STONE, 0.95), w * 0.28, h + rh * 0.55, -d * 0.18); B.box(1.1, 0.2, 1.1, DARK, w * 0.28, h + rh * 1.05 + 0.55, -d * 0.18); }
   const win = (x, y, z, ry) => B.at(x, y, z, ry, () => {
-    B.box(1.25, 1.45, 0.1, DARK, 0, 0, 0); G.box(0.95, 1.15, 0.16, LAMP, 0, 0, 0);
+    B.box(1.25, 1.45, 0.1, DARK, 0, 0, 0); G.box(0.95, 1.15, 0.16, o.glass ?? LAMP, 0, 0, 0);
     B.box(1.25, 0.08, 0.2, DARK, 0, 0, 0.02); B.box(0.08, 1.45, 0.2, DARK, 0, 0, 0.02);
     B.box(1.5, 0.12, 0.3, STONE, 0, -0.78, 0.06);
     for (const s of [-1, 1]) B.box(0.4, 1.45, 0.08, trim, s * 0.85, 0, 0.03);
@@ -40,15 +40,15 @@ function house(B, G, w, h, d, wall, roofCol, o = {}) {
     B.box(2.2, 0.25, 0.9, STONE, x, 0.12, d / 2 + 0.4);
   }
 }
-function barrel(B, x, y, z, s = 1) { B.cyl(0.62 * s, 0.7 * s, 1.3 * s, 0x7a5632, x, y + 0.65 * s, z, 8); for (const k of [0.3, 1.0]) B.cyl(0.72 * s, 0.72 * s, 0.1 * s, IRON, x, y + k * s, z, 8); }
-function crate(B, x, y, z, s, ry = 0) { B.box(s, s, s, CRATE, x, y + s / 2, z, 0, ry); B.box(s * 1.04, s * 0.14, s * 1.04, shade(CRATE, 0.75), x, y + s * 0.5, z, 0, ry); }
+export function barrel(B, x, y, z, s = 1) { B.cyl(0.62 * s, 0.7 * s, 1.3 * s, 0x7a5632, x, y + 0.65 * s, z, 8); for (const k of [0.3, 1.0]) B.cyl(0.72 * s, 0.72 * s, 0.1 * s, IRON, x, y + k * s, z, 8); }
+export function crate(B, x, y, z, s, ry = 0) { B.box(s, s, s, CRATE, x, y + s / 2, z, 0, ry); B.box(s * 1.04, s * 0.14, s * 1.04, shade(CRATE, 0.75), x, y + s * 0.5, z, 0, ry); }
 function lamp(B, G, x, y, z) {
   B.cyl(0.1, 0.14, 4.4, IRON, x, y + 2.2, z, 5); B.box(0.9, 0.1, 0.1, IRON, x + 0.4, y + 4.3, z);
   G.box(0.5, 0.6, 0.5, LAMP, x + 0.8, y + 3.85, z); B.cyl(0, 0.42, 0.3, IRON, x + 0.8, y + 4.3, z, 4, 0, Math.PI / 4);
 }
 // hanging shop sign on a bracket
 function sign(B, x, y, z, colour) { B.box(0.1, 0.1, 1.9, IRON, x, y + 0.75, z + 0.9); B.box(0.12, 1.1, 1.5, colour, x, y, z + 1.0); B.box(0.16, 0.5, 0.7, 0xe8d9a8, x, y, z + 1.0); }
-function rowboat(B, x, z, ry, colour) {
+export function rowboat(B, x, z, ry, colour) {
   B.at(x, 0.05, z, ry, () => {
     const rr = [];
     for (let k = 0; k <= 6; k++) { const u = k / 6, hw = 0.95 * Math.sin(Math.PI * (0.1 + u * 0.82)) ** 0.6, zz = (u - 0.5) * 5.4; rr.push([[-hw, 0.75, zz], [-hw * 0.75, 0.1, zz], [0, -0.25, zz], [hw * 0.75, 0.1, zz], [hw, 0.75, zz]]); }

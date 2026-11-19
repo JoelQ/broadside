@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mulberry, scatterIslands } from './geo.js';
 import { makeIsland } from './land.js';
 import { rng } from './rng.js';
+import { makeCoast, molePieces, segDist } from './coast.js';
 
 // ---------- shared wave model (JS + GLSL stay in sync) ----------
 const RAW_WAVES = [
@@ -214,7 +215,7 @@ export class World {
     fg.setAttribute('color', new THREE.BufferAttribute(new Float32Array(NF * 8), 4));
     this.flowMesh = new THREE.LineSegments(fg, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, fog: false }));
     this.flowMesh.frustumCulled = false; scene.add(this.flowMesh);
-    this.islands = [];
+    this.islands = []; this.coasts = []; this.moles = []; this.pieces = []; this.pieceGrid = new Map();
     this.islandGroup = new THREE.Group();
     scene.add(this.islandGroup);
 
@@ -304,7 +305,38 @@ export class World {
     return h * this.amp;
   }
 
-  clearIslands() { this.islandGroup.clear(); this.islands = []; this.setShoals([]); this.currentAt = null; this.clearPaws(); this.setWind(undefined, 1, true); this.wind.steady = false; this.wind.next = null; }
+  // Land that is not a round island: coasts and moles (see coast.js). Their shore circles are binned in a
+  // grid so ships, shot and the AI only look at the shore near them; ground(x, z) is the height of the land.
+  addCoast(def) {
+    const c = makeCoast(def);
+    this.islandGroup.add(c.mesh); this.coasts.push(c);
+    for (const p of c.pieces) this.addPiece(p);
+    return c;
+  }
+  addMole(m) {
+    this.moles.push(m);
+    for (const p of molePieces(m.path, m.w)) this.addPiece(p);
+    for (const [x, z, r] of m.platforms || []) this.addPiece({ x, z, r });
+    for (const [x, z, r] of m.blocks || []) this.addPiece({ x, z, r }); // a fort on its head: solid to ships, but shot meets the fort itself
+  }
+  addPiece(p) { const k = Math.floor(p.x / 60) * 4099 + Math.floor(p.z / 60); let c = this.pieceGrid.get(k); if (!c) this.pieceGrid.set(k, (c = [])); c.push(p); this.pieces.push(p); }
+  // shore circles within r of a point
+  shoreNear(x, z, r, out = []) {
+    out.length = 0;
+    const g0 = Math.floor((x - r - 40) / 60), g1 = Math.floor((x + r + 40) / 60), h0 = Math.floor((z - r - 40) / 60), h1 = Math.floor((z + r + 40) / 60);
+    for (let gx = g0; gx <= g1; gx++) for (let gz = h0; gz <= h1; gz++) { const c = this.pieceGrid.get(gx * 4099 + gz); if (c) for (const p of c) if (Math.hypot(p.x - x, p.z - z) < r + p.r) out.push(p); }
+    return out;
+  }
+  ground(x, z) {
+    let y = -20;
+    for (const c of this.coasts) { const b = c.shape.box; if (x > b[0] - 30 && x < b[2] + 30 && z > b[1] - 30 && z < b[3] + 30) y = Math.max(y, c.ground(x, z)); }
+    for (const m of this.moles) {
+      if (segDist(m.path, x, z) < m.w / 2) y = Math.max(y, m.top + (m.parapet || 0)); // the sea wall along it stops shot too
+      for (const [px, pz, r] of m.platforms || []) if (Math.hypot(x - px, z - pz) < r) y = Math.max(y, m.top);
+    }
+    return y;
+  }
+  clearIslands() { this.islandGroup.clear(); this.islands = []; this.coasts = []; this.moles = []; this.pieces = []; this.pieceGrid = new Map(); this.setShoals([]); this.currentAt = null; this.clearPaws(); this.setWind(undefined, 1, true); this.wind.steady = false; this.wind.next = null; }
   // wind strength: 0 is a dead calm, 1 a working breeze, 1.6 a gale
   setWind(dir, str, now) {
     const w = this.wind;

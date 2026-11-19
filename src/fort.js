@@ -29,7 +29,14 @@ export function buildFortModel(spec) {
   // a keep, and a door on the landward side
   S.box(R * 0.7, 2.6, R * 0.7, DARK, 0, H + 1.3, -R * 0.2);
   S.box(1.6, 2.4, 0.3, 0x3a2a1c, 0, 1.6, -R * (sq ? 1.01 : 0.99));
-  const mastH = H + 9;
+  if (spec.hullId === 'koules') {
+    // the Rocca a Mare: rounded corners, a second storey on the landward half, St Mark's lions on its faces
+    for (const [x, z] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { S.cyl(R * 0.32, R * 0.36, H + 2.4, STONE, x * R * 0.92, (H + 2.4) / 2 - 1.2, z * R * 0.92, 12); S.cyl(R * 0.35, R * 0.35, 0.6, DARK, x * R * 0.92, H + 1.3, z * R * 0.92, 12); }
+    S.box(R * 1.7, 6, R * 0.9, STONE, 0, H + 3, -R * 0.45); S.box(R * 1.78, 0.6, R * 0.98, DARK, 0, H + 6.1, -R * 0.45);
+    for (let i = 0; i < 6; i++) S.box(R * 0.14, 1.2, 0.9, STONE, (i / 5 - 0.5) * R * 1.6, H + 6.9, -R * 0.02);
+    for (const [x, z, a] of [[0, R * 1.005, 0], [R * 1.005, 0, Math.PI / 2], [-R * 1.005, 0, Math.PI / 2], [0, -R * 1.005, 0]]) { S.box(3.6, 3.2, 0.25, 0xa89060, x, H * 0.45, z, 0, a); S.box(2.6, 2.2, 0.3, 0xd8b04a, x, H * 0.45, z, 0, a); }
+  }
+  const mastH = H + (spec.hullId === 'koules' ? 15 : 9);
   S.bar([0, H + 2.6, -R * 0.2], [0, mastH, -R * 0.2], 0.16, 0x74522f, 5, 0.1);
   group.add(S.mesh());
   const fw = 5, fg = new THREE.PlaneGeometry(fw, fw * 0.58, 8, 2); fg.translate(fw / 2, 0, 0);

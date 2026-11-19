@@ -9,6 +9,19 @@ const cSand = C(SAND), cWet = C(WET), cRock = C(ROCK), cCliff = C(CLIFF), cGrass
 const BLOB = new THREE.DodecahedronGeometry(1, 0);
 const hash = (x, z) => { const s = Math.sin(x * 127.1 + z * 311.7) * 43758.5453; return s - Math.floor(s); };
 
+// The colour of a patch of ground at height y, with `up` how level it is (1 flat) and k a little noise.
+// dry (0-1) burns the grass toward summer straw and scrub, for the coasts of Anatolia and Crete.
+const cStraw = C(0xb4a46a), cScrub = C(0x6f7a44), _d = C(0);
+export function groundColour(y, up, k, H, dry = 0) {
+  if (y < 2.1) mix(cWet, cSand, (y + 0.2) / 1.2, _c).multiplyScalar(0.94 + k * 0.1);
+  else if (up < 0.66) mix(cCliff, cRock, k * 1.3 + (up - 0.5), _c);
+  else {
+    mix(cLush, cGrass, y / (H * 0.55) + k * 0.5 - 0.25, _c); if (y > H * 0.62) mix(_c, cDry, (y - H * 0.62) / (H * 0.3), _c);
+    if (dry) _c.lerp(mix(cScrub, cStraw, y / (H * 0.7) + k * 0.6 - 0.2, _d), dry);
+    if (y < 3.2) mix(cSand, _c, (y - 2.1) / 1.1, _c); _c.multiplyScalar(0.9 + k * 0.2);
+  }
+  return _c;
+}
 export function palm(B, x, y, z, h, rnd) {
   const lean = rnd() * 6.28, bend = 0.5 + rnd() * 1.4, pts = [];
   for (let i = 0; i <= 4; i++) { const k = i / 4; pts.push([x + Math.sin(lean) * bend * k * k, y - 0.3 + h * k, z + Math.cos(lean) * bend * k * k]); }
@@ -71,11 +84,7 @@ export function makeIsland(r, H, rnd, x, z, opts = {}) {
     if (top < -1.5) return; // far under water
     const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
     const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx, up = Math.abs(ny) / (Math.hypot(nx, ny, nz) || 1);
-    const y = (a[1] + b[1] + c[1]) / 3, k = hash(a[0] + c[0], a[2] + b[2]);
-    if (y < 2.1) mix(cWet, cSand, (y + 0.2) / 1.2, _c).multiplyScalar(0.94 + k * 0.1);
-    else if (up < 0.66) mix(cCliff, cRock, k * 1.3 + (up - 0.5), _c);
-    else { mix(cLush, cGrass, y / (H * 0.55) + k * 0.5 - 0.25, _c); if (y > H * 0.62) mix(_c, cDry, (y - H * 0.62) / (H * 0.3), _c); if (y < 3.2) mix(cSand, _c, (y - 2.1) / 1.1, _c); _c.multiplyScalar(0.9 + k * 0.2); }
-    B.tri(a, b, c, _c);
+    B.tri(a, b, c, groundColour((a[1] + b[1] + c[1]) / 3, up, hash(a[0] + c[0], a[2] + b[2]), H));
   };
   for (let j = 0; j < M; j++) for (let i = 0; i < M; i++) {
     const a = P(i, j), b = P(i + 1, j), c = P(i + 1, j + 1), d = P(i, j + 1);

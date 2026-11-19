@@ -1,4 +1,5 @@
 import { shipSpec } from './fleet.js';
+import { PLACES, narrowsCastles, KOULES, MOLE_HEAD, MOUTH, BASIN } from './maps.js';
 
 // Every campaign mission, as data the engine can build. Most missions are one scene that changes as it
 // goes (events on a clock, ships that wake, arrive or run); the pirate hunt and the finale are cruises of
@@ -223,33 +224,33 @@ const calm = {
 };
 
 // ---------- 4. The straits ----------
-// The channel runs north-south. The current sets south, out to sea, strongest in the middle; inshore
-// there is slack water, a back-eddy and shoals. The wind blows down the channel too.
-const straitShores = () => [-920, -690, -460, -230, 0, 230, 460, 690, 920].flatMap((z) => [{ x: -400, z, r: 150 }, { x: 400, z, r: 150 }]);
-const straitCurrent = (x) => { const a = Math.abs(x); return [0, a < 190 ? -3 * (1 - (a / 190) ** 2) - 0.3 : a < 270 ? 1.1 : 0]; };
-const straitShoals = (zs) => zs.flatMap((z) => [{ x: -232, z, r: 42, depth: 2.8 }, { x: 232, z: z + 60, r: 42, depth: 2.8 }]);
-const strait = () => ({ islands: straitShores(), current: straitCurrent, wind: { dir: PI - 1.1, str: 1, steady: true } });
-// Venice: one scene. Up the strait past the castles, destroy the flagship fitting out above them, and get out
-// again on the current.
+// The Dardanelles (see maps.js): a winding channel with the Narrows above the middle, a castle on each
+// shore there, and a bend round Nara point above them. The current sets south, out to sea, strongest in
+// mid-channel and through the Narrows; inshore there is slack water, a back-eddy and shoals. The wind
+// blows down the channel too.
+const castle = (c, id, at, h) => ({ id, spec: shipSpec('castle', c.foe, c.names[id === 'west' ? 'castleW' : 'castleE'], 'poor', { bow: { n: 3 } }), side: 1, x: at[0], z: at[1], h });
+// Venice: one scene. Up the strait through the Narrows, destroy the flagship fitting out in the bay above
+// them, and get out again on the current.
 const upStrait = {
   title: 'Up the strait',
   build(c) {
+    const berth = [-292, 214];
     return {
-      env: 'golden', ...strait(), shoals: straitShoals([-520, -330, -150, 30, 210, 390]),
-      player: { x: 0, z: -800, h: 0.5, speed: 6 },
+      env: 'golden', ...PLACES.strait({ castleShips: true, fittingOut: berth }),
+      player: { x: 0, z: -800, h: 0.3, speed: 6 },
       ships: [
-        { id: 'west', spec: shipSpec('castle', c.foe, c.names.castleW, 'poor', { bow: { n: 3 } }), side: 1, x: -262, z: -160, h: PI / 2 },
-        { id: 'east', spec: shipSpec('castle', c.foe, c.names.castleE, 'poor', { bow: { n: 3 } }), side: 1, x: 262, z: -130, h: -PI / 2 },
-        { id: 'flag', spec: shipSpec('flagship', c.foe, c.names.flag, 'poor', { guns: 6, magazine: 0.06, ai: { cuts: 0.3 } }), side: 1, x: 110, z: 470, h: 0, o: { crew: 0.35, sails: 0.3, hull: 0.75, anchored: true } },
-        { id: 'guard', spec: shipSpec('sloop', c.foe, c.names.picket, 'poor'), side: 1, x: -40, z: 290, h: PI, o: { idle: true } },
+        castle(c, 'west', narrowsCastles.west, PI / 2),
+        castle(c, 'east', narrowsCastles.east, -PI / 2),
+        { id: 'flag', spec: shipSpec('flagship', c.foe, c.names.flag, 'poor', { guns: 6, magazine: 0.06, ai: { cuts: 0.3 } }), side: 1, x: berth[0], z: berth[1], h: -1.1, o: { crew: 0.35, sails: 0.3, hull: 0.75, anchored: true } },
+        { id: 'guard', spec: shipSpec('sloop', c.foe, c.names.picket, 'poor'), side: 1, x: -150, z: 250, h: PI, o: { idle: true } },
       ],
       focus: 'flag',
-      objective: () => { const S = c.S; if (!S) return ''; return S.by.flag.out ? 'She is finished. Now get out: ride the current south, past the castles' : 'Go up past the castles, against wind and current, and destroy or take the flagship fitting out above them'; },
-      tip: 'The current is strongest in mid-channel. Inshore there is slack water and an eddy that sets north, among the shoals and under the castle guns.',
+      objective: () => { const S = c.S; if (!S) return ''; return S.by.flag.out ? 'She is finished. Now get out: ride the current south, back through the Narrows' : 'Go up through the Narrows against the current, and destroy or take the flagship fitting out in the bay above them'; },
+      tip: 'The castles cross their fire in mid-channel, where the current is strongest. Close under either shore their guns cannot bear, and an eddy sets north among the shoals.',
       check: (S) => {
         const f = S.by.flag, g = S.by.guard;
-        if (!S.flag.above && S.p.pos.z > 0) { S.flag.above = true; S.say('Barbaro, at the glass: “There. Yards down on deck, lighters alongside. And one guard ship.” Whatever is done to her, the way home is the way you came.', ''); }
-        if (g.ai && g.ai.idle && (S.p.pos.z > 60 || g.hull < g.hullMax)) S.wake('guard', 'The guard ship is coming down on you');
+        if (!S.flag.above && S.p.pos.z > 40) { S.flag.above = true; S.say('Barbaro, at the glass: “There, in the bay under the point. Yards down on deck, lighters alongside. And one guard ship.” Whatever is done to her, the way home is the way you came.', ''); }
+        if (g.ai && g.ai.idle && (S.p.pos.z > 90 || g.hull < g.hullMax)) S.wake('guard', 'The guard ship is coming down on you');
         if (f.out === 'captured') return 'won';
         if (f.out && !S.flag.exit) { S.flag.exit = true; S.addZone({ name: 'out', x: 0, z: -800, r: 120 }); S.say('Now get out: ride the current south'); }
         return f.out && S.inZone('out') ? 'won' : null;
@@ -257,23 +258,24 @@ const upStrait = {
     };
   },
 };
-// Ottomans: one scene. Down the strait on the current, past the watch galley, to break the blockade at the mouth.
+// Ottomans: one scene. Down the strait on the current, past the watch galley and under your own castles,
+// to break the blockade lying across the mouth, out of the castles' reach.
 const downStrait = {
   title: 'Down the strait',
   build(c) {
     return {
-      env: 'golden', ...strait(), shoals: straitShoals([-560, -200, 100, 400]),
+      env: 'golden', ...PLACES.strait(),
       player: { x: 0, z: 800, h: PI, speed: 8 },
       ships: [
-        { id: 'picket', spec: shipSpec('galley', c.foe, c.names.galley1, 'line'), side: 1, x: 40, z: 320, h: 0 },
-        { id: 'heavy', spec: shipSpec('merchantman', c.foe, c.names.heavy, 'line', { ai: { cuts: 0.5 } }), side: 1, x: -85, z: -400, h: PI / 2, o: { anchored: true } },
-        { id: 'brig', spec: shipSpec('brig', c.foe, c.names.brig, 'crack', { ai: { cuts: 0.5 } }), side: 1, x: 95, z: -390, h: -PI / 2, o: { anchored: true } },
+        { id: 'picket', spec: shipSpec('galley', c.foe, c.names.galley1, 'line'), side: 1, x: 150, z: 430, h: -0.4 },
+        { id: 'heavy', spec: shipSpec('merchantman', c.foe, c.names.heavy, 'line', { ai: { cuts: 0.5 } }), side: 1, x: -105, z: -600, h: PI / 2, o: { anchored: true } },
+        { id: 'brig', spec: shipSpec('brig', c.foe, c.names.brig, 'crack', { ai: { cuts: 0.5 } }), side: 1, x: 105, z: -592, h: -PI / 2, o: { anchored: true } },
       ],
       focus: 'heavy',
       objective: 'Break the blockade at the mouth: take, sink or burn one of the two anchored ships, or make her cut her cable',
       tip: 'Coming down is fast and hard to undo; the eddies inshore are the only way back up. The blockade cannot dodge. Neither can you, once the current has you.',
       check: (S) => {
-        if (!S.flag.seen && S.p.pos.z < -60) { S.flag.seen = true; S.say('İbrahim Reis: “They cannot run. Remember that neither can we.”', ''); }
+        if (!S.flag.seen && S.p.pos.z < -330) { S.flag.seen = true; S.say('İbrahim Reis: “They cannot run. Remember that neither can we.”', ''); }
         return S.by.heavy.out || S.by.brig.out || S.flag.cut ? 'won' : null;
       },
     };
@@ -281,38 +283,43 @@ const downStrait = {
 };
 
 // ---------- 5. Candia ----------
-const harbourCoast = () => [-450, -150, 150, 450].map((x) => ({ x, z: 470, r: 190 }));
+// The harbour of Candia (see maps.js): the city behind its sea walls, the harbour closed by two moles, the
+// Koules at the end of the western one and a battery on the head of the eastern. Each leg uses the same place.
+const koules = (c, own, o) => ({ id: 'koules', spec: shipSpec('koules', own ? c.own : c.foe, c.names.koules, 'line'), side: own ? 0 : 1, x: KOULES[0], z: KOULES[1], h: PI, o });
 const assaultMouth = {
   title: 'The mole',
   build(c) {
     return {
-      env: 'dusk', wind: { dir: 0.4, str: 1 }, islands: harbourCoast(),
+      env: 'dusk', wind: { dir: 0.4, str: 1 }, ...PLACES.candia({ koules: true, battery: true }),
       player: { x: -60, z: -560, h: 0.1, speed: 7 },
       ships: [
-        { id: 'koules', spec: shipSpec('koules', c.foe, c.names.koules, 'line'), side: 1, x: 40, z: 250, h: PI },
-        { id: 'battery', spec: shipSpec('battery', c.foe, 'The mole battery', 'line', { magazine: 0.07, crew: 75 }), side: 1, x: -205, z: 262, h: PI + 0.75 },
-        { id: 'guard', spec: shipSpec('galliot', c.foe, c.names.picket, 'line'), side: 1, x: -120, z: 60, h: PI },
+        koules(c, false),
+        { id: 'battery', spec: shipSpec('battery', c.foe, 'The mole battery', 'line', { magazine: 0.07, crew: 75 }), side: 1, x: MOLE_HEAD[0], z: MOLE_HEAD[1], h: PI + 0.3 },
+        { id: 'guard', spec: shipSpec('galliot', c.foe, c.names.picket, 'line'), side: 1, x: 60, z: 10, h: PI },
       ],
       focus: 'battery',
-      objective: 'Open the harbour mouth: silence the mole battery or fire its magazine, by any means',
-      tip: 'The fortress covers the open water to the south. The mole battery cannot bear along the shore to the west of it.',
+      objective: 'Open the harbour mouth: silence the battery on the eastern mole or fire its magazine, by any means',
+      tip: 'The Koules covers the open water south of the mouth. The mole battery looks across the mouth: it cannot bear along the outside of its own mole, to the east.',
       check: (S) => (S.by.battery.out ? 'won' : null),
     };
   },
 };
+// Both fleets are inside the harbour, fighting among the moorings. Theirs came in through the mouth.
 const melee = {
   title: 'The harbour',
   build(c) {
-    const f = [['brig', -220, 80], ['xebec', 0, 140], ['merchantman', 230, 100]], e = [['brig', -220, 330], ['galley', 10, 380], ['merchantman', 240, 350]];
+    const attacker = c.side !== 'venice', deep = [[-190, 380], [20, 400], [220, 375]], mouth = [[-170, 220], [40, 200], [225, 215]];
+    const f = ['brig', 'xebec', 'merchantman'].map((h, i) => [h, ...(attacker ? mouth : deep)[i]]), e = ['brig', 'galley', 'merchantman'].map((h, i) => [h, ...(attacker ? deep : mouth)[i]]);
+    const fh = attacker ? 0 : PI, eh = attacker ? PI : 0;
     return {
-      env: 'dusk', wind: { dir: PI / 2 + 0.2, str: 1 }, seedIslands: [1669, 2],
-      player: { x: 0, z: -260, h: 0, speed: 6 },
+      env: 'dusk', wind: { dir: PI / 2 + 0.2, str: 1 }, ...PLACES.candia(),
+      player: attacker ? { x: MOUTH[0], z: 40, h: 0, speed: 6 } : { x: 60, z: 420, h: PI + 0.3, speed: 5 },
       ships: [
-        ...f.map(([h, x, z], i) => ({ id: 'f' + i, spec: shipSpec(h, c.own, c.names.friends[i], 'poor'), side: 0, x, z, h: 0 })),
-        ...e.map(([h, x, z], i) => ({ id: 'e' + i, spec: shipSpec(h, c.foe, c.names.foes[i], 'line'), side: 1, x, z, h: PI })),
+        ...f.map(([h, x, z], i) => ({ id: 'f' + i, spec: shipSpec(h, c.own, c.names.friends[i], 'poor'), side: 0, x, z, h: fh })),
+        ...e.map(([h, x, z], i) => ({ id: 'e' + i, spec: shipSpec(h, c.foe, c.names.foes[i], 'line'), side: 1, x, z, h: eh })),
       ],
-      objective: () => { const S = c.S; if (!S) return ''; const n = ['e0', 'e1', 'e2'].filter((id) => !S.by[id].out).length, m = ['f0', 'f1', 'f2'].filter((id) => !S.by[id].out).length; return `Both fleets are paired off around you. Choose where to weigh in — theirs still fighting: ${n} · ours: ${m}`; },
-      tip: 'T picks your target. A ship already fighting one of ours has her attention elsewhere.',
+      objective: () => { const S = c.S; if (!S) return ''; const n = ['e0', 'e1', 'e2'].filter((id) => !S.by[id].out).length, m = ['f0', 'f1', 'f2'].filter((id) => !S.by[id].out).length; return `Both fleets are paired off inside the harbour. Choose where to weigh in — theirs still fighting: ${n} · ours: ${m}`; },
+      tip: 'T picks your target. A ship already fighting one of ours has her attention elsewhere. The moles stop shot as well as ships.',
       check: (S) => (allOut(S, ['e0', 'e1', 'e2']) ? 'won' : null),
     };
   },
@@ -320,36 +327,35 @@ const melee = {
 const flagDuel = (attacker) => ({
   title: 'The flagship',
   build(c) {
-    const fortSide = attacker ? 1 : 0;
     return {
-      env: 'storm', wind: { dir: PI / 2, str: 1 }, islands: harbourCoast(),
-      shoals: [{ x: -260, z: 60, r: 70, depth: 3.5 }, { x: 300, z: 20, r: 80, depth: 3.5 }],
-      player: { x: -40, z: -420, h: 0, speed: 6 },
+      env: 'storm', wind: { dir: PI / 2, str: 1 }, ...PLACES.candia({ koules: true, shoals: [{ x: -300, z: 10, r: 70, depth: 3.5 }, { x: 330, z: -20, r: 80, depth: 3.5 }] }),
+      player: { x: -40, z: -440, h: 0, speed: 6 },
       ships: [
-        { id: 'flag', spec: shipSpec('flagship', c.foe, c.names.flag, 'line'), side: 1, x: 60, z: 40, h: PI, o: { crew: 0.7, hull: 0.65 } },
-        { id: 'koules', spec: shipSpec('koules', attacker ? c.foe : c.own, c.names.koules, 'line'), side: fortSide, x: 40, z: 250, h: PI, o: attacker ? { hull: 0.6, crew: 0.6 } : { hull: 0.35, crew: 0.4 } },
+        { id: 'flag', spec: shipSpec('flagship', c.foe, c.names.flag, 'line'), side: 1, x: 60, z: -20, h: PI, o: { crew: 0.7, hull: 0.65 } },
+        koules(c, !attacker, attacker ? { hull: 0.6, crew: 0.6 } : { hull: 0.35, crew: 0.4 }),
       ],
-      objective: attacker ? 'Their flagship stands between you and the city. Finish her, and mind the fortress' : 'Their commander is coming in. Finish his flagship under what is left of your own guns',
-      tip: attacker ? 'The fortress arcs are drawn on the water. Fight her outside them if you can.' : 'The fortress still has a few guns. Draw him under them.',
+      objective: attacker ? 'Their flagship stands between you and the harbour mouth. Finish her, and mind the Koules' : 'Their commander is coming in for the harbour mouth. Finish his flagship under what is left of the Koules’ guns',
+      tip: attacker ? 'The Koules’ arc is drawn on the water. Fight her outside it if you can.' : 'The Koules still has a few guns. Draw him under them.',
       check: (S) => (S.by.flag.out ? 'won' : null),
     };
   },
 });
+// Venice: the fireships come in on the wind for the harbour mouth. Get out through it and stop them.
 const sortie = {
   title: 'The sortie',
   build(c) {
-    const mole = [0, 230];
+    const mole = [MOUTH[0], MOUTH[1] - 30];
     const fs = [[-200, -720], [0, -800], [210, -700]];
     return {
-      env: 'dusk', wind: { dir: 1.2, str: 1, steady: true }, islands: harbourCoast(),
-      player: { x: 0, z: 80, h: PI, speed: 7 },
+      env: 'dusk', wind: { dir: 1.2, str: 1, steady: true }, ...PLACES.candia(),
+      player: { x: BASIN[0] + 10, z: BASIN[1] - 60, h: PI, speed: 7 },
       zones: [{ name: 'mole', x: mole[0], z: mole[1], r: 55, color: 0xff6a5a }],
       ships: [
         ...fs.map(([x, z], i) => ({ id: 'fs' + i, spec: shipSpec('sloop', c.foe, 'Fireship', 'poor', { guns: 0, bow: { n: 1, cal: 0, arc: 0.2 }, magazine: 0.3, fuse: 2, speed: 7, stock: {} }), side: 1, x, z, h: 0, o: { crew: 0.3, goTo: mole, sail: 3 } })),
         { id: 'escort', spec: shipSpec('galliot', c.foe, c.names.galley1, 'line'), side: 1, x: 60, z: -520, h: 0 },
       ],
       focus: 'fs1',
-      objective: () => { const S = c.S; if (!S) return ''; return `Fireships are coming in on the wind for the mole. Stop at least two of the three — stopped: ${S.flag.stopped || 0} · got through: ${S.flag.through || 0}`; },
+      objective: () => { const S = c.S; if (!S) return ''; return `Fireships are coming in on the wind for the harbour mouth. Get out and stop at least two of the three — stopped: ${S.flag.stopped || 0} · got through: ${S.flag.through || 0}`; },
       tip: 'They are packed with powder: fire is quickest. Do not be alongside when one goes up.',
       check: (S) => {
         let stopped = 0, through = 0;
@@ -361,7 +367,7 @@ const sortie = {
         S.flag.stopped = stopped; S.flag.through = through;
         return through >= 2 ? 'failed' : stopped >= 2 ? 'won' : null;
       },
-      failText: 'The mole is burning',
+      failText: 'The harbour mouth is burning',
     };
   },
 };
