@@ -3,7 +3,7 @@
 // Writes <out>/<leg>.svg for every leg whose name matches ("m1V The run", "m4", "strait"), plus
 // <out>/index.html with all of them; --png also writes PNGs and a contact sheet (needs Playwright).
 // Prints what the checker found; exits 1 if anything is an error. --json prints the findings as JSON.
-import { mkdirSync, writeFileSync } from 'fs';
+import { mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { createRequire } from 'module';
 import path from 'path';
 import { pathToFileURL } from 'url';
@@ -26,10 +26,19 @@ for (const sc of list) {
   writeFileSync(path.join(out, file + '.svg'), svg(sc, found));
   report.push({ leg: sc.name, title: sc.title, file: path.join(out, file + '.svg'), findings: found });
 }
-writeFileSync(path.join(out, 'index.html'), `<!doctype html><meta charset="utf-8"><title>Broadside maps</title>
-<style>body{background:#0d2433;color:#cde;font:14px system-ui;margin:16px}main{display:grid;grid-template-columns:repeat(auto-fill,minmax(520px,1fr));gap:16px}
-img{width:100%;display:block;border-radius:4px}figure{margin:0}figcaption{padding:4px 2px}.error{color:#ff6b5e}.warn{color:#ffcc00}</style>
-<main>${report.map((r) => `<figure><img src="${path.basename(r.file)}"><figcaption>${r.findings.filter((x) => x.level !== 'note').map((x) => `<div class="${x.level}">${x.level}: ${x.msg.replace(/</g, '&lt;')}</div>`).join('') || 'no problems found'}</figcaption></figure>`).join('\n')}</main>`);
+// index.html: every leg on one page to scan, each map scaled to the same tile; click one to see it full width, again to put it back.
+// The maps are inlined, so the page stands on its own (it can be shared as it is).
+const tile = (r) => {
+  const bad = r.findings.filter((x) => x.level !== 'note');
+  return `<figure><div class="map">${readFileSync(r.file, 'utf8').replace(/^<svg /, '<svg preserveAspectRatio="xMidYMid meet" ')}</div><figcaption><b>${r.leg}</b> · ${r.title}${bad.map((x) => `<div class="${x.level}">${x.level}: ${x.msg.replace(/</g, '&lt;')}</div>`).join('')}</figcaption></figure>`;
+};
+writeFileSync(path.join(out, 'index.html'), `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Broadside maps</title>
+<style>body{background:#0d2433;color:#cde;font:13px system-ui,sans-serif;margin:12px}h1{font-size:16px;margin:0 0 10px}main{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+figure{margin:0;background:#0a1c28;border-radius:6px;overflow:hidden}figure .map{height:380px;cursor:zoom-in}figure.big{grid-column:1/-1}figure.big .map{height:auto;cursor:zoom-out}figure svg{width:100%;height:100%;display:block;overflow:hidden}
+figcaption{padding:6px 8px}.error{color:#ff6b5e}.warn{color:#ffcc00}</style>
+<h1>Broadside maps · ${report.length} legs · ${report.reduce((n, r) => n + r.findings.filter((x) => x.level === 'error').length, 0)} errors</h1>
+<main>${report.map(tile).join('\n')}</main>
+<script>document.querySelectorAll('figure .map').forEach((m) => m.onclick = () => { m.parentNode.classList.toggle('big'); m.scrollIntoView({ block: 'nearest' }); });</script>`);
 
 if (flag('png')) {
   const { chromium } = createRequire(import.meta.url)('playwright');
@@ -38,7 +47,7 @@ if (flag('png')) {
     await page.goto(pathToFileURL(r.file).href);
     await page.locator('svg').screenshot({ path: (r.png = r.file.replace(/\.svg$/, '.png')) });
   }
-  await page.setViewportSize({ width: 1600, height: 900 });
+  await page.setViewportSize({ width: 1640, height: 900 }); // five maps across
   await page.goto(pathToFileURL(path.join(out, 'index.html')).href);
   await page.screenshot({ path: path.join(out, 'contact.png'), fullPage: true });
   await browser.close();

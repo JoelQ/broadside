@@ -129,7 +129,9 @@ export function svg(sc, findings = [], { width = 1100 } = {}) {
   legend.forEach(([s, c], i) => text(W - pad, H - px(10 + 14 * (legend.length - 1 - i)), s, 10, c, 'end'));
 
   const hpx = Math.round((H / W) * width);
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${f(W)} ${f(H)}" width="${width}" height="${hpx}" font-family="system-ui, sans-serif">\n${o.join('\n')}\n</svg>\n`;
+  // clipped to the chart, so land that runs off it stays off it when the map is shown in a bigger box
+  const id = 'chart-' + String(sc.name).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${f(W)} ${f(H)}" width="${width}" height="${hpx}" font-family="system-ui, sans-serif">\n<clipPath id="${id}"><rect width="${f(W)}" height="${f(H)}"/></clipPath><g clip-path="url(#${id})">\n${o.join('\n')}\n</g></svg>\n`;
 }
 
 function arrow(o, x1, y1, x2, y2, col, w, head, op) {
