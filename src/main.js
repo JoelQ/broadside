@@ -10,6 +10,7 @@ import { CAMP } from './campaign.js';
 import { PT } from './playtest.js';
 import { steerTo } from './ai.js';
 import { rng, seedRng, rngSeed } from './rng.js';
+import { portrait, speakerOf } from './portraits.js';
 
 const $ = (id) => document.getElementById(id);
 // rand and gauss decide the fight and come from the seeded source; vrand is for looks only
@@ -212,6 +213,8 @@ function toast(text, cls = '', ms = 2600) {
   if (G.fast) return;
   const box = $('toasts'), el = document.createElement('div');
   el.className = 'toast ' + cls; el.textContent = text;
+  const who = speakerOf(text); // a line someone says gets their face beside it
+  if (who) { el.classList.add('said'); el.insertAdjacentHTML('afterbegin', `<span class="face">${portrait(who, { small: true })}</span>`); }
   box.appendChild(el);
   while (box.children.length > 3) box.firstChild.remove();
   setTimeout(() => { el.style.opacity = 0; setTimeout(() => el.remove(), 600); }, ms);
