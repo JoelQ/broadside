@@ -4,9 +4,9 @@
 //
 // The look follows the game's flat-shaded, low-poly ships and towns: flat colours, light from the upper left,
 // and the shadow side of every face and garment cut as one darker facet. Each character is told apart first by
-// silhouette (headgear, hair, beard), then by one signature colour, then by background: crimson and gold for
-// Venice, green for the Porte, sea blue for the islanders who serve either side, and the colours of their own
-// ships for the pirates.
+// silhouette (headgear, hair, beard), then by one signature colour, then by background: sea blue for your own
+// people (anyone who can sail as your officer, whichever flag they were born under), crimson and gold for the
+// Venetians who give you orders, green for the Ottomans who do, and one shared smoke-brown for every pirate.
 
 // ---------- colour ----------
 function mix(hex, k) { // k < 0 darkens toward black, k > 0 lightens toward white
@@ -20,7 +20,8 @@ export const SKIN = { pale: '#e9c9ad', fair: '#ddb08a', olive: '#c99668', tan: '
 const BG = {
   venice: ['#6e1b22', '#8d2a2c', '#d7b25a'],
   ottoman: ['#1d4b3c', '#2a6650', '#c9443a'],
-  island: ['#1d4a63', '#2a6683', '#e7dcc0'],
+  crew: ['#1d4a63', '#2a6683', '#e7dcc0'],
+  pirate: ['#3b322d', '#4b4039', '#8a2a22'],
 };
 
 // ---------- primitives ----------
@@ -123,11 +124,11 @@ const scale = (svg, cx, cy, k) => `<g transform="translate(${cx} ${cy}) scale(${
 // `face` on an entry is the box the small crop zooms to: [x, y, size].
 export const CAST = {
   manolis: {
-    name: 'Old Manolis', role: 'The pilot', side: 'island',
+    name: 'Old Manolis', role: 'The pilot', side: 'crew',
     where: 'Prologue; advisor in every mission (wind, shoals, rocks)',
     draw() {
       const skin = SKIN.tan, F = face(skin, { w: 29, jaw: 22, chin: 9, top: 54 }), white = '#ece8df', wd = '#c9c3b6', scarf = '#1d1b1c';
-      return background('island')
+      return background('crew')
         + bust('#22262e') // a dark vest
         + poly([[84, 146], [116, 146], [108, 200], [92, 200]], '#e6dcc7') // the shirt
         + poly([[30, 200], [40, 186], [160, 186], [170, 200]], '#7c2a22') // a red sash
@@ -150,11 +151,11 @@ export const CAST = {
     },
   },
   marousa: {
-    name: 'Marousa', role: 'The gunner', side: 'island',
+    name: 'Marousa', role: 'The gunner', side: 'crew',
     where: 'Officer from mission 3 on; briefings for the calm',
     draw() {
       const skin = SKIN.olive, F = face(skin, { w: 28, jaw: 21, chin: 8, top: 54, chinY: 136 }), hair = '#2a1a14', red = '#c2362b';
-      return background('island')
+      return background('crew')
         + path('M58 120 Q50 160 62 186 L80 186 Q72 150 74 116 Z', hair) // the braid behind
         + bust('#5a3a24') // a leather jerkin
         + poly([[86, 146], [114, 146], [106, 176], [94, 176]], '#e9dfc9')
@@ -177,11 +178,11 @@ export const CAST = {
     },
   },
   barbaro: {
-    name: 'Captain Zuanne Barbaro', role: 'Captain of marines (Venice)', side: 'venice',
+    name: 'Captain Zuanne Barbaro', role: 'Captain of marines (Venice)', side: 'crew',
     where: 'Briefs the Venetian powder run; rival on the Ottoman side; joins Venice after the calm',
     draw() {
       const skin = SKIN.fair, F = face(skin, { w: 29, jaw: 24, chin: 9 }), hair = '#2b1d16', steel = '#9aa3ab';
-      return background('venice')
+      return background('crew')
         + bust('#a3282a', { shoulder: 2 }) // red doublet
         // the breastplate
         + path('M56 200 L60 160 Q100 146 140 160 L144 200 Z', steel)
@@ -211,11 +212,11 @@ export const CAST = {
     },
   },
   ibrahim: {
-    name: 'İbrahim Reis', role: 'Patrol captain (the Porte)', side: 'ottoman',
+    name: 'İbrahim Reis', role: 'Patrol captain (the Porte)', side: 'crew',
     where: 'Briefs the Ottoman powder raid; rival on the Venetian side; joins the Porte after the calm',
     draw() {
       const skin = SKIN.tan, F = face(skin, { w: 30, jaw: 25, chin: 11, top: 58 }), beard = '#1c1512', white = '#f1ece0', wd = '#cfc6b3', coat = '#244e78';
-      return background('ottoman')
+      return background('crew')
         + bust(coat)
         + poly([[86, 146], [114, 146], [100, 200]], '#d8c9a2') // the inner robe
         + Array.from({ length: 4 }, (_, i) => line(`M${84 - i * 2} ${160 + i * 10} L${74 - i * 2} ${160 + i * 10} M${116 + i * 2} ${160 + i * 10} L${126 + i * 2} ${160 + i * 10}`, '#d7b25a', 2.4)).join('') // gold frogging
@@ -235,11 +236,11 @@ export const CAST = {
     },
   },
   piero: {
-    name: 'Mastro Piero', role: 'The carpenter (Venice)', side: 'venice',
+    name: 'Mastro Piero', role: 'The carpenter (Venice)', side: 'crew',
     where: 'Officer on the Venetian side; grumbles about his planking between fights',
     draw() {
       const skin = SKIN.ruddy, F = face(skin, { w: 32, jaw: 27, chin: 12, top: 48, chinY: 138 }), grey = '#b9b2a6', apron = '#7a5232';
-      return background('venice')
+      return background('crew')
         + bust('#5f7184') // a blue-grey working shirt
         + path('M60 200 L66 164 Q100 156 134 164 L140 200 Z', apron) + path('M100 158 Q120 158 134 164 L140 200 L100 200 Z', dk(apron, 0.2))
         + line('M66 164 L56 150 M134 164 L144 150', '#4a3220', 3)
@@ -260,11 +261,11 @@ export const CAST = {
     },
   },
   kemal: {
-    name: 'Usta Kemal', role: 'The carpenter (the Porte)', side: 'ottoman',
+    name: 'Usta Kemal', role: 'The carpenter (the Porte)', side: 'crew',
     where: 'Officer on the Ottoman side; grumbles about his planking between fights',
     draw() {
       const skin = SKIN.ruddy, F = face(skin, { w: 32, jaw: 28, chin: 13, top: 52 }), grey = '#cfc8bb', cap = '#7a4a2a', apron = '#6e4a2e';
-      return background('ottoman')
+      return background('crew')
         + bust('#b8a07a') // undyed wool
         + path('M60 200 L64 162 Q100 154 136 162 L140 200 Z', apron) + path('M100 156 Q120 156 136 162 L140 200 L100 200 Z', dk(apron, 0.2))
         // the adze over his shoulder
@@ -284,15 +285,16 @@ export const CAST = {
     },
   },
   recruiter: {
-    name: 'Ser Alvise', role: 'Officer from Suda (Venice)', side: 'venice',
-    where: 'The red-coated officer who offers Venice’s commission in the prologue; hands out orders at Suda',
+    name: 'Ser Alvise', role: 'Your patron at Suda (Venice)', side: 'venice',
+    where: 'Brings Venice’s offer to Lychna in the prologue, then gives your orders at Suda',
     draw() {
-      const skin = SKIN.fair, F = face(skin, { w: 28, jaw: 22, chin: 9, top: 52, chinY: 138 }), hair = '#5a3820', coat = '#b8312c', hat = '#1f1a1a';
+      const skin = SKIN.fair, F = face(skin, { w: 28, jaw: 22, chin: 9, top: 52, chinY: 138 }), hair = '#5a3820', coat = '#22201f', hat = '#1f1a1a';
       return background('venice')
         // long curled hair over the shoulders
         + path('M64 70 Q50 120 58 160 Q70 170 80 158 Q74 120 76 80 Z M136 70 Q150 120 142 160 Q130 170 120 158 Q126 120 124 80 Z', hair)
         + bust(coat)
         + Array.from({ length: 5 }, (_, i) => circ(100, 164 + i * 8, 2.2, '#e2c26a')).join('')
+        + poly([[30, 200], [42, 176], [70, 162], [76, 200]], '#8d2a2c') // the crimson stole of a Venetian gentleman
         // the falling lace collar
         + path('M70 148 Q100 140 130 148 L136 168 Q100 176 64 168 Z', '#f3efe4') + path('M100 144 Q120 144 130 148 L136 168 Q118 172 100 172 Z', '#d6cfbf')
         + line('M68 166 Q100 174 134 166', '#c9c1ad', 1.4, ' stroke-dasharray="2 3"')
@@ -311,8 +313,8 @@ export const CAST = {
     },
   },
   secretary: {
-    name: 'Hüseyin Efendi', role: 'The Kapudan Pasha’s secretary', side: 'ottoman',
-    where: 'The quiet man who offers the Porte’s commission in the prologue; hands out orders at Chania',
+    name: 'Hüseyin Efendi', role: 'Your patron at Chania, the Kapudan Pasha’s secretary', side: 'ottoman',
+    where: 'Brings the Porte’s offer to Lychna in the prologue, then gives your orders at Chania',
     crop: '38 4 124 124',
     draw() {
       const skin = SKIN.olive, F = face(skin, { w: 27, jaw: 21, chin: 9, top: 56, chinY: 140 }), beard = '#8e877c', robe = '#4a3a66', cap = '#efe9dc';
@@ -394,7 +396,7 @@ export const CAST = {
     where: 'The prologue’s pirate, off Lychna',
     draw() {
       const skin = SKIN.ruddy, F = face(skin, { w: 29, jaw: 23, chin: 9, top: 56, chinY: 138 }), hair = '#c4562a', hd = '#9a3e1c', band = '#1e1a18';
-      return background(['#3a2c22', '#4a3a2c', '#7c2f24'])
+      return background('pirate')
         // a mane of red hair going grey
         + path('M58 70 Q30 110 44 160 Q60 150 64 170 Q74 140 74 90 Z', hair) + path('M142 70 Q170 110 156 160 Q140 150 136 170 Q126 140 126 90 Z', hd)
         + line('M50 110 Q46 130 52 150 M150 110 Q154 130 148 150', '#d9d2c4', 2.4)
@@ -422,7 +424,7 @@ export const CAST = {
     where: 'Among the islets: knows every rock, as her mother taught her',
     draw() {
       const skin = SKIN.fair, F = face(skin, { w: 27, jaw: 20, chin: 8, top: 56, chinY: 134 }), hair = '#d0662e', hd = '#a84c1e', band = '#3b7a4a';
-      return background(['#4a3a2c', '#5e4a36', '#7c2f24'])
+      return background('pirate')
         // two braids
         + path('M64 96 Q56 130 62 172 L72 172 Q70 132 74 100 Z', hair) + path('M136 96 Q144 130 138 172 L128 172 Q130 132 126 100 Z', hd)
         + [0, 1, 2, 3].map((i) => line(`M61 ${112 + i * 14} L72 ${116 + i * 14} M139 ${112 + i * 14} L128 ${116 + i * 14}`, dk(hair, 0.3), 1.4)).join('')
@@ -446,7 +448,7 @@ export const CAST = {
     where: 'A lee shore: at sea in a gale because nobody sensible is',
     draw() {
       const skin = '#d6bcaa', F = face(skin, { w: 30, jaw: 26, chin: 12, top: 56 }), black = '#141317', coat = '#26262c';
-      return background(['#1d1d22', '#2c2d33', '#8a8f96'])
+      return background('pirate')
         + bust(coat, { shoulder: 3 })
         // the high storm collar, rain-dark
         + path('M54 200 L60 150 Q72 140 84 150 L86 200 Z', '#34343c') + path('M146 200 L140 150 Q128 140 116 150 L114 200 Z', '#1a1a1f')
@@ -472,7 +474,7 @@ export const CAST = {
     where: 'The careenage: caught at anchor with half her crew ashore',
     draw() {
       const skin = SKIN.brown, F = face(skin, { w: 27, jaw: 21, chin: 8, top: 56, chinY: 136 }), red = '#b3372c', rd = '#87261e', gold = '#e6c069';
-      return background(['#4e1612', '#6b1f1a', '#d8a046'])
+      return background('pirate')
         + path('M56 90 Q44 150 60 184 L140 184 Q156 150 144 90 Z', rd) // the wrap falling behind
         + bust('#2e2a30')
         + path('M36 172 Q60 150 100 148 Q140 150 164 172 L170 200 L30 200 Z', red) + path('M100 148 Q140 150 164 172 L170 200 L100 200 Z', rd) // the scarf over the shoulders
@@ -496,7 +498,7 @@ export const CAST = {
     where: 'The landing: his men are ashore, burning a village',
     draw() {
       const skin = SKIN.pale, F = face(skin, { w: 26, jaw: 19, chin: 8, top: 52, cheek: 96, jawY: 126, chinY: 146 }), hair = '#18141c', coat = '#4a3366';
-      return background(['#241c30', '#3b2a52', '#5d3f7a'])
+      return background('pirate')
         // long lank black hair
         + path('M66 64 Q54 120 62 164 L76 160 Q72 120 76 76 Z', hair) + path('M134 64 Q146 120 138 164 L124 160 Q128 120 124 76 Z', hair)
         + bust(coat)
@@ -523,7 +525,7 @@ export const CAST = {
     crop: '30 10 140 140',
     draw() {
       const skin = SKIN.ruddy, F = face(skin, { w: 36, jaw: 32, chin: 16, top: 54, cheek: 100, jawY: 126, chinY: 142 }), beard = '#3a1d16', red = '#9a1c1c', hat = '#16110f';
-      return background(['#16110f', '#2a1714', '#9a1c1c'])
+      return background('pirate')
         + bust(hat, { shoulder: 6 })
         + path('M26 172 L40 160 L66 166 L56 180 Z', '#d7b25a') + path('M174 172 L160 160 L134 166 L144 180 Z', '#a8893e') // epaulettes
         + line('M70 150 L80 200 M130 150 L120 200', red, 4)
@@ -568,8 +570,8 @@ function twin(cap, flip) {
   return flip ? `<g transform="translate(200 0) scale(-1 1)">${art}</g>` : art;
 }
 Object.assign(CAST, {
-  kastor: { name: 'Kastor', role: 'Pirate, the elder twin (galliot)', side: 'pirate', where: 'The brothers: two galliots hunting as a pair', draw: () => background(['#2a3a44', '#36505e', '#2f6aa8']) + twin('#2f6aa8', false) },
-  polydeukes: { name: 'Polydeukes', role: 'Pirate, the younger twin (galliot)', side: 'pirate', where: 'The brothers: two galliots hunting as a pair', draw: () => background(['#2a3a44', '#36505e', '#b8382c']) + twin('#b8382c', true) },
+  kastor: { name: 'Kastor', role: 'Pirate, the elder twin (galliot)', side: 'pirate', where: 'The brothers: two galliots hunting as a pair', draw: () => background('pirate') + twin('#2f6aa8', false) },
+  polydeukes: { name: 'Polydeukes', role: 'Pirate, the younger twin (galliot)', side: 'pirate', where: 'The brothers: two galliots hunting as a pair', draw: () => background('pirate') + twin('#b8382c', true) },
 });
 
 // Every portrait as SVG. o.small crops to the head and shoulders for a notification bubble.
