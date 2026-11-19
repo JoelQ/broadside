@@ -329,7 +329,11 @@ How a place is made (the same recipe will do for the other scenarios):
    `src/coast.js` roughens the outline and from that one shape makes the drawn land, the circles
    ships run into, and `world.ground(x, z)`, which shot hits and the camera stays above.
 2. Give the water its rules from the same points: current along the channel, shoals off the points
-   and in the slack water, forts where the shore commands a passage.
+   and in the slack water, forts where the shore commands a passage. Shoals are shapes too
+   (`makeShoal` in `src/coast.js`): an outline roughened into a ragged edge, with one depth. Most are a
+   `ribbon()` along a spine with a width at each point: a spit trailing down-current, a reef running
+   off a point, a bank along the foot of a cliff, silt in the corner a mole makes with the shore. A
+   broad bank (the banks east of Candia) is an outline drawn by hand, like a coast.
 3. Flatten the ground where a town stands, keep trees off it, then build it (`src/works.js`: walls,
    bastions, towers, towns, moles, the arsenal, a yard).
 4. Only add works that change what you see in a fight: a mole you can hide behind, the castle whose
@@ -339,7 +343,9 @@ How a place is made (the same recipe will do for the other scenarios):
    desktop and phone size, and with the legs harness.
 
 AI captains steer round a coast by finding the nearest heading clear of all its circles, keeping to
-the side they chose so they do not dither at a headland. Round islands are steered round as before,
+the side they chose so they do not dither at a headland. They steer round a bank they would stick on
+the same way, round circles inscribed along its edge. A ship that runs aground is hauled off back the
+way she came, to clear water. Round islands are steered round as before,
 so the other missions are unchanged.
 
 ### What the harness checks

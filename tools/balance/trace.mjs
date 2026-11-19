@@ -10,7 +10,7 @@ const cells = (await import('./legs.mjs')).default, every = +process.argv[2] || 
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: 320, height: 200 } });
 page.on('pageerror', (e) => console.error('PAGE ERROR', e.message, e.stack));
-await page.goto(pathToFileURL(path.join(here, '../../dist/index.html')).href);
+await page.goto(pathToFileURL(process.env.DIST ? path.resolve(process.env.DIST) : path.join(here, '../../dist/index.html')).href); // DIST=<html> plays another build
 await page.waitForTimeout(600);
 await page.addScriptTag({ content: readFileSync(path.join(here, 'harness.js'), 'utf8') });
 for (const c of cells.slice(0, 3)) {

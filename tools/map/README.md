@@ -18,8 +18,9 @@ leg and `out/maps/contact.png`. The leg list and the routes drawn on the maps co
 
 ## What a map shows
 
-North (+z) is up. Land is sand with the line a ship actually hits (r x 0.8) in green. Banks are shaded by
-depth with the depth written on them; a reef (under 2 deep) grounds anything. Zones are dashed gold
+North (+z) is up. Land is sand with the line a ship actually hits (r x 0.8) in green. Banks are the same ragged
+shapes the game builds (a ship that draws more than the depth sticks anywhere inside), drawn under the
+land and shaded by depth with the depth written on them; a reef (under 2 deep) grounds anything. Zones are dashed gold
 circles. Ships are drawn to length (at least 14 px), pointing where they head: gold is you, blue friends,
 red foes; hollow means at anchor, dashed means the ship arrives later (from the leg's timed events). Forts
 are squares with their gun reach. Dotted lines from a ship go to where it is sent (`goTo`); coloured
@@ -35,7 +36,7 @@ dotted paths are the balance routes' waypoints. Arrows on the water are the curr
 - **note**: which hulls can reach each zone and each route's waypoints.
 
 "Reach" is a flood fill on an 8 m grid that keeps a ship a beam's width off land and off any bank she'd
-stick on. It ignores wind, current and enemies: it answers "is there water", not "can you win".
+stick on (by the bank's shape, not a circle round it). It ignores wind, current and enemies: it answers "is there water", not "can you win".
 
 Timed events are run against a stand-in scene to find later arrivals and zones. An event that depends on
 the state of the fight is skipped, so a ship that only appears if something happens may not be drawn.

@@ -485,11 +485,17 @@ function collideIslands(s) {
       else if (s.side !== G.player.side && G.state === 'battle') floater('Aground!', 'good rake', _v.set(s.pos.x, s.model.mastH * 0.8, s.pos.z).clone());
     }
   } else if (s.aground > 0 && s.aground < 0.1 && s.shoal) {
-    // off again: she floats clear at the edge of the bank, the way she came
-    const sh = s.shoal, dx = s.pos.x - s.fwdX * 10 - sh.x, dz = s.pos.z - s.fwdZ * 10 - sh.z, d = Math.hypot(dx, dz) || 1;
+    // off again: her boats haul her clear of the bank, back the way she came
+    const sh = s.shoal, clear = s.spec.L * 0.5 + 6;
     s.aground = 0; s.offT = 9; s.shoal = null;
     if (s.isPlayer) toast('She floats! Steer clear of the bank', 'good');
-    s.backOff = [sh.x + (dx / d) * (sh.r + s.spec.L * 0.5 + 6), sh.z + (dz / d) * (sh.r + s.spec.L * 0.5 + 6)];
+    let k = 4;
+    while (k < 400 && sh.at(s.pos.x - s.fwdX * k, s.pos.z - s.fwdZ * k) > -clear) k += 4;
+    if (k < 400) s.backOff = [s.pos.x - s.fwdX * k, s.pos.z - s.fwdZ * k];
+    else { // she came in from far across it: take the shortest way off instead
+      const d = sh.at(s.pos.x, s.pos.z), gx = sh.at(s.pos.x + 2, s.pos.z) - sh.at(s.pos.x - 2, s.pos.z), gz = sh.at(s.pos.x, s.pos.z + 2) - sh.at(s.pos.x, s.pos.z - 2), gl = Math.hypot(gx, gz) || 1;
+      s.backOff = [s.pos.x - (gx / gl) * (d + clear), s.pos.z - (gz / gl) * (d + clear)];
+    }
   }
   if (s.backOff) { // hauled off by her boats
     const dx = s.backOff[0] - s.pos.x, dz = s.backOff[1] - s.pos.z, d = Math.hypot(dx, dz);
@@ -1147,7 +1153,7 @@ function drawRadar(p, e) {
   const up = wrap(world.wind.dir + Math.PI - p.heading), sa = -Math.PI / 2 - up;
   x.fillStyle = 'rgba(220,80,60,.2)'; x.beginPath(); x.moveTo(0, 0); x.arc(0, 0, R, sa - noGoHalf(p.spec), sa + noGoHalf(p.spec)); x.fill();
   x.fillStyle = 'rgba(143,224,207,.35)';
-  for (const i of world.shoals) { const [ix, iy] = pt(i.x, i.z); x.beginPath(); x.arc(ix, iy, i.r * k, 0, 7); x.fill(); }
+  for (const sh of world.shoals) { x.beginPath(); const P = sh.shape.pts; for (let i = 0; i < P.length; i += 2) { const [ix, iy] = pt(P[i][0], P[i][1]); if (i) x.lineTo(ix, iy); else x.moveTo(ix, iy); } x.closePath(); x.fill(); }
   x.fillStyle = '#8c8266';
   for (const i of world.islands) { if (i.soft) continue; const [ix, iy] = pt(i.x, i.z); x.beginPath(); x.arc(ix, iy, i.r * k * 1.1, 0, 7); x.fill(); }
   for (const c of world.coasts) { x.beginPath(); const P = c.shape.pts; for (let i = 0; i < P.length; i += 2) { const [ix, iy] = pt(P[i][0], P[i][1]); if (i) x.lineTo(ix, iy); else x.moveTo(ix, iy); } x.closePath(); x.fill(); }
