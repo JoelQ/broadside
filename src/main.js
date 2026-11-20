@@ -5,6 +5,7 @@ import { Ship, AMMO, AMMO_KEYS, CAL, SAILS, TOP, noGoHalf, wrap, clamp, polar, p
 import { PLAYER_SPEC, ENEMIES, KITS, KIT_OF, kitCost, SHOPS, REPAIR } from './data.js';
 import { updateAI, newAI } from './ai.js';
 import { buildHarbor } from './harbor.js';
+import { HOMES } from './homes.js';
 import { HULLS, shipSpec, GALLEY_KIT } from './fleet.js';
 import { CAMP } from './campaign.js';
 import { PT } from './playtest.js';
@@ -32,8 +33,15 @@ const camera = new THREE.PerspectiveCamera(55, 1, 0.5, 14000);
 const world = new World(scene);
 const fx = new FX(scene);
 const sfx = new Sfx();
-const harbor = buildHarbor();
-scene.add(harbor.group);
+// a harbour for each home port, built the first time you make port there; the quay, the berth and the
+// moorings are the same in all of them, so only the one in use is shown
+const HARBORS = {};
+let harbor = useHarbor('island');
+function useHarbor(place) {
+  if (!HARBORS[place]) { HARBORS[place] = buildHarbor(place, HOMES[place]); scene.add(HARBORS[place].group); }
+  for (const k in HARBORS) HARBORS[k].group.visible = k === place;
+  return (harbor = HARBORS[place]);
+}
 let VW = 1, VH = 1;
 function resize() {
   VW = window.innerWidth; VH = window.innerHeight;
@@ -1215,6 +1223,7 @@ const KEYS_HTML = `<div class="keys">
   <div class="touchKeys">◀ ▶ rudder · Sail + / − · FIRE shoots whichever side bears<br>Tap PORT or STBD to fire one side · tap a shot to load it<br>Drag the sea to look around · pinch to zoom · tap the oars line to row</div>`;
 function showTitle() {
   G.state = 'title'; setMode(null);
+  if (harbor.group.visible && harbor !== HARBORS.island) { useHarbor('island'); world.setEnv('harbor'); } // the title is always Lychna
   const saved = CAMP.saved();
   showScreen(`<div id="titleWrap"><h1>Broadside</h1><div class="tag">The war for Candia, 1645–1669. An island captain, two flags to choose from.</div>
     <div class="rowc">${saved ? `<button class="btn big" data-act="camp:continue">Continue the campaign</button><button class="btn" data-act="camp:new">New campaign</button>` : `<button class="btn big" data-act="camp:new">Begin the campaign</button>`}
@@ -1303,8 +1312,8 @@ function sailIn(t, dt) {
 // your brig alone between them: any other ship of yours is out of the picture until you have chosen (enterHarbor brings it back)
 function clearEnvoys() { for (const t of G.envoys || []) scene.remove(t.group); G.envoys = []; }
 function enterHarbor() {
-  harbor.group.visible = true; clearEnvoys();
-  world.setEnv('harbor'); world.clearIslands(); world.wind.dir = world.wind.target = 2.2;
+  useHarbor(G.mode === 'campaign' && CAMP.st ? CAMP.livery() : 'island'); clearEnvoys();
+  world.setEnv(harbor === HARBORS.island ? 'harbor' : 'home'); world.clearIslands(); world.wind.dir = world.wind.target = 2.2;
   clearBalls();
   clearShips(); clearZones();
   moor();
@@ -1651,7 +1660,7 @@ G.step = (dt, n = 1) => { for (let i = 0; i < n; i++) update(dt); renderer.rende
 G.newAI = newAI;
 G.tick = (dt, n = 1) => { for (let i = 0; i < n; i++) update(dt); };
 G.world = world; G.view = { renderer, scene, camera };
-G.api = { faces, showEnvoys, offersCard, endOffersCard, aiApi, nearest, dropArcs, startScenario, showLegCard, showTitle: () => showTitle(), clearShips, world, strengthOf: (x) => strength(x), scene, restartSkirmish: () => restart(true),  addShip, beginScenario, beginBattle, shipOut, setTarget, foesOf, sep, relSpeed, hideScreen, showScreen, setMode, enterHarbor, snapCamera, buildPlayer, moor, playerSpec, renderPort: () => renderPort(), sfx, fx, floater, store, harbor, cutGrapples, hullSpec, updateAI, reach, inArc, hasGauge, strength: (s) => strength(s), rebuild: () => { if (G.player.arcs) dropArcs(G.player); scene.remove(G.player.group); G.player = null; buildPlayer(true); }, fire, act, tap, keys, startBoarding, boardSwivel, endBattle, toast, showPort: () => showPort(), prize };
+G.api = { faces, showEnvoys, offersCard, endOffersCard, aiApi, nearest, dropArcs, startScenario, showLegCard, showTitle: () => showTitle(), clearShips, world, strengthOf: (x) => strength(x), scene, restartSkirmish: () => restart(true),  addShip, beginScenario, beginBattle, shipOut, setTarget, foesOf, sep, relSpeed, hideScreen, showScreen, setMode, enterHarbor, snapCamera, buildPlayer, moor, playerSpec, renderPort: () => renderPort(), sfx, fx, floater, store, get harbor() { return harbor; }, cutGrapples, hullSpec, updateAI, reach, inArc, hasGauge, strength: (s) => strength(s), rebuild: () => { if (G.player.arcs) dropArcs(G.player); scene.remove(G.player.group); G.player = null; buildPlayer(true); }, fire, act, tap, keys, startBoarding, boardSwivel, endBattle, toast, showPort: () => showPort(), prize };
 CAMP.init(G, G.api); G.CAMP = CAMP;
 if (__PLAYTEST__) PT.install(G, G.api, CAMP);
 showTitle();

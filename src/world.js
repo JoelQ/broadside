@@ -50,6 +50,11 @@ export const ENVS = {
     deep: 0x0f4a63, shallow: 0x3aa0a0, cloud: 0xffe6c8, cover: 0.55,
     hemi: 1.1, dir: 2.0, fog: [500, 3200], amp: 0.28,
   },
+  home: { // the two home ports: the harbour's evening light, with clearer air so the far shores and mountains read
+    zenith: 0x3f6fb4, horizon: 0xf0cfa0, sun: [0.55, 0.34, 0.5], sunCol: 0xffd9a0,
+    deep: 0x0f4a63, shallow: 0x3aa0a0, cloud: 0xffe6c8, cover: 0.55,
+    hemi: 1.0, dir: 2.2, fog: [900, 5200], amp: 0.28,
+  },
   noon: {
     zenith: 0x2a6fc4, horizon: 0xb7d8ee, sun: [0.45, 0.8, 0.35], sunCol: 0xfff6e0,
     deep: 0x0a3d63, shallow: 0x1f8a9e, cloud: 0xffffff, cover: 0.52,

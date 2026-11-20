@@ -2,8 +2,14 @@ import * as THREE from 'three';
 import { Batch, GLOW, shade, mulberry, wrap } from './geo.js';
 import { makeIsland, palm, tree } from './land.js';
 import { Figures } from './crew.js';
+import { flagTexture } from './model.js';
+import { LIVERY } from './fleet.js';
 
-// Port Halcyon: the home harbour. Built once, shown on the title screen and between fights.
+// The home harbour: a quay with the shops, a pier where your ship lies, and the town around it. The quay and
+// everything you use there are the same in every port; what stands around them is the port's own:
+//   island: Port Halcyon, on Lychna (the title screen, skirmish and the prologue), a green hill with a lighthouse
+//   venice, ottoman: Suda and Chania, built by homes.js and handed in as `setting`.
+// The town's colours and the flag over the quay come from STYLE.
 const STONE = 0x8d8676, WOOD = 0x6b4a2c, DARK = 0x3a2412, IRON = 0x1c1c1e, LAMP = 0xffd98a, PLANK = 0x8a6a44, ROPE = 0xb09a6a, CRATE = 0x9a7a4a;
 const QY = 2.2; // top of the quay
 
@@ -58,8 +64,24 @@ export function rowboat(B, x, z, ry, colour) {
   });
 }
 
-export function buildHarbor() {
-  const g = new THREE.Group(), G = new Batch(), B = new Batch(G), rnd = mulberry(77);
+const STYLE = {
+  island: { walls: [0xe6dcc4, 0xd9c9a8, 0xcfa98a, 0xe0d2b8, 0xd8b89a, 0xead9c0], roofs: [0x8a4a3a, 0x7a3f33, 0x5a6b7a, 0x9a5a3a, 0xa0583c], palms: 7 },
+  venice: { walls: [0xf2ead8, 0xe6c088, 0xf0e6d0, 0xd98e5e, 0xead9c0, 0xc98a5a], roofs: [0xb4482c, 0xa63f2a, 0xc0562f, 0x8a3a2a], palms: 2 },
+  ottoman: { walls: [0xf4eee0, 0xe8c99a, 0xd99a6a, 0xf0e6d0, 0xe0b88a, 0xf6f0e4], roofs: [0xb4482c, 0xa63f2a, 0xc0562f, 0xb06a44], palms: 5 },
+};
+// a flag on a staff, in a livery's colours (the same picture the ships fly)
+const flagMats = {};
+export function flagstaff(g, B, x, y, z, place, h = 14, ry = 0) {
+  B.cyl(0.12, 0.2, h, 0xe8e2d0, x, y + h / 2, z, 6); B.cyl(0.9, 1.1, 0.6, STONE, x, y + 0.3, z, 8);
+  const mat = flagMats[place] || (flagMats[place] = new THREE.MeshLambertMaterial({ map: flagTexture(LIVERY[place]), side: THREE.DoubleSide }));
+  const k = h / 14, f = new THREE.Mesh(new THREE.PlaneGeometry(3.6 * k, 2.1 * k), mat);
+  f.position.set(x + Math.cos(ry) * 1.9 * k, y + h - 1.3 * k, z - Math.sin(ry) * 1.9 * k); f.rotation.y = ry;
+  g.add(f);
+}
+
+export function buildHarbor(place = 'island', setting = null) {
+  const g = new THREE.Group(), G = new Batch(), B = new Batch(G), rnd = mulberry(77), sty = STYLE[place];
+  const island = !setting;
   // the hill behind the town: a shelf is cut for the quay and a gentle slope for the streets above it
   const smooth = (a, b, v) => { const t = Math.max(0, Math.min(1, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
   const shape = (lx, lz, y) => {
@@ -69,10 +91,10 @@ export function buildHarbor() {
     return y + (Math.min(y, town) - y) * k;
   };
   const inTown = (lx, lz) => Math.abs(lx) < 100 && lz - 268 > -132;
-  const hill = makeIsland(215, 46, rnd, 0, -268, { detail: 4, shape, trees: 1.3, soften: 0.2, clear: (lx, lz) => inTown(lx, lz) || lz < 40 });
-  const point = makeIsland(26, 9, rnd, 108, 6, { clear: (lx, lz) => Math.hypot(lx, lz) < 9 });
-  g.add(hill, point);
-  const ground = hill.userData.height;
+  const hill = island && makeIsland(215, 46, rnd, 0, -268, { detail: 4, shape, trees: 1.3, soften: 0.2, clear: (lx, lz) => inTown(lx, lz) || lz < 40 });
+  const point = island && makeIsland(26, 9, rnd, 108, 6, { clear: (lx, lz) => Math.hypot(lx, lz) < 9 });
+  if (island) g.add(hill, point);
+  const ground = island ? hill.userData.height : () => QY;
 
   // stone quay: paving, kerb stones, weed along the waterline, bollards, steps, lamps
   B.box(176, 7, 46, STONE, 0, QY - 3.5, -63);
@@ -158,19 +180,19 @@ export function buildHarbor() {
   // handcart
   B.at(70, QY, -46, 0.5, () => { B.box(1.6, 0.15, 2.6, WOOD, 0, 0.95, 0).box(1.6, 0.5, 0.1, WOOD, 0, 1.25, -1.3); for (const s of [-1, 1]) { B.cyl(0.7, 0.7, 0.14, DARK, s * 0.92, 0.7, -0.2, 9, 0, 0, Math.PI / 2); B.bar([s * 0.7, 0.95, 1.3], [s * 0.7, 1.05, 2.8], 0.06, WOOD, 4); } crate(B, 0, 1.03, -0.3, 1.0); });
   // flagstaff at the west end of the quay
-  B.cyl(0.12, 0.2, 14, 0xe8e2d0, -84, QY + 7, -44, 6); B.cyl(0.9, 1.1, 0.6, STONE, -84, QY + 0.3, -44, 8); B.box(3.4, 2, 0.08, 0x2b62b8, -82.2, QY + 12.6, -44).box(3.4, 0.36, 0.1, 0xece6d4, -82.2, QY + 12.6, -44).box(0.36, 2, 0.1, 0xece6d4, -83, QY + 12.6, -44);
+  flagstaff(g, B, -84, QY, -44, place);
 
   // the rest of the town climbs the hill behind the quay
-  const walls = [0xe6dcc4, 0xd9c9a8, 0xcfa98a, 0xe0d2b8, 0xd8b89a, 0xead9c0], roofs = [0x8a4a3a, 0x7a3f33, 0x5a6b7a, 0x9a5a3a, 0xa0583c];
+  const walls = sty.walls, roofs = sty.roofs;
   const lots = [];
   for (let i = 0; i < 9; i++) lots.push([-76 + i * 19 + rnd() * 6, -77 - rnd() * 2, 6 + rnd() * 3, 4 + rnd() * 2]);
-  for (let row = 0; row < 3; row++) for (let i = 0; i < 9 - row; i++) {
+  if (island) for (let row = 0; row < 3; row++) for (let i = 0; i < 9 - row; i++) {
     const x = -78 + row * 9 + i * 18.5 + rnd() * 7, z = -93 - row * 13 - rnd() * 4;
     if (Math.hypot(x + 46, z + 112) > 15) lots.push([x, z, 5.5 + rnd() * 3.5, 3.8 + rnd() * 2.6]);
   }
   lots.forEach(([x, z, w, h], i) => B.at(x, z > -86 ? QY : ground(x, z) + 0.2, z, (rnd() - 0.5) * 0.3, () => house(B, G, w, h, 6, walls[i % walls.length], roofs[(i * 3) % roofs.length], { door: z < -86, rows: h > 5.8 ? 2 : 1, front: i % 4 === 1 })));
   // church with a bell tower
-  B.at(-46, ground(-46, -112) + 0.3, -112, 0, () => {
+  if (island) B.at(-46, ground(-46, -112) + 0.3, -112, 0, () => {
     house(B, G, 8, 7.5, 14, 0xf1ece0, 0x8a4a3a, { front: true, chimney: false, door: true });
     B.box(4.6, 15, 4.6, 0xf1ece0, -6, 5.5, 5.5); B.box(4.9, 0.3, 4.9, STONE, -6, 10.5, 5.5);
     for (const [dx, dz, w, d] of [[0, 2.32, 1.3, 0.1], [0, -2.32, 1.3, 0.1], [2.32, 0, 0.1, 1.3], [-2.32, 0, 0.1, 1.3]]) B.box(w, 2, d, DARK, -6 + dx, 11.8, 5.5 + dz);
@@ -178,15 +200,14 @@ export function buildHarbor() {
     B.box(0.16, 2, 0.16, 0xe2c24a, -6, 19.8, 5.5).box(1.1, 0.16, 0.16, 0xe2c24a, -6, 20.2, 5.5);
   });
   // palms along the front, trees between the houses
-  for (const [x, z, h] of [[-80, -46, 9], [-74, -52, 7], [80, -52, 8], [44, -45, 7], [-14, -44.5, 8], [22, -45, 6.5], [-52, -46, 7.5]]) palm(B, x, QY, z, h, rnd);
-  for (let i = 0; i < 26; i++) {
+  for (const [x, z, h] of [[-80, -46, 9], [-74, -52, 7], [80, -52, 8], [44, -45, 7], [-14, -44.5, 8], [22, -45, 6.5], [-52, -46, 7.5]].slice(0, sty.palms)) palm(B, x, QY, z, h, rnd);
+  if (island) for (let i = 0; i < 26; i++) {
     const x = -92 + rnd() * 184, z = -88 - rnd() * 42;
     if (lots.every((l) => Math.hypot(l[0] - x, l[1] - z) > 8) && Math.hypot(x + 48, z + 110) > 13) (i % 3 ? tree : palm)(B, x, ground(x, z), z, i % 3 ? 0.9 + rnd() * 0.7 : 6 + rnd() * 3, rnd);
   }
 
   // lighthouse on the point, with the keeper's cottage beside it
-  const py = point.userData.height(108, 6);
-  B.at(108, py - 0.4, 6, 0, () => {
+  if (island) B.at(108, point.userData.height(108, 6) - 0.4, 6, 0, () => {
     B.cyl(3.5, 3.9, 1.6, STONE, 0, 0.8, 0, 12);
     for (let i = 0; i < 4; i++) B.cyl(2.6 - i * 0.35, 3 - i * 0.35, 5, i % 2 ? 0xb8372b : 0xf1ece0, 0, 4.1 + i * 5, 0, 12);
     B.box(1.3, 2.4, 0.3, DARK, 0, 2.6, 2.95); for (const [y, a] of [[8, 0.9], [13, -0.6], [17.5, 0.3]]) B.box(0.7, 1, 0.3, DARK, Math.sin(a) * (2.75 - y * 0.06), y, Math.cos(a) * (2.75 - y * 0.06), 0, a);
@@ -195,7 +216,8 @@ export function buildHarbor() {
     for (let i = 0; i < 8; i++) { const a = (i / 8) * 6.283; B.box(0.12, 2.4, 0.12, IRON, Math.sin(a) * 1.55, 23.2, Math.cos(a) * 1.55); }
     G.cyl(1.45, 1.45, 2.3, 0xfff0b0, 0, 23.2, 0, 8); B.cyl(0, 2.2, 2, 0x45484f, 0, 25.4, 0, 12); B.add(new THREE.IcosahedronGeometry(0.3, 0), 0xe2c24a, new THREE.Matrix4().makeTranslation(0, 26.6, 0));
   });
-  B.at(100, point.userData.height(100, 10), 10, 0.5, () => house(B, G, 5, 3.2, 4.5, 0xf1ece0, 0x8a4a3a, {}));
+  if (island) B.at(100, point.userData.height(100, 10), 10, 0.5, () => house(B, G, 5, 3.2, 4.5, 0xf1ece0, 0x8a4a3a, {}));
+  if (setting) setting(g, B, G);
 
   g.add(B.mesh(), G.mesh(GLOW));
 
