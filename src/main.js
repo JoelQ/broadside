@@ -633,11 +633,11 @@ function startScenario(def, c) {
   G.state = 'intro'; G.focus = 'enemy';
   showLegCard(c.card(def));
 }
-// the faces of whoever you are about to fight, above the card
+// the faces of pirate captains, on the skirmish Wanted card and on result banners
 const faces = (ids, cls = '') => (ids && ids.length ? `<div class="faces ${cls}">${ids.map((id) => portrait(id)).join('')}</div>` : '');
 function showLegCard(h) {
   setMode(null); $('bars').classList.add('on');
-  showScreen(`<div class="lower">${faces(h.faces)}<div class="eyebrow">${h.eyebrow}</div><h1>${h.title}</h1><div class="line">${h.line}</div>
+  showScreen(`<div class="lower"><div class="eyebrow">${h.eyebrow}</div><h1>${h.title}</h1><div class="line">${h.line}</div>
     <div class="hook">${h.hook || ''}</div><button class="btn big" data-act="engage">${h.go || 'Beat to quarters'}</button></div>`, 'clear low');
 }
 function startIntro() {
