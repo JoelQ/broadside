@@ -9,7 +9,7 @@ export const PLAYER_SPEC = {
 // ai.range: preferred gunnery distance. plan: opening ammo doctrine.
 export const ENEMIES = [
   {
-    name: 'Scavenger', cls: 'Sloop', captain: 'Cutthroat Mags', env: 'noon', islands: 4, bounty: 260,
+    name: 'Gorgona', cls: 'Sloop', captain: 'Despina', env: 'noon', islands: 4, bounty: 260,
     hook: 'Light guns that must get close. Quick, and she sails nearer the wind than you can.',
     tip: 'She is quick but weak. Keep her in your arc and hammer her.',
     L: 20, B: 5.8, D: 2.2, masts: 1, sailsPerMast: 2, castle: false, rigScale: 1.25,
@@ -18,7 +18,7 @@ export const ENEMIES = [
     stock: { chain: 2, grape: 2, fire: 0 }, ai: { range: 110, plan: 'round', boarder: false, battleSail: false },
   },
   {
-    name: 'Black Tide', cls: 'Brig', captain: 'Captain Varga', env: 'golden', islands: 6, bounty: 420,
+    name: 'Karabulut', cls: 'Brig', captain: 'Kara Osman', env: 'golden', islands: 6, bounty: 420,
     hook: 'Shreds your sails first, then pounds the hull.',
     tip: 'He opens with chain shot. Less sail means less to shred.',
     L: 30, B: 8, D: 3, masts: 2, sailsPerMast: 2, castle: false,
@@ -27,7 +27,7 @@ export const ENEMIES = [
     stock: { chain: 6, grape: 3, fire: 0 }, ai: { range: 125, plan: 'chain', boarder: false, battleSail: true },
   },
   {
-    name: 'Red Sirocco', cls: 'Corsair xebec', captain: 'Yusra the Red', env: 'overcast', islands: 5, bounty: 580,
+    name: 'Kasırga', cls: 'Xebec', captain: 'Kızıl Ayşe', env: 'overcast', islands: 5, bounty: 580,
     hook: '135 cutthroats behind light guns. She wants your deck.',
     tip: 'She must slow you with chain before her grapples will hold. Keep your speed, and sweep her deck with grape as she closes.',
     L: 36, B: 7.2, D: 2.5, masts: 3, sailsPerMast: 2, castle: false, rigScale: 0.72,
@@ -36,7 +36,7 @@ export const ENEMIES = [
     stock: { chain: 9, grape: 10, fire: 0 }, ai: { range: 90, plan: 'grape', boarder: true, battleSail: false },
   },
   {
-    name: "Widow's Lament", cls: 'Frigate', captain: 'Silas Thorne', env: 'dusk', islands: 6, bounty: 780,
+    name: 'Chira', cls: 'Frigate', captain: 'Lazaros', env: 'dusk', islands: 6, bounty: 780,
     hook: 'Heavy guns that outreach yours and a furnace to heat the shot. Barely enough hands to work them.',
     tip: 'His guns outreach yours and hit hard, but load slowly and only bear square off his sides. Get past them, or get aboard.',
     L: 46, B: 11.2, D: 4.3, masts: 3, sailsPerMast: 3, castle: 1,
@@ -45,7 +45,7 @@ export const ENEMIES = [
     stock: { chain: 4, grape: 4, fire: 9 }, ai: { range: 180, plan: 'fire', boarder: false, battleSail: true },
   },
   {
-    name: "Leviathan's Maw", cls: 'War galleon', captain: 'Dread Admiral Korrigan', env: 'storm', islands: 5, bounty: 1500,
+    name: 'Ejderha', cls: 'War galleon', captain: 'Murad', env: 'storm', islands: 5, bounty: 1500,
     hook: 'Thirty-six heavy guns on two decks. She outreaches you, and she turns like an island.',
     tip: 'Her guns only bear square off her sides. Get past them, sit astern, and stay there.',
     L: 64, B: 16, D: 6.2, masts: 4, sailsPerMast: 4, castle: 2,

@@ -74,7 +74,7 @@ export const CAMP = {
     if (st.done) return;
     CAMP.save();
     const b = CAMP.text(key).brief || { title: MISSIONS[key].title, text: [] }, sp = G.player.spec;
-    CAMP.tell({ eyebrow: `${CAMP.portName()} · orders`, ...b, go: 'Weigh anchor' }, 'camp:go', `<p class="note">You sail in the <b>${sp.name}</b> (${sp.cls.toLowerCase()}, draws ${sp.D.toFixed(1)}${G.player.crew < sp.crew ? `, short-handed: ${Math.round(G.player.crew)} of ${sp.crew}` : ''}). The choice is fixed once you sail.</p>`
+    CAMP.tell({ eyebrow: `${CAMP.portName()} · orders`, ...b, go: 'Weigh anchor' }, 'camp:go', `<p class="note">You sail in the <b>${sp.name}</b> (${sp.cls.toLowerCase()}, draws ${sp.D.toFixed(1)}${G.player.crew < sp.crew ? `, short-handed: ${Math.round(G.player.crew)} of ${sp.crew}` : ''}). You cannot change ships once you sail.</p>${b.note ? `<p class="note">${b.note}</p>` : ''}`
       + `<div class="rowc" style="margin-top:0"><button class="btn sm" data-act="camp:port">Back to the quay</button></div>`);
   },
 
@@ -162,7 +162,7 @@ export const CAMP = {
     E.showScreen(`<div class="story wide"><div class="eyebrow">${MISSIONS[run.key].title} · between fights</div><h2>${w} watch${w === 1 ? '' : 'es'} to spend</h2>${lines}
       <div class="cols"><div class="shipstate"><h3>${p.spec.name}</h3>${bar('Hull', p.hullR, Math.ceil(p.hull))}${bar('Sails', p.sailR, Math.ceil(p.sails))}${bar('Crew', p.crewR, Math.round(p.crew))}
       <div class="role">Chain ×${p.stock.chain} · grape ×${p.stock.grape} · heated ×${p.stock.fire}</div></div><div class="watches">${rows.join('')}</div></div>
-      <div class="rowc"><button class="btn big" data-act="camp:next">${w > 0 ? 'Carry on' : 'Carry on'}</button></div><p class="note">Next: ${run.legs[run.i + 1].title}</p></div>`, 'dim');
+      <div class="rowc"><button class="btn big" data-act="camp:next">Carry on</button></div><p class="note">Next: ${run.legs[run.i + 1].title}</p></div>`, 'dim');
   },
   watch(k) {
     const run = CAMP.run, p = G.player;

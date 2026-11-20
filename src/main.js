@@ -1225,7 +1225,7 @@ function showTitle() {
   G.state = 'title'; setMode(null);
   if (harbor.group.visible && harbor !== HARBORS.island) { useHarbor('island'); world.setEnv('harbor'); } // the title is always Lychna
   const saved = CAMP.saved();
-  showScreen(`<div id="titleWrap"><h1>Broadside</h1><div class="tag">The war for Candia, 1645–1669. An island captain, two flags to choose from.</div>
+  showScreen(`<div id="titleWrap"><h1>Broadside</h1><div class="tag">The war for Candia. An island captain, two flags to choose from.</div>
     <div class="rowc">${saved ? `<button class="btn big" data-act="camp:continue">Continue the campaign</button><button class="btn" data-act="camp:new">New campaign</button>` : `<button class="btn big" data-act="camp:new">Begin the campaign</button>`}
     <button class="btn" data-act="skirmish">Skirmish: five pirates</button>${__PLAYTEST__ ? PT.titleButton() : ''}</div>${saved ? `<div class="tag" style="font-size:15px;margin-top:14px">${saved}</div>` : ''}</div>`, 'clear');
 }

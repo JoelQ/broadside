@@ -1,4 +1,5 @@
 import { shipSpec } from './fleet.js';
+import { STORY } from './story.js';
 import { PLACES, narrowsCastles, KOULES, MOLE_HEAD, MOUTH, BASIN } from './maps.js';
 import { ribbon } from './coast.js';
 
@@ -22,7 +23,7 @@ const home = {
     return {
       env: 'noon', wind: { dir: w, str: 1 }, seedIslands: [4242 + ((c.rnd() * 900) | 0), 4], coach: true,
       player: { x: 0, z: 0, h: w + PI / 2, speed: 7 },
-      ships: [{ id: 'pirate', spec: pirate('sloop', 'Scavenger', 'poor', { captain: 'Cutthroat Mags', stock: { chain: 2, grape: 2, fire: 0 } }), side: 1, x: Math.sin(w + PI / 2 + 0.4) * 480, z: Math.cos(w + PI / 2 + 0.4) * 480, h: w - PI / 2 }],
+      ships: [{ id: 'pirate', spec: pirate('sloop', 'Gorgona', 'poor', { captain: 'Despina', stock: { chain: 2, grape: 2, fire: 0 } }), side: 1, x: Math.sin(w + PI / 2 + 0.4) * 480, z: Math.cos(w + PI / 2 + 0.4) * 480, h: w - PI / 2 }],
       objective: 'Keep the pirate off the harbour: sink her, wreck her or take her',
       tip: 'She is quick but weak. Keep her in your arc and hammer her.',
       check: (S) => (S.by.pirate.out ? 'won' : null),
@@ -59,7 +60,7 @@ const theRun = {
       objective: () => { const S = c.S; if (!S) return ''; return S.flag.alarm ? 'The patrol is under way. Reach the harbour, beat the patrol, or take one of them and sail in under her colours' : S.flag.seen ? 'The picket is rowing to warn the patrol: catch her, or be quick' : 'Bring the powder into Candia. The patrol off the harbour has not seen you yet'; },
       tip: 'The pale water is shoal: a ship that draws less than you floats over it, one that draws more sticks. Rocks in the water are reef, and nothing floats over those.',
       events: [
-        { t: 5, fn: (S) => S.say('Manolis: “The galliot is their picket. If she sees us she will row for the patrol off the harbour: a hired ship with heavy guns, and a brig. Both draw more water than a sloop.”', '') },
+        { t: 5, fn: (S) => S.say('Manolis: “The galliot is their picket. If she sees us, she runs for the patrol.”', '') },
       ],
       check: (S) => {
         const k = S.by.picket;
@@ -128,8 +129,8 @@ const POOL = {
     build: (c) => ({
       env: 'storm', wind: { dir: PI / 2, str: 1.6, steady: true }, ...PLACES.leeShore(),
       player: { x: -60, z: -300, h: 0, speed: 8 },
-      ships: [{ id: 'a', spec: pirate('brig', 'Black Tide', 'line', { captain: 'Captain Varga', ai: { plan: 'chain', reckless: 0.5 } }), side: 1, x: -260, z: 250, h: PI }],
-      objective: 'A gale, and rocks under your lee: finish the Black Tide without going ashore',
+      ships: [{ id: 'a', spec: pirate('brig', 'Karabulut', 'line', { captain: 'Kara Osman', ai: { plan: 'chain', reckless: 0.5 } }), side: 1, x: -260, z: 250, h: PI }],
+      objective: 'A gale, and rocks under your lee: finish the Karabulut without going ashore',
       tip: 'A gale spoils everyone’s gunnery and tears full sail. Shorten sail, and keep off the shore to the east.',
       check: (S) => (S.by.a.out ? 'won' : null),
     }),
@@ -140,11 +141,11 @@ const POOL = {
       env: 'golden', wind: { dir: 0.5, str: 0.9 }, ...PLACES.careenage(),
       player: { x: 150, z: -470, h: -0.2, speed: 7 },
       ships: [
-        { id: 'a', spec: pirate('xebec', 'Red Sirocco', 'line', { captain: 'Yusra the Red', ai: { cuts: 0.6 } }), side: 1, x: 25, z: 250, h: PI / 2, o: { crew: 0.6, anchored: true } },
-        { id: 'b', spec: pirate('sloop', 'Sandfly', 'poor'), side: 1, x: -60, z: 30, h: PI },
+        { id: 'a', spec: pirate('xebec', 'Kasırga', 'line', { captain: 'Kızıl Ayşe', ai: { cuts: 0.6 } }), side: 1, x: 25, z: 250, h: PI / 2, o: { crew: 0.6, anchored: true } },
+        { id: 'b', spec: pirate('sloop', 'Kounoupi', 'poor'), side: 1, x: -60, z: 30, h: PI },
       ],
       focus: 'a',
-      objective: 'The Red Sirocco lies at anchor with half her crew ashore: finish her before she can get under way',
+      objective: 'The Kasırga lies at anchor with half her crew ashore: finish her before she can get under way',
       tip: 'At anchor she can only haul herself round slowly. Her lookout sloop will try to keep you busy.',
       check: (S) => (S.by.a.out ? 'won' : null),
     }),
@@ -154,8 +155,8 @@ const POOL = {
     build: (c) => ({
       env: 'dusk', wind: { dir: -0.6, str: 1 }, ...PLACES.landing(),
       player: { x: -120, z: -480, h: 0.2, speed: 7 },
-      ships: [{ id: 'a', spec: pirate('merchantman', 'Widow’s Lament', 'line', { captain: 'Silas Thorne', ai: { cuts: 0.75 } }), side: 1, x: 10, z: 175, h: PI / 2, o: { crew: 0.45, anchored: true } }],
-      objective: () => (c.S && c.S.flag.back ? 'Her boats are back aboard: finish the Widow’s Lament' : 'Thorne’s men are ashore in the village: strike before the boats come back'),
+      ships: [{ id: 'a', spec: pirate('merchantman', 'Chira', 'line', { captain: 'Lazaros', ai: { cuts: 0.75 } }), side: 1, x: 10, z: 175, h: PI / 2, o: { crew: 0.45, anchored: true } }],
+      objective: () => (c.S && c.S.flag.back ? 'Her boats are back aboard: finish the Chira' : 'Lazaros’s men are ashore in the village: strike before the boats come back'),
       tip: 'She is at anchor with fewer than half her men aboard. That will not last.',
       events: [{ t: 110, fn: (S) => { const a = S.by.a; if (a.out) return; S.flag.back = true; a.crew = Math.max(a.crew, a.crewMax * 0.9); if (a.anchored) a.weighT = 3; S.say('Her boats are back: she is manned again, and weighing'); } }],
       check: (S) => (S.by.a.out ? 'won' : null),
@@ -172,7 +173,7 @@ const POOL = {
         { outline: ribbon([[-300, 360, 35], [-260, 420, 55], [-240, 490, 30]]), depth: 2.6 },
       ],
       player: { x: 0, z: -350, h: 0, speed: 7 },
-      ships: [{ id: 'a', spec: pirate('sloop', 'Scavenger II', 'line', { captain: 'Mags’s daughter', ai: { range: 130 } }), side: 1, x: 40, z: 330, h: PI }],
+      ships: [{ id: 'a', spec: pirate('sloop', 'Mikri Gorgona', 'line', { captain: 'Despina’s daughter', ai: { range: 130 } }), side: 1, x: 40, z: 330, h: PI }],
       objective: 'A sloop that knows every rock here: run her down among the islets',
       tip: 'She floats over the shoals; a deeper ship does not. Chain shot will slow her.',
       check: (S) => (S.by.a.out ? 'won' : null),
@@ -183,8 +184,8 @@ const POOL = {
     build: (c) => ({
       env: 'golden', wind: { dir: PI / 2, str: 1 }, seedIslands: [8086, 3],
       player: { x: 0, z: -420, h: 0, speed: 6 },
-      ships: [{ id: 'a', spec: pirate('flagship', 'Leviathan’s Maw', 'line', { captain: 'Korrigan' }), side: 1, x: -40, z: 220, h: PI / 2, o: { crew: 0.6, hold: true, sail: 1 } }],
-      objective: () => (c.S && c.S.by.a.ai.hold ? 'She takes you for a friend. Choose your moment: she will know you when you fire or come within a ship’s length' : 'Finish the Leviathan’s Maw'),
+      ships: [{ id: 'a', spec: pirate('flagship', 'Ejderha', 'line', { captain: 'Murad' }), side: 1, x: -40, z: 220, h: PI / 2, o: { crew: 0.6, hold: true, sail: 1 } }],
+      objective: () => (c.S && c.S.by.a.ai.hold ? 'She takes you for a friend. Choose your moment: she will know you when you fire or come within a ship’s length' : 'Finish the Ejderha'),
       tip: 'Under a borrowed flag you may come as close as you dare. Your first broadside is free; make it a rake.',
       check: (S) => (S.by.a.out ? 'won' : null),
     }),
@@ -217,8 +218,9 @@ const calm = {
       objective: () => { const S = c.S; if (!S) return ''; return S.flag.breeze ? (galleysDone(S) ? 'The galleys are done with. Finish the tall ship, or slip away upwind to the north' : 'The breeze has brought one of their sailing ships. Deal with the galleys; then finish her or slip away upwind') : S.t > 95 ? 'Wind is coming from the north-east. Hold on' : 'No wind, and two galleys coming out under oars: live through the calm'; },
       tip: 'Without wind a sailing ship barely steers. G drops anchor: she holds still, her guns steady, and a spring on the cable lets A and D haul her broadside round.',
       events: [
+        { t: 14, fn: (S) => { const l = STORY.rivals[c.side]; if (l) S.say(l, ''); } }, // the rival from Powder for Candia
         { t: 6, fn: (S) => { if (!S.p.spec.oars) S.say('Manolis: “No steerage way. Anchor, and we can still swing her on the spring.”', ''); } },
-        { t: 95, fn: (S) => S.say(c.has('pilot') ? 'Pilot: “Wind on the water to the north-east. A little longer.”' : 'Dark water to the north-east: wind is coming') },
+        { t: 95, fn: (S) => S.say('Manolis: “Wind on the water to the north-east. A little longer.”') },
         { t: 110, fn: (S) => S.wind(W, 0.5) },
         { t: 130, fn: (S) => { S.wind(W, 1); S.flag.breeze = true; S.say('The breeze is here. Manolis points north-east: a tall ship, coming down with the wind behind her. “They sent a friend.”'); S.add({ id: 'sail', spec: shipSpec('merchantman', c.foe, c.names.heavy, 'poor'), side: 1, x: up[0], z: up[1], h: Math.atan2(-up[0], -up[1]), o: { speed: 8 } }); } },
       ],
@@ -309,7 +311,7 @@ const assaultMouth = {
       ],
       focus: 'battery',
       objective: 'Open the harbour mouth: silence the battery on the eastern mole or fire its magazine, by any means',
-      tip: 'The Koules covers the open water south of the mouth. The mole battery looks across the mouth: it cannot bear along the outside of its own mole, to the east.',
+      tip: 'The sea fortress covers the open water south of the mouth. The mole battery looks across the mouth: it cannot bear along the outside of its own mole, to the east.',
       check: (S) => (S.by.battery.out ? 'won' : null),
     };
   },
@@ -347,8 +349,8 @@ const flagDuel = (attacker) => ({
         { id: 'flag', spec: shipSpec('flagship', c.foe, c.names.flag, 'line'), side: 1, x: 60, z: -20, h: PI, o: { crew: 0.7, hull: 0.65 } },
         koules(c, !attacker, attacker ? { hull: 0.6, crew: 0.6 } : { hull: 0.35, crew: 0.4 }),
       ],
-      objective: attacker ? 'Their flagship stands between you and the harbour mouth. Finish her, and mind the Koules' : 'Their commander is coming in for the harbour mouth. Finish his flagship under what is left of the Koules’ guns',
-      tip: attacker ? 'The Koules’ arc is drawn on the water. Fight her outside it if you can.' : 'The Koules still has a few guns. Draw him under them.',
+      objective: attacker ? 'Their flagship stands between you and the harbour mouth. Finish her, and mind the sea fortress' : 'Their commander is coming in for the harbour mouth. Finish his flagship under what is left of the sea fortress’s guns',
+      tip: attacker ? 'The sea fortress’s arc is drawn on the water. Fight her outside it if you can.' : 'The sea fortress still has a few guns. Draw him under them.',
       check: (S) => (S.by.flag.out ? 'won' : null),
     };
   },

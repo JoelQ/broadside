@@ -392,7 +392,7 @@ export const CAST = {
     },
   },
   mags: {
-    name: 'Cutthroat Mags', role: 'Pirate, the sloop Scavenger', side: 'pirate',
+    name: 'Despina', role: 'Pirate, the sloop Gorgona', side: 'pirate',
     where: 'The prologue’s pirate, off Lychna',
     draw() {
       const skin = SKIN.ruddy, F = face(skin, { w: 29, jaw: 23, chin: 9, top: 56, chinY: 138 }), hair = '#c4562a', hd = '#9a3e1c', band = '#1e1a18';
@@ -420,7 +420,7 @@ export const CAST = {
     },
   },
   daughter: {
-    name: 'Kate, Mags’s daughter', role: 'Pirate, the sloop Scavenger II', side: 'pirate',
+    name: 'Eleni, Despina’s daughter', role: 'Pirate, the sloop Mikri Gorgona', side: 'pirate',
     where: 'Among the islets: knows every rock, as her mother taught her',
     draw() {
       const skin = SKIN.fair, F = face(skin, { w: 27, jaw: 20, chin: 8, top: 56, chinY: 134 }), hair = '#d0662e', hd = '#a84c1e', band = '#3b7a4a';
@@ -444,7 +444,7 @@ export const CAST = {
     },
   },
   varga: {
-    name: 'Captain Varga', role: 'Pirate, the brig Black Tide', side: 'pirate',
+    name: 'Kara Osman', role: 'Pirate, the brig Karabulut', side: 'pirate',
     where: 'A lee shore: at sea in a gale because nobody sensible is',
     draw() {
       const skin = '#d6bcaa', F = face(skin, { w: 30, jaw: 26, chin: 12, top: 56 }), black = '#141317', coat = '#26262c';
@@ -470,7 +470,7 @@ export const CAST = {
     },
   },
   yusra: {
-    name: 'Yusra the Red', role: 'Corsair, the xebec Red Sirocco', side: 'pirate',
+    name: 'Kızıl Ayşe', role: 'Pirate, the xebec Kasırga', side: 'pirate',
     where: 'The careenage: caught at anchor with half her crew ashore',
     draw() {
       const skin = SKIN.brown, F = face(skin, { w: 27, jaw: 21, chin: 8, top: 56, chinY: 136 }), red = '#b3372c', rd = '#87261e', gold = '#e6c069';
@@ -494,7 +494,7 @@ export const CAST = {
     },
   },
   thorne: {
-    name: 'Silas Thorne', role: 'Pirate, the Widow’s Lament', side: 'pirate',
+    name: 'Lazaros', role: 'Pirate, the Chira', side: 'pirate',
     where: 'The landing: his men are ashore, burning a village',
     draw() {
       const skin = SKIN.pale, F = face(skin, { w: 26, jaw: 19, chin: 8, top: 52, cheek: 96, jawY: 126, chinY: 146 }), hair = '#18141c', coat = '#4a3366';
@@ -520,7 +520,7 @@ export const CAST = {
     },
   },
   korrigan: {
-    name: 'Dread Admiral Korrigan', role: 'Pirate, the galleon Leviathan’s Maw', side: 'pirate',
+    name: 'Murad', role: 'Pirate, the galleon Ejderha; calls himself Kapudan', side: 'pirate',
     where: 'False colours: you come alongside under a borrowed flag',
     crop: '30 10 140 140',
     draw() {
@@ -585,7 +585,7 @@ export function portrait(id, o = {}) {
 // an officer by job ("The carpenter has opinions…") need the side you serve, which decides who holds the post.
 const SPEAKERS = [[/^(Old )?Manolis\b|^Pilot:/, 'manolis'], [/^Marousa\b|^Gunner:/, 'marousa'], [/^(Captain )?(Zuanne )?Barbaro\b/, 'barbaro'], [/^İbrahim Reis\b/, 'ibrahim'],
   [/^(Mastro )?Piero\b/, 'piero'], [/^(Usta )?Kemal\b/, 'kemal'], [/^Ser Alvise\b/, 'recruiter'], [/^Hüseyin Efendi\b/, 'secretary'],
-  [/^(Cutthroat )?Mags:/, 'mags'], [/^Kate:/, 'daughter'], [/^(Captain )?Varga:/, 'varga'], [/^Yusra\b/, 'yusra'], [/^(Silas )?Thorne:/, 'thorne'], [/^Korrigan:/, 'korrigan'], [/^Kastor:/, 'kastor'], [/^Polydeukes:/, 'polydeukes']];
+  [/^Despina:/, 'mags'], [/^Eleni:/, 'daughter'], [/^Kara Osman:/, 'varga'], [/^Kızıl Ayşe\b/, 'yusra'], [/^Lazaros:/, 'thorne'], [/^Murad:/, 'korrigan'], [/^Kastor:/, 'kastor'], [/^Polydeukes:/, 'polydeukes']];
 export function speakerOf(text, side) {
   text = text.replace(/<[^>]+>/g, '');
   for (const [re, id] of SPEAKERS) if (re.test(text)) return id;
@@ -597,5 +597,5 @@ export function officerFace(post, side) {
   return { pilot: 'manolis', gunner: 'marousa', carpenter: side === 'ottoman' ? 'kemal' : 'piero', marines: side === 'ottoman' ? 'ibrahim' : 'barbaro' }[post] || null;
 }
 // the face of a pirate captain, by the name on her ship's spec
-const CAPTAINS = { 'Cutthroat Mags': 'mags', 'Captain Varga': 'varga', 'Yusra the Red': 'yusra', 'Silas Thorne': 'thorne', 'Dread Admiral Korrigan': 'korrigan', Korrigan: 'korrigan', 'Mags’s daughter': 'daughter' };
+const CAPTAINS = { Despina: 'mags', 'Kara Osman': 'varga', 'Kızıl Ayşe': 'yusra', Lazaros: 'thorne', Murad: 'korrigan', 'Despina’s daughter': 'daughter' };
 export const captainFace = (name) => CAPTAINS[name] || null;

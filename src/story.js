@@ -9,6 +9,8 @@
 // Chania at the start of the war; Venice blockaded the Dardanelles in the 1650s; the island
 // fortress of Suda stayed Venetian; Candia was surrendered in September 1669 by Francesco
 // Morosini to the Grand Vizier, Köprülü Fazıl Ahmed. The Venetian ending here departs from that.
+// The campaign covers the last years of the siege, and on purpose it moves the Dardanelles blockade
+// (The straits) to those years too: the game only has to agree with itself, so leave that be.
 // No years are shown on screen.
 
 export const SIDE_NAME = { venice: 'Venice', ottoman: 'the Ottoman fleet' };
@@ -39,8 +41,8 @@ export const STORY = {
   opening: {
     eyebrow: 'Lychna, in the Aegean', title: 'Home waters',
     text: [
-      'Lychna is a rock with one harbour, forty houses and a chapel. It pays its tax to the Sultan and sells its wine to whoever calls. The <i>Agia Marina</i> is the island’s brig and you are her captain, which mostly means carrying wine and counting barrels.',
-      'There is a war on. Two summers ago the Sultan’s army landed on Crete, and now the Venetians are shut up in the great city of Candia with the sea at their backs. On Lychna the war has meant higher prices and fewer honest ships.',
+      'Lychna is a rock with one harbour, forty houses and a chapel. It pays its tax to the Sultan and sells its wine to whoever calls. You captain the island’s brig, the <i>Agia Marina</i>, which mostly means counting barrels.',
+      'There is a war on. Twenty summers ago the Sultan’s army landed on Crete, and the Venetians are still shut up in the great city of Candia with the sea at their backs. On Lychna the war has meant higher prices and fewer honest ships.',
       'This morning the goatherd’s boy ran down from the ridge. A sail to the south, black-hulled, standing in for the harbour, and nobody on the island owns a black hull.',
     ],
     go: 'Clear for action',
@@ -48,32 +50,32 @@ export const STORY = {
   choice: {
     title: 'Two offers',
     // the opening shot, over both ships sailing in; then the dialog
-    card: { eyebrow: 'Lychna, a week later', line: 'A fight off a small island is news for a week. Before the week was out two boats had called at Lychna.' },
+    card: { eyebrow: 'Lychna, a week later', line: 'A fight off a small island is news for a week. Before the week is out, two boats call at Lychna.' },
     text: [
-      'The first carried Ser Alvise, a Venetian gentleman from the fortress of Suda, in black with a crimson stole, with a purse and a paper.',
+      'The first brings Ser Alvise, a Venetian gentleman from Suda, in black and crimson, with a purse and a paper.',
       say('recruiter', '“The Republic is hiring ships to keep Candia alive. A captain who can fight a brig like that should not be carrying wine.”'),
-      'The second carried Hüseyin Efendi, a quiet man who keeps the Kapudan Pasha’s papers at Chania, with a paper of his own.',
+      'The second brings Hüseyin Efendi, a quiet man who keeps the Kapudan Pasha’s papers at Chania. He has a paper too.',
       say('secretary', '“The Sultan’s fleet has need of captains who know these islands. And Lychna is the Sultan’s island, after all.”'),
-      'Old Manolis, who has piloted these waters for fifty years and served under both flags, shrugged.',
+      'Old Manolis, who has piloted these waters for fifty years under both flags, shrugs.',
       say('manolis', '“The sea is the same sea. Choose the paymaster you can live with.”'),
     ],
     venice: 'Sail for Venice', ottoman: 'Sail for the Porte',
   },
   // one line under each leg's title, on the card before the fight
   legs: {
-    'Home waters': { both: 'Forty houses and a chapel, and nobody else to send.' },
+    'Home waters': { both: 'One brig, one harbour, and nobody else to send.' },
     'The run': { both: 'A powder ship does not want a long conversation. Candia’s walls are in sight, and so is the patrol.' },
     'The anchorage': { both: 'Powder for a month of siege, in one hull, waiting for dark.' },
     'The brothers': { both: 'They have hunted as a pair since they were boys.' },
-    'A lee shore': { both: 'Nobody sensible is at sea today. Varga is.' },
+    'A lee shore': { both: 'Nobody sensible is at sea today. Kara Osman is.' },
     'The careenage': { both: 'Half her people are ashore scraping weed. For now.' },
     'The landing': { both: 'The village bell is ringing.' },
-    'Among the islets': { both: 'She learned these rocks from her mother.' },
+    'Among the islets': { both: 'Despina had a daughter.' },
     'False colours': { both: 'A borrowed flag, a steady course, and a straight face.' },
     'Dead calm': { both: 'Dawn, and the sails hang like washing.' },
     'Up the strait': { both: 'Two castles, one current, and all of it against you. Then the same way back.' },
     'The flagship': { both: 'Everything so far has been for this.' },
-    'Down the strait': { both: 'The current is with you. It will not let you change your mind. Two ships at anchor have shut the fleet in: open the door.' },
+    'Down the strait': { both: 'The current is with you. It will not let you change your mind.' },
     'The mole': { both: 'The day of the assault.' },
     'The harbour': { both: 'Smoke, and every ship for herself.' },
     'The sortie': { both: 'The day of the assault.' },
@@ -81,39 +83,37 @@ export const STORY = {
   // what each pirate captain says a few seconds into the fight, shown with their face. Start each line with the
   // name portraits.js knows them by (speakerOf).
   taunts: {
-    mags: ['Mags: “Forty houses and a chapel. I only want the wine.”'],
+    mags: ['Despina: “Only the wine, captain. Keep your chapel.”'],
     kastor: ['Kastor: “You take the left one, brother.”'],
     polydeukes: ['Polydeukes: “I always take the left one.”'],
-    varga: ['Varga: “Good weather for it.”'],
-    yusra: ['Yusra: “Get the boats back! Cut the cable if you have to!”'],
-    thorne: ['Thorne: “Finish ashore. I will deal with this one.”'],
-    daughter: ['Kate: “My mother taught me these rocks. Who taught you?”'],
-    korrigan: ['Korrigan: “Come alongside, friend, and tell me the news.”'],
+    varga: ['Kara Osman: “Good weather for it.”'],
+    yusra: ['Kızıl Ayşe: “Get the boats back! Cut the cable if you have to!”'],
+    thorne: ['Lazaros: “Finish ashore. I will deal with this one.”'],
+    daughter: ['Eleni: “My mother taught me these rocks. Who taught you?”'],
+    korrigan: ['Murad: “Come alongside, friend, and tell me the news.”'],
   },
+  // the rival from Powder for Candia hails you a few seconds into Dead calm, by the side you serve
+  rivals: { [V]: 'İbrahim Reis: “Now we find out.”', [O]: 'Barbaro: “I said I would remember.”' },
   officers: {
-    pilot: { [V]: { name: 'Old Manolis, the pilot', line: '“Somebody has to tell you where the rocks are.”' }, [O]: { name: 'Old Manolis, the pilot', line: '“Somebody has to tell you where the rocks are.”' } },
+    pilot: { [V]: { name: 'Old Manolis, the pilot', line: 'He has piloted these waters for fifty years and sees no reason to stop.' }, [O]: { name: 'Old Manolis, the pilot', line: 'He has piloted these waters for fifty years and sees no reason to stop.' } },
     carpenter: { [V]: { name: 'Mastro Piero, the carpenter', line: 'A shipwright from the Arsenal, sent out to Suda and bored there.' }, [O]: { name: 'Usta Kemal, the carpenter', line: 'A shipwright from the yards at Galata, sent out to Chania and bored there.' } },
     gunner: { [V]: { name: 'Marousa, the gunner', line: 'She laid guns for three pirate captains and outlived all of them. She would rather be paid regularly.' }, [O]: { name: 'Marousa, the gunner', line: 'She laid guns for three pirate captains and outlived all of them. She would rather be paid regularly.' } },
-    marines: { [V]: { name: 'Captain Zuanne Barbaro', line: 'He lost the <i>Santa Caterina</i>’s sister to these same waters and has asked to serve where the fighting is.' }, [O]: { name: 'İbrahim Reis', line: 'He has chased powder ships off Candia for three years. He would rather sail with someone who catches them.' } },
+    marines: { [V]: { name: 'Captain Zuanne Barbaro', line: '' }, [O]: { name: 'İbrahim Reis', line: '' } },
   },
 
   m0: {
     [V]: { end: { title: 'Suda', text: [
       'The fortress of Suda sits on an island in the mouth of its bay, with Ottoman Crete all round it and the lion of St Mark over the gate. They paint the same lion on your sails before you have finished your first cup of wine.',
-      'Manolis comes with you.',
-      say('manolis', '“Somebody has to see that the <i>Agia Marina</i> is looked after.”'),
     ] } },
     [O]: { end: { title: 'Chania', text: [
       'Chania was Venetian until the first summer of the war. Now the fleet lies in its harbour under the red flag, and the old arsenals build galleys for the Sultan. They paint the crescent on your sails before you have finished your first cup of coffee.',
-      'Manolis comes with you.',
-      say('manolis', '“Somebody has to see that the <i>Agia Marina</i> is looked after.”'),
     ] } },
   },
 
   m1: {
     [V]: {
       brief: { title: 'Powder for Candia', text: [
-        'Suda is an island fortress in the mouth of a long bay, and it is one of the last places on Crete where the Lion of St Mark still flies. Candia is the other that matters. The city has held for years because ships keep reaching it.',
+        'Candia has held for twenty years because ships keep reaching it. Suda keeps them coming.',
         'Captain Zuanne Barbaro has a cargo and no ship fit to carry it: powder, enough for a month of the city’s guns.',
         say('barbaro', '“İbrahim Reis keeps a patrol off the harbour, and he is good at it. They will see you coming. There is shoal water inshore of them, if your ship is small enough to use it.”'),
         say('barbaro', '“How you get the powder in is your affair. Getting it in is the Republic’s.”'),
@@ -127,7 +127,7 @@ export const STORY = {
     },
     [O]: {
       brief: { title: 'Powder for Candia', text: [
-        'Chania was the first city of Crete to fall, and it is the fleet’s harbour now. From here the army before Candia is fed, and from here the sea around the city is watched. The siege goes on because ships keep reaching Candia.',
+        'From Chania the army before Candia is fed and the sea around it watched. The siege goes on because ships keep reaching the city.',
         'İbrahim Reis commands the patrol and has news.',
         say('ibrahim', '“The <i>Santa Caterina</i>, a powder ship, under a captain named Barbaro. She has put into a cove down the coast to wait for dark, under a small battery. One guard ship outside.”'),
         say('ibrahim', '“If that powder reaches the city, the siege is a month longer. Take her, burn her or sink her. I do not mind which.”'),
@@ -143,7 +143,7 @@ export const STORY = {
   m2: {
     [V]: {
       brief: { title: 'Independent command', text: [
-        'A war is good weather for pirates. With both fleets busy off Crete, the Cyclades have filled with captains who serve nobody: renegades, deserters, and a few who were simply here first. They take the Republic’s supply ships and the Sultan’s alike.',
+        'A war is good weather for pirates. With both fleets busy off Crete, the Cyclades fill with island captains who serve nobody and take the Republic’s ships and the Sultan’s alike.',
         'Ser Alvise brings you a commission from the Provveditore, and no instructions worth the name.',
         say('recruiter', '“Clear them out. Three have been reported this month; which three you find will depend on the wind.”'),
         say('recruiter', '“Anything you take is yours to keep, and to sail.”'),
@@ -154,12 +154,12 @@ export const STORY = {
         {},
       ],
       end: { title: 'Quiet in the Cyclades', text: [
-        'For the first time in two years a grain ship reaches Suda from the north without an escort. Nobody remarks on it, which is the point.',
+        'For the first time in years a grain ship reaches Suda from the north without an escort. Nobody remarks on it, which is the point.',
       ] },
     },
     [O]: {
       brief: { title: 'Independent command', text: [
-        'A war is good weather for pirates. With both fleets busy off Crete, the Cyclades have filled with captains who serve nobody: renegades, deserters, and a few who were simply here first. They take the Sultan’s supply ships and the Republic’s alike.',
+        'A war is good weather for pirates. With both fleets busy off Crete, the Cyclades fill with island captains who serve nobody and take the Sultan’s ships and the Republic’s alike.',
         'Hüseyin Efendi gives you a commission and no instructions worth the name.',
         say('secretary', '“The islands pay their tax to be kept safe; keep them safe. Three pirates have been reported this month; which three you find will depend on the wind.”'),
         say('secretary', '“Anything you take is yours to keep, and to sail.”'),
@@ -170,7 +170,7 @@ export const STORY = {
         {},
       ],
       end: { title: 'Quiet in the Cyclades', text: [
-        'For the first time in two years a grain ship reaches Chania from the north without an escort. Nobody remarks on it, which is the point.',
+        'For the first time in years a grain ship reaches Chania from the north without an escort. Nobody remarks on it, which is the point.',
       ] },
     },
   },
@@ -184,8 +184,8 @@ export const STORY = {
         say('marousa', '“If the wind fails, we are a fort. Forts can win, if they are patient.”'),
       ] },
       end: { title: 'After the calm', text: [
-        'Among the men pulled from the water is a Venetian in the rags of a red coat: Zuanne Barbaro, taken off Candia a year ago and chained to an oar in the galley you fought. He looks at your ship for some time.',
-        say('barbaro', '“I have had a year to think about what I would do with a deck under me again.”'),
+        'Among the men pulled from the water is Zuanne Barbaro, in the rags of a red coat. He took the next powder run in himself and never arrived; since then he has pulled an oar in the galley you fought. He looks at your ship for some time.',
+        say('barbaro', '“I have had a whole season to think about what I would do with a deck under me again.”'),
       ] },
     },
     [O]: {
@@ -208,7 +208,6 @@ export const STORY = {
         'The Republic cannot beat the Sultan’s army on Crete, so it has gone to the door the army is fed through. A Venetian fleet lies off the mouth of the Dardanelles, a week’s sail from Candia, and everything bound for Crete must come out past it.',
         'Ser Alvise has come out with the dispatch boat.',
         say('recruiter', '“The Captain General has word of a great ship fitting out above the castles: a flagship for a fleet meant to break the blockade. She is not ready. In a month she will be.”'),
-        'The current in the strait runs out to sea, hard in mid-channel and hardest through the Narrows, slack along the shores, and the summer wind comes down off the European hills.',
         say('manolis', '“Going up is slow. Coming down is fast, and you cannot take it back.”'),
       ] },
       end: { title: 'Below the castles', text: [
@@ -221,8 +220,7 @@ export const STORY = {
         'The Venetians cannot beat the army on Crete, so they have gone to the door it is fed through. Their fleet lies off the mouth of the Dardanelles, and for months nothing has come out: no powder, no bread, no men.',
         'Hüseyin Efendi has come up from Chania with the orders, and reads them to you himself.',
         say('secretary', '“The fleet in the strait is not ready to fight its way out. It does not need to. Two ships are anchored across the channel at the mouth, and they are the blockade.”'),
-        say('secretary', '“Take one, sink one, burn one, or frighten one into cutting her cable, and the convoys can run.”'),
-        'The current runs out to sea, hard in mid-channel and slack along the shores, and the summer wind blows the same way.',
+        say('secretary', '“One of them will do. Take her, burn her, or frighten her off her anchor, and the convoys can run.”'),
         say('manolis', '“Going down is fast, and you cannot take it back. Only the eddies inshore will carry you up again.”'),
       ] },
       end: { title: 'The door opens', text: [
@@ -234,26 +232,26 @@ export const STORY = {
 
   m5: {
     [V]: {
-      brief: { title: 'Candia', text: [
+      brief: { title: 'Candia', note: 'No port between fights today: whatever ship you take out is the ship you have, with whatever you can capture.', text: [
         'More than twenty years. Children born in Candia during the siege have children of their own. The walls are rubble held together by habit, and the Captain General, Francesco Morosini, has perhaps one fight left in his garrison.',
-        'The Grand Vizier knows it. His army will go at the walls at dawn, and his fleet will come for the harbour at the same hour, because if the harbour goes the city starves in a week. At the harbour mouth stands the Rocca a Mare, the sea fortress, with the lion carved over its gate.',
-        say('morosini', '“There will be no port between fights today. Whatever ship you take out is the ship you have, with whatever you can capture.”'),
+        'The Grand Vizier knows it. At dawn his army goes at the walls and his fleet at the harbour, because if the harbour falls the city starves in a week.',
+        say('morosini', '“The city has one more day in it. So have I. Keep the harbour open until dark.”'),
       ] },
       legs: [
         { pause: ['The mole still stands. Behind you the harbour is filling with smoke as the two fleets come together.', 'Barbaro, reloading: “Pick one. Any one. They are all the right one today.”'] },
-        { pause: ['The harbour is yours for the moment. Then Manolis touches your arm and points seaward.', 'A great ship under a green and red standard, standing in alone. The fortress fires and the shot falls short: half its guns are dismounted.'] },
+        { pause: ['The harbour is yours for the moment.', 'Marousa: “The guns are hot. Give them a minute and something to shoot at.”', 'Then Manolis touches your arm and points seaward.', 'A great ship under a green and red standard, standing in alone. The fortress fires and the shot falls short: half its guns are dismounted.'] },
         {},
       ],
     },
     [O]: {
-      brief: { title: 'Candia', text: [
+      brief: { title: 'Candia', note: 'No port between fights today: whatever ship you take out is the ship you have, with whatever you can capture.', text: [
         'More than twenty years. Men who dug the first trenches before Candia have sons in the trenches now. The Grand Vizier, Köprülü Fazıl Ahmed, has come in person to finish it, and at dawn the army goes at the walls.',
-        'The fleet goes at the harbour in the same hour, because while the harbour is open the city can be fed for ever. At the harbour mouth stands the sea fortress the Venetians call Rocca a Mare and the army calls the Water Tower, and beside it the battery on the mole.',
-        say('vizier', '“There will be no port between fights today. Whatever ship you take out is the ship you have, with whatever you can capture.”'),
+        'The fleet goes at the harbour in the same hour: while it stays open, the city can be fed for ever. At the mouth stand the sea fortress and the battery on the mole.',
+        say('vizier', '“Twenty years. I mean to be home before the winter.”'),
       ] },
       legs: [
         { pause: ['The mole battery is quiet. Through the gap the harbour is filling with smoke as the two fleets come together.', 'İbrahim Reis, reloading: “Pick one. Any one. They are all the right one today.”'] },
-        { pause: ['The harbour is yours for the moment. Then Manolis touches your arm and points.', 'A great ship with the lion at her mainmast, warping out from under the fortress to fight in the last clear water there is.'] },
+        { pause: ['The harbour is yours for the moment.', 'Marousa: “The guns are hot. Give them a minute and something to shoot at.”', 'Then Manolis touches your arm and points.', 'A great ship with the lion at her mainmast, warping out from under the fortress to fight in the last clear water there is.'] },
         {},
       ],
     },
@@ -262,14 +260,15 @@ export const STORY = {
   ending: {
     [V]: { eyebrow: 'Candia', title: 'The city holds', text: [
       'With the harbour open, the relief ships come in on the evening wind, and the assault on the walls breaks against men who know they will eat tomorrow. Within the month the Grand Vizier’s engineers are filling in their own trenches.',
-      say('morosini', 'The Republic strikes a medal. Your name is not on it, because you are not Venetian, but Morosini sends for you and says what the medal does not.'),
-      'Then you sail for Lychna, which is a rock with one harbour, forty houses and a chapel, and where nobody owns a black hull.',
+      say('morosini', 'The Republic strikes a medal for the defenders of Candia. It honours only Venetians, so your name is not on it. Morosini sends for you anyway, and gives you the flag the <i>Agia Marina</i> flew in the harbour, scorched through, with the lion still on it.'),
+      say('barbaro', '“The historians will have the medal. Everyone on those walls will remember whose ship flew that flag.”'),
+      'Then you sail for Lychna: one harbour, forty houses and a chapel. The flag goes in a chest under the wine. The goatherd’s boy still keeps watch from the ridge. He has not seen a black hull in a long time.',
     ] },
     [O]: { eyebrow: 'Kandiye', title: 'The city falls', text: [
-      'With the harbour closed, Morosini asks for terms within the week, and the Grand Vizier grants them: the garrison may sail away with its arms and its banners, and the people with what they can carry. After more than twenty years the keys are handed over without another shot.',
-      say('vizier', 'The Grand Vizier sends a robe of honour.'),
-      say('ibrahim', '“It suits you. I would not wear it on Lychna.”'),
-      'Then you sail for home, which is a rock with one harbour, forty houses and a chapel, and where nobody owns a black hull.',
+      'With the harbour closed, Morosini asks for terms within the week. The garrison may sail away with its arms and banners, the people with what they can carry. After more than twenty years the keys change hands without another shot.',
+      say('vizier', 'The Grand Vizier sends a robe of honour: green silk, gold thread, and sleeves that reach past your fingers.'),
+      say('ibrahim', '“It suits you. Wear it on Lychna and the goats will think the Sultan has come.”'),
+      'Then you sail for Lychna: one harbour, forty houses and a chapel. The robe goes in a chest under the wine. The goatherd’s boy still keeps watch from the ridge. He has not seen a black hull in a long time.',
     ] },
     note: 'In history Candia was surrendered on terms in September 1669, after a siege of more than twenty years. Venice kept the island fortresses of Suda, Spinalonga and Gramvousa.',
   },
