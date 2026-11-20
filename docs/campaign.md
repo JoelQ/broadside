@@ -268,8 +268,10 @@ Where the game differs from the proposal above, and why.
 - **Mission 5, Venice.** The assault is led by fireships only. Bomb vessels are an anachronism for
   1669 (they first appear in the 1680s).
 - **Prizes.** A prize of a kind you do not own joins your ships in port; one of a kind you already
-  own is sold. The fleet also lends you a ship after each mission (sloop, xebec, galley, armed
-  merchantman) so every route is open to a player who has captured nothing.
+  own is sold. There are no loans: your fleet is the brig you start with and what you take. Every
+  fight is winnable by several kinds of ship, and in the harness the brig wins every one, so a
+  player who captures nothing still has a way through. Which other ships you get depends on what
+  the pirate hunt draws and what you board, so a galley is a prize of the calm, not a way to fight it.
 - **The burning-prize route in the straits** ("set a prize alight and let the current take it down")
   is not built. Fire does spread between hulls that foul each other.
 - **Storming a battery** is a boarding action against its garrison, so "by any means" includes it.

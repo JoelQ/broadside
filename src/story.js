@@ -14,9 +14,9 @@
 export const SIDE_NAME = { venice: 'Venice', ottoman: 'the Ottoman fleet' };
 export const PORTS = { island: 'Lychna', venice: 'Suda', ottoman: 'Chania' };
 
-// Ship names. NAMES.venice are Venetian ships (met as enemies when you serve the Porte, lent to
-// you when you serve Venice), and the other way about. Ottoman galleys were known by their
-// captains, so theirs carry a captain's name.
+// Ship names. NAMES.venice are Venetian ships (met as enemies when you serve the Porte, and the
+// names the playtest build gives your own ships when you serve Venice), and the other way about.
+// Ottoman galleys were known by their captains, so theirs carry a captain's name.
 export const NAMES = {
   home: 'Agia Marina',
   venice: {
