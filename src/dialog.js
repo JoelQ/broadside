@@ -18,12 +18,13 @@ export function tellSteps(page, end, show) {
 function render() {
   const { page, steps: S, i, end } = D, s = S[i], c = CAST[s.who], last = i === S.length - 1;
   const dots = S.length > 1 ? `<span class="dlg-dots">${S.map((_, j) => `<i class="${j === i ? 'on' : j < i ? 'seen' : ''}"></i>`).join('')}</span>` : '';
-  const nav = `<div class="dlg-nav">${dots}<span>${i ? '<button class="btn sm" data-act="camp:dlg:back">Back</button>' : ''}${last ? '' : '<button class="btn sm" data-act="camp:dlg:skip">Skip</button>'}</span></div>`;
+  // going on is the usual thing to do, so it is the one big button; back and skip are quiet links beside the dots
+  const nav = `<div class="dlg-nav"><span class="dlg-aux">${dots}${i ? '<button class="dlg-link" data-act="camp:dlg:back">‹ Back</button>' : ''}${last ? '' : '<button class="dlg-link" data-act="camp:dlg:skip">Skip</button>'}</span>${last ? '' : '<button class="btn big dlg-next" data-act="camp:dlg:next">Next ›</button>'}</div>`;
   D.show(`<div class="dlg${c ? ' speaks' : ''}"${last ? '' : ' data-act="camp:dlg:next"'}>
     <div class="dlg-title"><div class="eyebrow">${page.eyebrow || ''}</div><h2>${page.title || ''}</h2></div>
     <div class="dlg-row">${c ? `<figure class="dlg-face">${portrait(s.who)}</figure>` : '<div class="dlg-face none"></div>'}
       <div class="dlg-box">${c ? `<div class="dlg-name">${c.name}<small>${c.role}</small></div>` : ''}<p>${s.text}</p>
-        ${last ? `<div class="dlg-end story">${end}</div>` : '<div class="dlg-more">▸</div>'}${nav}</div></div></div>`, 'dlgscr');
+        ${last ? `<div class="dlg-end story">${end}</div>` : ''}${nav}</div></div></div>`, 'dlgscr');
 }
 
 const showing = () => D && document.querySelector('#screen.dlgscr .dlg');
