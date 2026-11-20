@@ -237,7 +237,7 @@ export const CAMP = {
     const c = STORY.choice;
     E.showEnvoys(); // a Venetian and an Ottoman ship at anchor off the quay while you choose
     const pick = (side, who) => `<div class="pick"><figure class="face">${portrait(who)}<figcaption>${CAST[who].name}</figcaption></figure><button class="btn big" data-act="camp:side:${side}">${c[side]}</button></div>`;
-    CAMP.tell({ eyebrow: 'Afterwards', title: c.title, text: [...c.text, ''] }, `<div class="picks">${pick('venice', 'recruiter')}${pick('ottoman', 'secretary')}</div>`, CAMP.run.summary || '');
+    CAMP.tell({ eyebrow: 'Afterwards', title: c.title, text: [...c.text, ''], onStep: E.envoyStep }, `<div class="picks">${pick('venice', 'recruiter')}${pick('ottoman', 'secretary')}</div>`, CAMP.run.summary || '');
     E.snapCamera(); // frame the harbour and the two ships at once, not by panning across from the fight
   },
   takeSide(side) {

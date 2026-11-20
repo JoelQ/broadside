@@ -1269,14 +1269,37 @@ function showFinal() {
 function showEnvoys() {
   clearEnvoys();
   for (const t of G.trophyShips) t.group.visible = false;
-  // anchored off the quay either side of your berth, broadside on to the view, Venice to the left and the Porte to the right
+  // anchored off the quay either side of your berth, broadside on to the view, Venice to the left and the Porte to the right.
+  // Each sails in from her own side of the bay on the dialog step that names her envoy (envoyStep), and drops anchor.
   const b = harbor.berth;
-  G.envoys = [['venice', 'brig', NAMES.venice.brig, -1], ['ottoman', 'xebec', NAMES.ottoman.lent.xebec, 1]].map(([side, hull, name, k]) => {
+  G.envoys = [['venice', 'brig', NAMES.venice.brig, -1, 1], ['ottoman', 'xebec', NAMES.ottoman.lent.xebec, 1, 3]].map(([side, hull, name, k, step]) => {
     const t = new Ship(shipSpec(hull, side, name), false);
-    t.crew = 30; t.sailLevel = 0; t.pos.set(b.x + k * 46, 0, b.z + 18); t.heading = k * Math.PI / 2;
+    t.crew = 30; t.sailLevel = 0; t.heading = -k * Math.PI / 2; t.group.visible = false;
+    t.arrive = { step, from: [b.x + k * 125, b.z - 26], to: [b.x + k * 46, b.z + 18], t: 0, dur: 6, on: false };
+    t.pos.set(t.arrive.to[0], 0, t.arrive.to[1]);
     scene.add(t.group);
     return t;
   });
+}
+// the dialog has reached step i of "Two offers": a ship whose step it is starts in, one already past it is at anchor
+function envoyStep(i) {
+  for (const t of G.envoys || []) {
+    const a = t.arrive;
+    if (i < a.step) { t.group.visible = false; a.on = false; a.t = 0; continue; }
+    t.group.visible = true;
+    if (i === a.step && !a.on && a.t === 0) { a.on = true; t.sailLevel = TOP; } else if (i > a.step) a.t = a.dur;
+    sailIn(t, 0);
+  }
+}
+function sailIn(t, dt) {
+  const a = t.arrive;
+  if (a.on) a.t = Math.min(a.dur, a.t + dt);
+  const u = a.t / a.dur, e = 1 - (1 - u) ** 2.2; // she comes in fast and carries her way up to the anchorage
+  const x = a.from[0] + (a.to[0] - a.from[0]) * e, z = a.from[1] + (a.to[1] - a.from[1]) * Math.sin((e * Math.PI) / 2);
+  if (u < 1) { const dx = x - t.pos.x, dz = z - t.pos.z; if (dx * dx + dz * dz > 1e-4) t.heading = Math.atan2(dx, dz); }
+  t.pos.set(x, 0, z);
+  if (u >= 1 && a.on) { a.on = false; t.sailLevel = 0; t.heading = Math.sign(a.from[0] - a.to[0]) * -Math.PI / 2; }
+  else if (u >= 1) { t.sailLevel = 0; t.heading = Math.sign(a.from[0] - a.to[0]) * -Math.PI / 2; }
 }
 // your brig alone between them: any other ship of yours is out of the picture until you have chosen (enterHarbor brings it back)
 function clearEnvoys() { for (const t of G.envoys || []) scene.remove(t.group); G.envoys = []; }
@@ -1589,7 +1612,7 @@ function update(dt) {
   const bf = now === 'boarding' && G.bd ? G.bd.foe : null;
   const hush = now === 'intro' && G.mode === 'campaign'; // a leg's card: nothing moves until you engage
   p.update(dt, world, bf || home || hush);
-  if (home) { for (const t of [...G.trophyShips, ...(G.envoys || [])]) t.update(dt, world, true); if (!G.fast) harbor.update(dt); }
+  if (home) { for (const t of G.envoys || []) sailIn(t, dt); for (const t of [...G.trophyShips, ...(G.envoys || [])]) t.update(dt, world, true); if (!G.fast) harbor.update(dt); }
   else {
     const ss = G.ships, live = now === 'battle' || now === 'ending' || now === 'boarding';
     for (const s of ss) {
@@ -1628,7 +1651,7 @@ G.step = (dt, n = 1) => { for (let i = 0; i < n; i++) update(dt); renderer.rende
 G.newAI = newAI;
 G.tick = (dt, n = 1) => { for (let i = 0; i < n; i++) update(dt); };
 G.world = world; G.view = { renderer, scene, camera };
-G.api = { faces, showEnvoys, aiApi, nearest, dropArcs, startScenario, showLegCard, showTitle: () => showTitle(), clearShips, world, strengthOf: (x) => strength(x), scene, restartSkirmish: () => restart(true),  addShip, beginScenario, beginBattle, shipOut, setTarget, foesOf, sep, relSpeed, hideScreen, showScreen, setMode, enterHarbor, snapCamera, buildPlayer, moor, playerSpec, renderPort: () => renderPort(), sfx, fx, floater, store, harbor, cutGrapples, hullSpec, updateAI, reach, inArc, hasGauge, strength: (s) => strength(s), rebuild: () => { if (G.player.arcs) dropArcs(G.player); scene.remove(G.player.group); G.player = null; buildPlayer(true); }, fire, act, tap, keys, startBoarding, boardSwivel, endBattle, toast, showPort: () => showPort(), prize };
+G.api = { faces, showEnvoys, envoyStep, aiApi, nearest, dropArcs, startScenario, showLegCard, showTitle: () => showTitle(), clearShips, world, strengthOf: (x) => strength(x), scene, restartSkirmish: () => restart(true),  addShip, beginScenario, beginBattle, shipOut, setTarget, foesOf, sep, relSpeed, hideScreen, showScreen, setMode, enterHarbor, snapCamera, buildPlayer, moor, playerSpec, renderPort: () => renderPort(), sfx, fx, floater, store, harbor, cutGrapples, hullSpec, updateAI, reach, inArc, hasGauge, strength: (s) => strength(s), rebuild: () => { if (G.player.arcs) dropArcs(G.player); scene.remove(G.player.group); G.player = null; buildPlayer(true); }, fire, act, tap, keys, startBoarding, boardSwivel, endBattle, toast, showPort: () => showPort(), prize };
 CAMP.init(G, G.api); G.CAMP = CAMP;
 if (__PLAYTEST__) PT.install(G, G.api, CAMP);
 showTitle();
