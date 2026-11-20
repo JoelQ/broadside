@@ -1,6 +1,6 @@
 // Screenshots of the built game at desktop and phone sizes, for checking looks and layout.
 //   node tools/shots/shots.mjs [scene-regex] [--out dir] [--sizes desktop,phone,portrait]
-// Scenes: the title, the campaign's first story screen, and the opening of every campaign leg (from the balance grid).
+// Scenes: the title, the campaign's first story screen, the two home ports, and the opening of every campaign leg (from the balance grid).
 // Writes <out>/<size>/<scene>.png and <out>/index.html with them side by side. Exits 1 on any page error.
 import { createRequire } from 'module';
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
@@ -26,6 +26,14 @@ const act = (page, a) => page.evaluate((a) => G.api.act(a), a);
 const SCENES = [
   { name: 'title', run: async () => {} },
   { name: 'prologue', run: async (page) => { await page.evaluate(() => localStorage.clear()); await act(page, 'camp:new'); } },
+  // each side's home port (homes.js), with a few ships at their moorings
+  ...[['port-suda', 'venice'], ['port-chania', 'ottoman']].map(([name, side]) => ({ name, run: async (page) => {
+    await page.evaluate((side) => {
+      const C = G.CAMP; G.mode = 'campaign'; const st = (C.st = C.fresh()); st.side = side; st.stage = 2;
+      st.stable = ['brig', 'sloop', 'xebec', 'galley'].map((hull, i) => ({ id: 's' + (i + 1), hull, name: hull, fit: {} }));
+      C.rebuild(); G.api.showPort(); G.api.snapCamera();
+    }, side);
+  } })),
   ...LEGS.map((L) => ({
     name: L.name.replace(/[^\w]+/g, '-').toLowerCase(),
     run: async (page) => {

@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { Batch, mulberry, clamp } from './geo.js';
 import { groundColour, palm, tree, boulder } from './land.js';
 
@@ -9,6 +10,7 @@ import { groundColour, palm, tree, boulder } from './land.js';
 // A mole is a stone breakwater along a path: a strip of masonry with the same three things.
 // Nothing here is a new rule: land stops ships and shot exactly as an island always has.
 
+const SNOW = new THREE.Color(0xf4f2ec), BARE = new THREE.Color(0x9a948a);
 const CELL = 40, CAP = 160; // segment grid cell; distance inland beyond which the shore no longer matters
 
 // ---------- outline ----------
@@ -84,7 +86,8 @@ const fbm = (x, z) => vnoise(x, z) * 0.55 + vnoise(x * 2.1 + 5.2, z * 2.1 + 1.3)
 
 // ---------- a coast ----------
 // def: { outline: [[x, z, rough?]...], rough, seed, H (hill height), rise (yards inland to reach it), beach (yards of sand),
-//        scale (yards per hill), shape(x, z, y) -> y (flatten a town), clear(x, z) (no trees), trees (density), dry (0-1, a summer-burnt palette) }
+//        scale (yards per hill), shape(x, z, y) -> y (flatten a town), clear(x, z) (no trees), trees (density), dry (0-1, a summer-burnt palette),
+//        snow (height above which the peaks are white), extent (how far from the centre the land is drawn), tint(x, z, colour, y, level) (recolour, in place) }
 export function makeCoast(def) {
   const shape = new Shape(roughen(def.outline, def.rough ?? 14, def.seed || 7));
   const H = def.H ?? 30, rise = def.rise ?? 70, beach = def.beach ?? 9, sc = def.scale ?? 150, ph = (def.seed || 7) * 13.37;
@@ -112,7 +115,11 @@ export function makeCoast(def) {
     if (Math.max(a[1], b[1], c[1]) < -1.5) return;
     const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
     const nx_ = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz_ = ux * vy - uy * vx, up = Math.abs(ny) / (Math.hypot(nx_, ny, nz_) || 1);
-    B.tri(a, b, c, groundColour((a[1] + b[1] + c[1]) / 3, up, hash(a[0] + c[0], a[2] + b[2]), H, def.dry || 0));
+    const y = (a[1] + b[1] + c[1]) / 3, col = groundColour(y, up, hash(a[0] + c[0], a[2] + b[2]), H, def.dry || 0);
+    if (def.snow && y > def.snow * 0.4) col.lerp(BARE, clamp((y - def.snow * 0.4) / (def.snow * 0.5), 0, 1) * 0.7); // the high ground bare limestone
+    if (def.snow && y > def.snow) col.lerp(SNOW, clamp((y - def.snow) / 60 + hash(a[2], c[0]) * 0.4 - 0.2, 0, 1) * (up > 0.55 ? 0.95 : 0.55)); // snow lies on the peaks, thinner on the crags
+    if (def.tint && y > 1.2) def.tint((a[0] + b[0] + c[0]) / 3, (a[2] + b[2] + c[2]) / 3, col, y, up); // a town's streets and yards
+    B.tri(a, b, c, col);
   };
   const cyAt = (i, j) => cy[j * (nx + 1) + i];
   const fineH = new Map(); // fine heights, kept for ground()
