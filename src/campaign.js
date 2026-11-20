@@ -3,6 +3,7 @@ import { MISSIONS, ORDER, LEG_POOL } from './missions.js';
 import { STORY, NAMES, PORTS, SIDE_NAME } from './story.js';
 import { mulberry } from './geo.js';
 import { portrait, speakerOf, officerFace, captainFace, CAST } from './portraits.js';
+import { tellSteps, dialogAct } from './dialog.js';
 
 // The campaign: saved progress, the stable, officers, and the flow from briefing to cruise to port.
 // The engine (main.js) plays one leg at a time; this file decides which leg, and what happens between.
@@ -66,10 +67,8 @@ export const CAMP = {
   // ---------- telling the story: a page of text over the scene ----------
   tell(page, next, extra = '') {
     G.state = 'story'; E.setMode(null);
-    const paras = (page.text || []).map((t) => `<p>${t}</p>`).join(''), c = CAST[page.who];
-    const head = `<div class="eyebrow">${page.eyebrow || ''}</div><h2>${page.title || ''}</h2>`;
-    E.showScreen(`<div class="story">${c ? `<div class="head"><figure class="face">${portrait(page.who)}<figcaption>${c.name}</figcaption></figure><div>${head}</div></div>` : head}${paras}${extra}
-      <div class="rowc">${typeof next === 'string' && !next.startsWith('<') ? `<button class="btn big" data-act="${next}">${page.go || 'Continue'}</button>` : next}</div></div>`, 'dim');
+    const go = typeof next === 'string' && !next.startsWith('<') ? `<button class="btn big" data-act="${next}">${page.go || 'Continue'}</button>` : next;
+    tellSteps(page, `${extra}<div class="rowc">${go}</div>`, E.showScreen);
   },
   text(key) { const m = STORY[key]; return (m && (m[CAMP.st.side] || m.both)) || {}; },
   brief() {
@@ -240,7 +239,7 @@ export const CAMP = {
   ending() {
     const st = CAMP.st, e = STORY.ending[st.side], mm = Math.floor(st.stats.time / 60);
     G.state = 'story'; E.setMode(null); E.enterHarbor(); E.snapCamera();
-    CAMP.tell({ who: e.who, eyebrow: e.eyebrow, title: e.title, text: e.text, go: 'Back to the title' }, 'camp:title', `<p class="note">${mm} minutes in action. ${STORY.ending.note}</p>`);
+    CAMP.tell({ eyebrow: e.eyebrow, title: e.title, text: e.text, go: 'Back to the title' }, 'camp:title', `<p class="note">${mm} minutes in action. ${STORY.ending.note}</p>`);
   },
 
   act(a) {
@@ -257,6 +256,7 @@ export const CAMP = {
     else if (k === 'strip') CAMP.strip(+x);
     else if (k === 'flag') CAMP.shiftFlag(+x);
     else if (k === 'next') { run.i++; CAMP.startLeg(); }
+    else if (k === 'dlg') dialogAct(x);
     else if (k === 'side') CAMP.takeSide(x);
     else if (k === 'ending') CAMP.ending();
     else if (k === 'title') { E.enterHarbor(); E.showTitle(); E.snapCamera(); }

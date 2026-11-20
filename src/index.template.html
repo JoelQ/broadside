@@ -186,6 +186,20 @@ body.touch #coach{bottom:auto;top:130px;font-size:14px}
 .story .officer{display:flex;gap:12px;align-items:center;text-align:left} .story .officer .face svg{width:84px;height:84px;border-radius:6px;border:2px solid var(--brass);display:block}
 .story p.said{display:flex;gap:10px;align-items:center;text-align:left} .story p.said .face svg{width:48px;height:48px;border-radius:50%;border:2px solid var(--brass);display:block;flex:none}
 .lower .faces{display:flex;gap:10px;margin-bottom:14px} .banner .faces{display:flex;justify-content:center;gap:10px;margin-bottom:10px} .banner .faces svg{width:110px;height:110px;border-radius:8px;border:2px solid var(--brass);box-shadow:0 4px 18px rgba(0,0,0,.6);display:block} .faces.beaten svg{filter:grayscale(.85) brightness(.8)} .banner.bad .faces svg{border-color:#e0685c}
+#screen.dlgscr{align-items:flex-start;justify-content:center;padding:0 3vw 4vh;background:linear-gradient(rgba(5,10,18,.15),rgba(5,10,18,.55) 45%,rgba(5,10,18,.9));overflow-y:auto;touch-action:pan-y}
+.dlg{width:900px;max-width:100%;margin-top:auto;text-align:left;cursor:pointer;text-shadow:0 1px 3px #000}
+.dlg-title .eyebrow{margin:0} .dlg-title h2{font:400 clamp(28px,4.4vw,44px)/1 var(--head);color:#f6e3b0;margin:2px 0 12px;letter-spacing:1px}
+.dlg-row{display:flex;align-items:flex-end;gap:16px}
+.dlg-face{margin:0;flex:none;width:194px;animation:dlgface .3s ease-out} .dlg-face.none{animation:none} .dlg-face svg{width:190px;height:190px;border-radius:10px;border:2px solid var(--brass);box-shadow:0 6px 24px rgba(0,0,0,.6);display:block}
+.dlg-box{flex:1;min-width:0;background:rgba(8,16,28,.9);border:1px solid var(--line);border-radius:12px;padding:14px 18px 10px;font-size:19px;line-height:1.45;animation:dlgin .25s ease-out;position:relative}
+.dlg:not(.speaks) .dlg-box{font-style:italic;background:rgba(8,16,28,.78)}
+.dlg-box p{margin:0 0 6px}
+.dlg-name{font:400 24px/1 var(--head);color:#ffe29a;margin-bottom:6px;letter-spacing:.5px} .dlg-name small{font:italic 14px var(--body);color:var(--cream);opacity:.7;margin-left:10px;letter-spacing:0}
+.dlg-more{position:absolute;right:16px;bottom:34px;color:var(--brass);font-size:20px;animation:dlgbob 1s ease-in-out infinite}
+.dlg-end{font-style:normal;cursor:default;max-width:none;margin:0;padding:0;font-size:inherit;text-shadow:none} .dlg-end .rowc{margin-top:10px}
+.dlg-nav{display:flex;justify-content:space-between;align-items:center;margin-top:6px;min-height:26px} .dlg-nav .btn.sm{margin-left:6px;font-size:14px;padding:2px 12px}
+.dlg-dots{display:flex;gap:5px} .dlg-dots i{width:7px;height:7px;border-radius:50%;background:rgba(215,178,90,.25)} .dlg-dots i.seen{background:rgba(215,178,90,.55)} .dlg-dots i.on{background:var(--brass)}
+@keyframes dlgin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}} @keyframes dlgface{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}} @keyframes dlgbob{50%{transform:translateX(3px)}}
 .story .head{display:flex;gap:16px;align-items:flex-end;margin-bottom:6px} .story .head h2{margin-bottom:4px}
 .story figure.face{margin:0;flex:none;text-align:center} .story figure.face svg{width:120px;height:120px;border-radius:8px;border:2px solid var(--brass);display:block;box-shadow:0 4px 18px rgba(0,0,0,.5)} .story figure.face figcaption{font-size:13px;color:#ffe29a;margin-top:4px;max-width:120px;line-height:1.15}
 .picks{display:flex;gap:28px;justify-content:center;flex-wrap:wrap} .pick{display:flex;flex-direction:column;align-items:center;gap:8px}
@@ -231,7 +245,7 @@ body.touch #coach{bottom:auto;top:130px;font-size:14px}
   #screen h1{font-size:min(clamp(44px,8vw,84px),15vh)} #titleWrap h1{font-size:min(clamp(64px,14vw,136px),24vh)}
   #titleWrap .tag{margin:4px 0 14px}
   .btn.big{font-size:21px;padding:6px 26px} .btn{font-size:16px;padding:5px 14px} .rowc{margin-top:12px}
-  .story{font-size:15px;line-height:1.38} .story h2{font-size:30px;margin-bottom:8px} .story .officer{font-size:14px;padding:6px 10px} .story .officer .face svg{width:56px;height:56px} .story p.said .face svg{width:36px;height:36px} .lower .faces svg{width:min(84px,20vh);height:min(84px,20vh)} .banner .faces svg{width:min(72px,18vh);height:min(72px,18vh)} .story figure.face svg{width:72px;height:72px} .story figure.face figcaption{font-size:11px;max-width:72px} .picks{gap:16px} .crewfaces svg{width:28px;height:28px;border-width:1.5px}
+  .story{font-size:15px;line-height:1.38} .story h2{font-size:30px;margin-bottom:8px} .story .officer{font-size:14px;padding:6px 10px} #screen.dlgscr{padding:0 calc(3vw + var(--sr)) 3vh calc(3vw + var(--sl))} .dlg-title h2{font-size:26px;margin-bottom:6px} .dlg-face{width:min(108px,31vh)} .dlg-face svg{width:min(104px,30vh);height:min(104px,30vh)} .dlg-end .pick .face{display:none} .dlg-row{gap:10px} .dlg-box{font-size:15px;line-height:1.35;padding:9px 12px 6px} .dlg-name{font-size:19px;margin-bottom:3px} .dlg-name small{font-size:12px} .dlg-more{bottom:28px} .story .officer .face svg{width:56px;height:56px} .story p.said .face svg{width:36px;height:36px} .lower .faces svg{width:min(84px,20vh);height:min(84px,20vh)} .banner .faces svg{width:min(72px,18vh);height:min(72px,18vh)} .story figure.face svg{width:72px;height:72px} .story figure.face figcaption{font-size:11px;max-width:72px} .picks{gap:16px} .crewfaces svg{width:28px;height:28px;border-width:1.5px}
   .lower .line{font-size:15px} .lower .hook{font-size:17px;margin:4px 0 10px} .banner .gold{font-size:32px} .stats b{font-size:22px} .keys{font-size:13px;margin-top:8px}
   #screen.low{padding:0 calc(5vw + var(--sl)) 12vh}
 }

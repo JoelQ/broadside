@@ -11,6 +11,7 @@ import { PT } from './playtest.js';
 import { steerTo } from './ai.js';
 import { rng, seedRng, rngSeed } from './rng.js';
 import { portrait, speakerOf, captainFace } from './portraits.js';
+import { dialogKey } from './dialog.js';
 
 const $ = (id) => document.getElementById(id);
 // rand and gauss decide the fight and come from the seeded source; vrand is for looks only
@@ -1478,6 +1479,7 @@ window.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
   if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'tab'].includes(k)) e.preventDefault();
   if (e.repeat) return;
+  if (G.state === 'story' && dialogKey(k)) return e.preventDefault();
   keys[k] = true; tap(k);
 });
 window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
