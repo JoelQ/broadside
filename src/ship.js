@@ -7,7 +7,19 @@ import { CrewFigures } from './crew.js';
 export { wrap, clamp };
 
 // Speed fraction by angle off dead-downwind (deg).
-const POLAR = [[0, 0.76], [45, 1], [90, 0.88], [115, 0.66], [135, 0.4], [150, 0.14], [180, 0.02]];
+// Close-hauled (about 115 to 145 degrees) is slow but workable; the wedge nearer the wind still stops her.
+const POLAR = [[0, 0.76], [45, 1], [90, 0.9], [115, 0.74], [130, 0.55], [145, 0.22], [160, 0.06], [180, 0.02]];
+// How a hull carries way and answers her helm. Each is one dial, so the feel can be tuned a piece at a time.
+export const HANDLING = {
+  gather: 0.42, // how quickly she gathers way toward what her sails give (per second, before mass)
+  shed: 0.3, // how quickly she loses way when her sails give less: low numbers carry way through a tack
+  helmAt: 0.3, // the share of her top speed at which she answers her helm fully
+  helmFloor: 0.28, // how much helm she keeps with no way on, for a brig in a breeze (she can back a sail to pay off);
+  // lighter hulls keep more, heavier less, and in a calm none: there the spring is the only way round
+  drag: 0.06, // way lost per second with the helm hard over, for a brig; heavier hulls lose more
+  spring: 0.2, // how fast the spring hauls her round at anchor (not while the anchor is coming up)
+};
+export const helmFloor = (mass) => clamp(HANDLING.helmFloor / mass ** 1.5, 0.06, 0.4);
 // Sail settings: more canvas is faster, less is a steadier gun platform that turns tighter and is harder to dismast.
 export const SAILS = [
   { name: 'Furled', spd: 0, turn: 1, aim: 0.8, dmg: 0.3 },
@@ -140,15 +152,15 @@ export class Ship {
       const held = this.anchored || this.aground > 0;
       const oars = this.oarSpeed(world), tgt = this.struck || held ? 0 : this.maxSpeedNow(world);
       const m = this.mass, rowing = oars > 0 && oars >= tgt - 0.01;
-      this.speed += (tgt - this.speed) * Math.min(1, (dt * (held ? 2.2 : tgt > this.speed ? (rowing ? 0.8 : 0.42) : 0.7)) / m ** 0.8);
+      this.speed += (tgt - this.speed) * Math.min(1, (dt * (held ? 2.2 : tgt > this.speed ? (rowing ? 0.8 : HANDLING.gather) : HANDLING.shed)) / m ** 0.8);
       this.rudder += clamp(this.input.turn - this.rudder, -dt * 2.2, dt * 2.2);
-      const way = 0.06 + 0.94 * clamp(this.speed / (0.45 * sp.speed), 0, 1);
+      const floor = helmFloor(m) * clamp(world.strAt ? world.strAt(this.pos.x, this.pos.z) : world.wind.str ?? 1, 0, 1), way = floor + (1 - floor) * clamp(this.speed / (HANDLING.helmAt * sp.speed), 0, 1);
       // the hull swings toward the rate the rudder asks for; a heavy hull takes longer to start and to stop swinging.
       // At anchor she is hauled round on a spring, slowly but whatever the wind; aground she does not answer at all.
-      const rate = this.aground > 0 ? 0 : this.anchored ? (this.rudder * 0.2 * (0.35 + 0.65 * this.crewR)) / this.mass ** 0.7 : this.rudder * sp.turn * Math.max(way, rowing ? 0.75 : 0) * SAILS[this.sailLevel].turn;
+      const rate = this.aground > 0 ? 0 : this.anchored ? (this.weighT > 0 ? 0 : (this.rudder * HANDLING.spring * (0.35 + 0.65 * this.crewR)) / this.mass ** 0.7) : this.rudder * sp.turn * Math.max(way, rowing ? 0.75 : 0) * SAILS[this.sailLevel].turn;
       this.yaw += (rate - this.yaw) * Math.min(1, dt / (0.35 * m));
       this.heading = wrap(this.heading + this.yaw * dt);
-      this.speed *= 1 - Math.abs(this.rudder) * 0.07 * dt;
+      this.speed *= 1 - Math.abs(this.rudder) * HANDLING.drag * m * dt;
       if (this.aground > 0) this.aground = Math.max(0, this.aground - dt);
       this.offT -= dt;
       if (this.weighT > 0 && (this.weighT -= dt) <= 0) this.anchored = false;
