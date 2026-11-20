@@ -107,12 +107,17 @@ export const CAMP = {
     const run = CAMP.run, def = run.legs[run.i].build(run.c);
     def.title = run.legs[run.i].title;
     run.snap = CAMP.snapshot(); run.crew0 = G.player.crew;
+    // each pirate captain has one line a few seconds in, said with their face
+    const lines = CAMP.foeFaces(def).flatMap((f) => STORY.taunts[f] || []);
+    def.events = [...(def.events || []), ...lines.map((l, k) => ({ t: 4 + k * 3.5, fn: (S) => S.say(l, '') }))];
     E.startScenario(def, run.c);
   },
+  // the pirate captains in a fight, by portrait
+  foeFaces: (def) => [...new Set([...(def.faces || []), ...def.ships.filter((d) => d.side === 1).map((d) => captainFace(d.spec.captain))].filter(Boolean))],
   card(def) {
     const run = CAMP.run, t = CAMP.text(run.key), leg = (t.legs || [])[run.i] || {};
     const obj = typeof def.objective === 'function' ? def.objective() : def.objective;
-    const faces = [...new Set([...(def.faces || []), ...def.ships.filter((d) => d.side === 1).map((d) => captainFace(d.spec.captain))].filter(Boolean))];
+    const faces = CAMP.foeFaces(def);
     run.faces = faces;
     return { faces, eyebrow: run.legs.length > 1 ? `${MISSIONS[run.key].title} · ${run.i + 1} of ${run.legs.length}` : MISSIONS[run.key].title, title: def.title, line: obj, hook: (STORY.legs[def.title] || {})[CAMP.livery()] || (STORY.legs[def.title] || {}).both || leg.hook || '' };
   },

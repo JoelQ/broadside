@@ -77,6 +77,18 @@ export const STORY = {
     'The harbour': { both: 'Smoke, and every ship for herself.' },
     'The sortie': { both: 'The day of the assault.' },
   },
+  // what each pirate captain says a few seconds into the fight, shown with their face. Start each line with the
+  // name portraits.js knows them by (speakerOf).
+  taunts: {
+    mags: ['Mags: “Forty houses and a chapel. I only want the wine.”'],
+    kastor: ['Kastor: “You take the left one, brother.”'],
+    polydeukes: ['Polydeukes: “I always take the left one.”'],
+    varga: ['Varga: “Good weather for it.”'],
+    yusra: ['Yusra: “Get the boats back! Cut the cable if you have to!”'],
+    thorne: ['Thorne: “Finish ashore. I will deal with this one.”'],
+    daughter: ['Kate: “My mother taught me these rocks. Who taught you?”'],
+    korrigan: ['Korrigan: “Come alongside, friend, and tell me the news.”'],
+  },
   officers: {
     pilot: { [V]: { name: 'Old Manolis, the pilot', line: '“Somebody has to tell you where the rocks are.”' }, [O]: { name: 'Old Manolis, the pilot', line: '“Somebody has to tell you where the rocks are.”' } },
     carpenter: { [V]: { name: 'Mastro Piero, the carpenter', line: 'A shipwright from the Arsenal, sent out to Suda and bored there.' }, [O]: { name: 'Usta Kemal, the carpenter', line: 'A shipwright from the yards at Galata, sent out to Chania and bored there.' } },

@@ -584,7 +584,8 @@ export function portrait(id, o = {}) {
 // Who is speaking in a line of text, from the name it starts with ("Manolis: “…”"), or null. Lines that name
 // an officer by job ("The carpenter has opinions…") need the side you serve, which decides who holds the post.
 const SPEAKERS = [[/^(Old )?Manolis\b|^Pilot:/, 'manolis'], [/^Marousa\b|^Gunner:/, 'marousa'], [/^(Captain )?(Zuanne )?Barbaro\b/, 'barbaro'], [/^İbrahim Reis\b/, 'ibrahim'],
-  [/^(Mastro )?Piero\b/, 'piero'], [/^(Usta )?Kemal\b/, 'kemal'], [/^Ser Alvise\b/, 'recruiter'], [/^Hüseyin Efendi\b/, 'secretary']];
+  [/^(Mastro )?Piero\b/, 'piero'], [/^(Usta )?Kemal\b/, 'kemal'], [/^Ser Alvise\b/, 'recruiter'], [/^Hüseyin Efendi\b/, 'secretary'],
+  [/^(Cutthroat )?Mags:/, 'mags'], [/^Kate:/, 'daughter'], [/^(Captain )?Varga:/, 'varga'], [/^Yusra\b/, 'yusra'], [/^(Silas )?Thorne:/, 'thorne'], [/^Korrigan:/, 'korrigan'], [/^Kastor:/, 'kastor'], [/^Polydeukes:/, 'polydeukes']];
 export function speakerOf(text, side) {
   text = text.replace(/<[^>]+>/g, '');
   for (const [re, id] of SPEAKERS) if (re.test(text)) return id;
