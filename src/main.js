@@ -12,6 +12,7 @@ import { steerTo } from './ai.js';
 import { rng, seedRng, rngSeed } from './rng.js';
 import { portrait, speakerOf, captainFace } from './portraits.js';
 import { dialogKey } from './dialog.js';
+import { NAMES } from './story.js';
 
 const $ = (id) => document.getElementById(id);
 // rand and gauss decide the fight and come from the seeded source; vrand is for looks only
@@ -943,6 +944,9 @@ function updateCamera(dt) {
     const sp = G.shop && harbor.spots.find((s) => s.id === G.shop), ts = G.shop && G.trophyShips.find((t) => 'ship:' + t.id === G.shop);
     if (sp) { center.set(sp.pos.x * 0.75, 7, sp.pos.z + 16); dist = 72; } else if (ts) { center.set(ts.pos.x, 8, ts.pos.z); dist = 80; } else { center.set(0, 7, 4); dist = VH < 540 && camera.aspect > 1.6 ? 100 : 128; } // a short wide screen: closer, so the shop signs do not pile up
     want = 0.3 + Math.sin(G.t * 0.07) * 0.14 + c.yaw; pitch = 0.27;
+  } else if (st === 'story' && G.envoys && G.envoys.length) {
+    // the choice of side: the harbour from the sea, with both navies' galleys and your brig in frame above the dialog
+    center.set(harbor.berth.x, 0, harbor.berth.z + 40); want = Math.sin(G.t * 0.05) * 0.05 + c.yaw; dist = 80; pitch = 0.17;
   } else if (G.focus === 'enemy' && e) {
     const intro = st === 'intro';
     center.set(e.pos.x, intro ? 2 : 8, e.pos.z); want = G.t * 0.12 + c.yaw; dist = 52 + e.spec.L * 1.3; pitch = intro ? 0.12 : 0.22;
@@ -1260,8 +1264,24 @@ function showFinal() {
 }
 
 // ---------- Port Halcyon ----------
+// While you choose a side at the end of the prologue, a ship from each navy rides at anchor off the quay: a Venetian
+// brig with the lion on her sails and an Ottoman xebec with the crescent, two silhouettes nobody can confuse.
+function showEnvoys() {
+  clearEnvoys();
+  for (const t of G.trophyShips) t.group.visible = false;
+  // anchored off the quay either side of your berth, broadside on to the view, Venice to the left and the Porte to the right
+  const b = harbor.berth;
+  G.envoys = [['venice', 'brig', NAMES.venice.brig, -1], ['ottoman', 'xebec', NAMES.ottoman.lent.xebec, 1]].map(([side, hull, name, k]) => {
+    const t = new Ship(shipSpec(hull, side, name), false);
+    t.crew = 30; t.sailLevel = 0; t.pos.set(b.x + k * 46, 0, b.z + 18); t.heading = k * Math.PI / 2;
+    scene.add(t.group);
+    return t;
+  });
+}
+// your brig alone between them: any other ship of yours is out of the picture until you have chosen (enterHarbor brings it back)
+function clearEnvoys() { for (const t of G.envoys || []) scene.remove(t.group); G.envoys = []; }
 function enterHarbor() {
-  harbor.group.visible = true;
+  harbor.group.visible = true; clearEnvoys();
   world.setEnv('harbor'); world.clearIslands(); world.wind.dir = world.wind.target = 2.2;
   clearBalls();
   clearShips(); clearZones();
@@ -1569,7 +1589,7 @@ function update(dt) {
   const bf = now === 'boarding' && G.bd ? G.bd.foe : null;
   const hush = now === 'intro' && G.mode === 'campaign'; // a leg's card: nothing moves until you engage
   p.update(dt, world, bf || home || hush);
-  if (home) { for (const t of G.trophyShips) t.update(dt, world, true); if (!G.fast) harbor.update(dt); }
+  if (home) { for (const t of [...G.trophyShips, ...(G.envoys || [])]) t.update(dt, world, true); if (!G.fast) harbor.update(dt); }
   else {
     const ss = G.ships, live = now === 'battle' || now === 'ending' || now === 'boarding';
     for (const s of ss) {
@@ -1608,7 +1628,7 @@ G.step = (dt, n = 1) => { for (let i = 0; i < n; i++) update(dt); renderer.rende
 G.newAI = newAI;
 G.tick = (dt, n = 1) => { for (let i = 0; i < n; i++) update(dt); };
 G.world = world; G.view = { renderer, scene, camera };
-G.api = { faces, aiApi, nearest, dropArcs, startScenario, showLegCard, showTitle: () => showTitle(), clearShips, world, strengthOf: (x) => strength(x), scene, restartSkirmish: () => restart(true),  addShip, beginScenario, beginBattle, shipOut, setTarget, foesOf, sep, relSpeed, hideScreen, showScreen, setMode, enterHarbor, snapCamera, buildPlayer, moor, playerSpec, renderPort: () => renderPort(), sfx, fx, floater, store, harbor, cutGrapples, hullSpec, updateAI, reach, inArc, hasGauge, strength: (s) => strength(s), rebuild: () => { if (G.player.arcs) dropArcs(G.player); scene.remove(G.player.group); G.player = null; buildPlayer(true); }, fire, act, tap, keys, startBoarding, boardSwivel, endBattle, toast, showPort: () => showPort(), prize };
+G.api = { faces, showEnvoys, aiApi, nearest, dropArcs, startScenario, showLegCard, showTitle: () => showTitle(), clearShips, world, strengthOf: (x) => strength(x), scene, restartSkirmish: () => restart(true),  addShip, beginScenario, beginBattle, shipOut, setTarget, foesOf, sep, relSpeed, hideScreen, showScreen, setMode, enterHarbor, snapCamera, buildPlayer, moor, playerSpec, renderPort: () => renderPort(), sfx, fx, floater, store, harbor, cutGrapples, hullSpec, updateAI, reach, inArc, hasGauge, strength: (s) => strength(s), rebuild: () => { if (G.player.arcs) dropArcs(G.player); scene.remove(G.player.group); G.player = null; buildPlayer(true); }, fire, act, tap, keys, startBoarding, boardSwivel, endBattle, toast, showPort: () => showPort(), prize };
 CAMP.init(G, G.api); G.CAMP = CAMP;
 if (__PLAYTEST__) PT.install(G, G.api, CAMP);
 showTitle();
