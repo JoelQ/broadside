@@ -15,10 +15,10 @@ const strip = (s) => s.replace(/<[^>]+>/g, '');
 
 // a sample line for the mock dialog and bubble, taken from the game's own words where there is one
 const SAMPLE = {
-  manolis: [strip(STORY.choice.text[3]), 'Pilot: “Wind’s about to shift, veering.”'],
-  marousa: [strip(STORY.m3.venice.brief.text[2]), 'Marousa: “If the wind fails, we are a fort.”'],
-  barbaro: [strip(STORY.m1.venice.brief.text[1]), 'Barbaro, reloading: “Pick one. Any one.”'],
-  ibrahim: [strip(STORY.m1.ottoman.brief.text[1]), 'İbrahim Reis: “They cannot run. Remember that neither can we.”'],
+  manolis: ['', 'Pilot: “Wind’s about to shift, veering.”'],
+  marousa: ['', 'Marousa: “If the wind fails, we are a fort.”'],
+  barbaro: ['', 'Barbaro, reloading: “Pick one. Any one.”'],
+  ibrahim: ['', 'İbrahim Reis: “They cannot run. Remember that neither can we.”'],
   piero: ['', 'The carpenter has opinions about what the last one did to his planking.'],
   kemal: ['', 'The carpenter has opinions about what the last one did to his planking.'],
   recruiter: ['', '“A captain who can fight a brig like that should not be carrying wine.”'],
