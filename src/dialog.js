@@ -1,5 +1,5 @@
 // The story told one step at a time: a page's `text` is a list of steps, each a line of narration (a string) or
-// a line someone says ({ who, text }, `who` a key of CAST in portraits.js). A step with a speaker shows their
+// a line someone says ({ who, text }, an empty string a step that only carries the page's end; `who` a key of CAST in portraits.js). A step with a speaker shows their
 // portrait and name beside it. Click, tap, Space or Enter goes on; Back or the left arrow goes back; Skip or
 // Escape jumps to the last step, which carries the page's buttons and anything else it ends with.
 import { portrait, CAST } from './portraits.js';
@@ -23,7 +23,7 @@ function render() {
   D.show(`<div class="dlg${c ? ' speaks' : ''}"${last ? '' : ' data-act="camp:dlg:next"'}>
     <div class="dlg-title"><div class="eyebrow">${page.eyebrow || ''}</div><h2>${page.title || ''}</h2></div>
     <div class="dlg-row">${c ? `<figure class="dlg-face">${portrait(s.who)}</figure>` : '<div class="dlg-face none"></div>'}
-      <div class="dlg-box">${c ? `<div class="dlg-name">${c.name}<small>${c.role}</small></div>` : ''}<p>${s.text}</p>
+      <div class="dlg-box">${c ? `<div class="dlg-name">${c.name}<small>${c.role}</small></div>` : ''}${s.text ? `<p>${s.text}</p>` : ''}
         ${last ? `<div class="dlg-end story">${end}</div>` : ''}${nav}</div></div></div>`, 'dlgscr');
 }
 
