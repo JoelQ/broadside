@@ -77,6 +77,8 @@ node tools/balance/legreport.mjs /tmp/legs.json
   `HULLS=sloop,brig`, `ROUTES=<regex>`; `FIT=1` fits every ship out fully.
 - `legreport.mjs` prints a table per leg and flags any leg that fewer than three kinds of ship, or
   fewer than three routes, can win; it also flags a route that always works.
+- `handling.mjs` measures how each hull sails in open water: speed to windward, time to tack, time to pay off
+  from irons, turning circle, and how long she takes to gather and lose way. The dials are `HANDLING` in `src/ship.js`.
 - `drive.mjs` runs a script against the built page with screenshots, for checking flow and looks.
 
 The design rule being checked is in `docs/campaign.md`: no mission is won by one quality alone.
