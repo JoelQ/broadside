@@ -947,6 +947,7 @@ function updateCamera(dt) {
   } else if (st === 'story' && G.envoys && G.envoys.length) {
     // the choice of side: the harbour from the sea, with both navies' galleys and your brig in frame above the dialog
     center.set(harbor.berth.x, 0, harbor.berth.z + 40); want = Math.sin(G.t * 0.05) * 0.05 + c.yaw; dist = 80; pitch = 0.17;
+    if (G.envoyCut) { center.y = 5; dist = 92; pitch = 0.07; } // the opening shot: low on the water, like a fight's card
   } else if (G.focus === 'enemy' && e) {
     const intro = st === 'intro';
     center.set(e.pos.x, intro ? 2 : 8, e.pos.z); want = G.t * 0.12 + c.yaw; dist = 52 + e.spec.L * 1.3; pitch = intro ? 0.12 : 0.22;
@@ -1266,31 +1267,29 @@ function showFinal() {
 // ---------- Port Halcyon ----------
 // While you choose a side at the end of the prologue, a ship from each navy rides at anchor off the quay: a Venetian
 // brig with the lion on her sails and an Ottoman xebec with the crescent, two silhouettes nobody can confuse.
-function showEnvoys() {
+function showEnvoys(arriving) {
   clearEnvoys();
   for (const t of G.trophyShips) t.group.visible = false;
   // anchored off the quay either side of your berth, broadside on to the view, Venice to the left and the Porte to the right.
-  // Each sails in from her own side of the bay on the dialog step that names her envoy (envoyStep), and drops anchor.
+  // With `arriving`, both sail in together from either side of the bay and drop anchor (the opening shot of "Two offers").
   const b = harbor.berth;
-  G.envoys = [['venice', 'brig', NAMES.venice.brig, -1, 1], ['ottoman', 'xebec', NAMES.ottoman.lent.xebec, 1, 3]].map(([side, hull, name, k, step]) => {
+  G.envoys = [['venice', 'brig', NAMES.venice.brig, -1], ['ottoman', 'xebec', NAMES.ottoman.lent.xebec, 1]].map(([side, hull, name, k]) => {
     const t = new Ship(shipSpec(hull, side, name), false);
-    t.crew = 30; t.sailLevel = 0; t.heading = -k * Math.PI / 2; t.group.visible = false;
-    t.arrive = { step, from: [b.x + k * 125, b.z - 26], to: [b.x + k * 46, b.z + 18], t: 0, dur: 6, on: false };
-    t.pos.set(t.arrive.to[0], 0, t.arrive.to[1]);
+    t.crew = 30; t.sailLevel = arriving ? TOP : 0; t.heading = -k * Math.PI / 2;
+    t.arrive = { from: [b.x + k * 125, b.z - 26], to: [b.x + k * 46, b.z + 18], t: arriving ? 0 : 5, dur: 5, on: !!arriving };
+    sailIn(t, 0);
     scene.add(t.group);
     return t;
   });
 }
-// the dialog has reached step i of "Two offers": a ship whose step it is starts in, one already past it is at anchor
-function envoyStep(i) {
-  for (const t of G.envoys || []) {
-    const a = t.arrive;
-    if (i < a.step) { t.group.visible = false; a.on = false; a.t = 0; continue; }
-    t.group.visible = true;
-    if (i === a.step && !a.on && a.t === 0) { a.on = true; t.sailLevel = TOP; } else if (i > a.step) a.t = a.dur;
-    sailIn(t, 0);
-  }
+const envoysIn = () => (G.envoys || []).every((t) => t.arrive.t >= t.arrive.dur);
+function anchorEnvoys() { for (const t of G.envoys || []) { t.arrive.t = t.arrive.dur; sailIn(t, 0); } }
+// the opening shot: letterbox bars and a card over the two ships coming in. A click or a key, or both ships at anchor, goes on.
+function offersCard(c) {
+  setMode(null); $('bars').classList.add('on'); G.envoyCut = { t: 0 };
+  showScreen(`<div class="cut" data-act="camp:offers"><div class="lower"><div class="eyebrow">${c.eyebrow}</div><h1>${c.title}</h1><div class="hook">${c.line}</div></div></div>`, 'clear low');
 }
+function endOffersCard() { G.envoyCut = null; $('bars').classList.remove('on'); anchorEnvoys(); }
 function sailIn(t, dt) {
   const a = t.arrive;
   if (a.on) a.t = Math.min(a.dur, a.t + dt);
@@ -1522,6 +1521,7 @@ window.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
   if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'tab'].includes(k)) e.preventDefault();
   if (e.repeat) return;
+  if (G.state === 'story' && G.envoyCut && [' ', 'enter', 'escape', 'arrowright'].includes(k)) { e.preventDefault(); return act('camp:offers'); }
   if (G.state === 'story' && dialogKey(k)) return e.preventDefault();
   keys[k] = true; tap(k);
 });
@@ -1612,6 +1612,7 @@ function update(dt) {
   const bf = now === 'boarding' && G.bd ? G.bd.foe : null;
   const hush = now === 'intro' && G.mode === 'campaign'; // a leg's card: nothing moves until you engage
   p.update(dt, world, bf || home || hush);
+  if (G.envoyCut && envoysIn() && (G.envoyCut.t += dt) > 1.2) CAMP.act('offers'); // both at anchor: on to the dialog
   if (home) { for (const t of G.envoys || []) sailIn(t, dt); for (const t of [...G.trophyShips, ...(G.envoys || [])]) t.update(dt, world, true); if (!G.fast) harbor.update(dt); }
   else {
     const ss = G.ships, live = now === 'battle' || now === 'ending' || now === 'boarding';
@@ -1651,7 +1652,7 @@ G.step = (dt, n = 1) => { for (let i = 0; i < n; i++) update(dt); renderer.rende
 G.newAI = newAI;
 G.tick = (dt, n = 1) => { for (let i = 0; i < n; i++) update(dt); };
 G.world = world; G.view = { renderer, scene, camera };
-G.api = { faces, showEnvoys, envoyStep, aiApi, nearest, dropArcs, startScenario, showLegCard, showTitle: () => showTitle(), clearShips, world, strengthOf: (x) => strength(x), scene, restartSkirmish: () => restart(true),  addShip, beginScenario, beginBattle, shipOut, setTarget, foesOf, sep, relSpeed, hideScreen, showScreen, setMode, enterHarbor, snapCamera, buildPlayer, moor, playerSpec, renderPort: () => renderPort(), sfx, fx, floater, store, harbor, cutGrapples, hullSpec, updateAI, reach, inArc, hasGauge, strength: (s) => strength(s), rebuild: () => { if (G.player.arcs) dropArcs(G.player); scene.remove(G.player.group); G.player = null; buildPlayer(true); }, fire, act, tap, keys, startBoarding, boardSwivel, endBattle, toast, showPort: () => showPort(), prize };
+G.api = { faces, showEnvoys, offersCard, endOffersCard, aiApi, nearest, dropArcs, startScenario, showLegCard, showTitle: () => showTitle(), clearShips, world, strengthOf: (x) => strength(x), scene, restartSkirmish: () => restart(true),  addShip, beginScenario, beginBattle, shipOut, setTarget, foesOf, sep, relSpeed, hideScreen, showScreen, setMode, enterHarbor, snapCamera, buildPlayer, moor, playerSpec, renderPort: () => renderPort(), sfx, fx, floater, store, harbor, cutGrapples, hullSpec, updateAI, reach, inArc, hasGauge, strength: (s) => strength(s), rebuild: () => { if (G.player.arcs) dropArcs(G.player); scene.remove(G.player.group); G.player = null; buildPlayer(true); }, fire, act, tap, keys, startBoarding, boardSwivel, endBattle, toast, showPort: () => showPort(), prize };
 CAMP.init(G, G.api); G.CAMP = CAMP;
 if (__PLAYTEST__) PT.install(G, G.api, CAMP);
 showTitle();

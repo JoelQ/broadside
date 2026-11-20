@@ -235,10 +235,15 @@ export const CAMP = {
   },
   choose() {
     const c = STORY.choice;
-    E.showEnvoys(); // a Venetian and an Ottoman ship at anchor off the quay while you choose
+    // first an opening shot of a Venetian and an Ottoman ship sailing in (CAMP.offers goes on to the dialog)
+    G.state = 'story'; E.showEnvoys(true); E.offersCard({ title: c.title, ...c.card }); E.snapCamera();
+  },
+  offers() {
+    if (!G.envoyCut) return;
+    const c = STORY.choice;
+    E.endOffersCard();
     const pick = (side, who) => `<div class="pick"><figure class="face">${portrait(who)}<figcaption>${CAST[who].name}</figcaption></figure><button class="btn big" data-act="camp:side:${side}">${c[side]}</button></div>`;
-    CAMP.tell({ eyebrow: 'Afterwards', title: c.title, text: [...c.text, ''], onStep: E.envoyStep }, `<div class="picks">${pick('venice', 'recruiter')}${pick('ottoman', 'secretary')}</div>`, CAMP.run.summary || '');
-    E.snapCamera(); // frame the harbour and the two ships at once, not by panning across from the fight
+    CAMP.tell({ eyebrow: c.card.eyebrow, title: c.title, text: [...c.text, ''] }, `<div class="picks">${pick('venice', 'recruiter')}${pick('ottoman', 'secretary')}</div>`, CAMP.run.summary || '');
   },
   takeSide(side) {
     const st = CAMP.st;
@@ -266,6 +271,7 @@ export const CAMP = {
     else if (k === 'flag') CAMP.shiftFlag(+x);
     else if (k === 'next') { run.i++; CAMP.startLeg(); }
     else if (k === 'dlg') dialogAct(x);
+    else if (k === 'offers') CAMP.offers();
     else if (k === 'side') CAMP.takeSide(x);
     else if (k === 'ending') CAMP.ending();
     else if (k === 'title') { E.enterHarbor(); E.showTitle(); E.snapCamera(); }

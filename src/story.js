@@ -47,8 +47,9 @@ export const STORY = {
   },
   choice: {
     title: 'Two offers',
+    // the opening shot, over both ships sailing in; then the dialog
+    card: { eyebrow: 'Lychna, a week later', line: 'A fight off a small island is news for a week. Before the week was out two boats had called at Lychna.' },
     text: [
-      'A fight off a small island is news for a week. Before the week was out two boats had called at Lychna.',
       'The first carried Ser Alvise, a Venetian gentleman from the fortress of Suda, in black with a crimson stole, with a purse and a paper.',
       say('recruiter', '“The Republic is hiring ships to keep Candia alive. A captain who can fight a brig like that should not be carrying wine.”'),
       'The second carried Hüseyin Efendi, a quiet man who keeps the Kapudan Pasha’s papers at Chania, with a paper of his own.',
