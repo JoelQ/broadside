@@ -195,9 +195,10 @@ body.touch #coach{bottom:auto;top:130px;font-size:14px}
 .dlg:not(.speaks) .dlg-box{font-style:italic;background:rgba(8,16,28,.78)}
 .dlg-box p{margin:0 0 6px}
 .dlg-name{font:400 24px/1 var(--head);color:#ffe29a;margin-bottom:6px;letter-spacing:.5px} .dlg-name small{font:italic 14px var(--body);color:var(--cream);opacity:.7;margin-left:10px;letter-spacing:0}
-.dlg-more{position:absolute;right:16px;bottom:34px;color:var(--brass);font-size:20px;animation:dlgbob 1s ease-in-out infinite}
 .dlg-end{font-style:normal;cursor:default;max-width:none;margin:0;padding:0;font-size:inherit;text-shadow:none} .dlg-end .rowc{margin-top:10px}
-.dlg-nav{display:flex;justify-content:space-between;align-items:center;margin-top:6px;min-height:26px} .dlg-nav .btn.sm{margin-left:6px;font-size:14px;padding:2px 12px}
+.dlg-nav{display:flex;justify-content:space-between;align-items:center;margin-top:8px;min-height:26px;gap:12px} .dlg-aux{display:flex;align-items:center;gap:14px}
+.dlg-link{background:none;border:0;padding:4px 2px;font:italic 15px var(--body);color:var(--cream);opacity:.6;cursor:pointer} .dlg-link:hover{opacity:1;text-decoration:underline}
+.btn.big.dlg-next{font-size:22px;padding:6px 26px}
 .dlg-dots{display:flex;gap:5px} .dlg-dots i{width:7px;height:7px;border-radius:50%;background:rgba(215,178,90,.25)} .dlg-dots i.seen{background:rgba(215,178,90,.55)} .dlg-dots i.on{background:var(--brass)}
 @keyframes dlgin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}} @keyframes dlgface{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}} @keyframes dlgbob{50%{transform:translateX(3px)}}
 .story .head{display:flex;gap:16px;align-items:flex-end;margin-bottom:6px} .story .head h2{margin-bottom:4px}
@@ -245,7 +246,7 @@ body.touch #coach{bottom:auto;top:130px;font-size:14px}
   #screen h1{font-size:min(clamp(44px,8vw,84px),15vh)} #titleWrap h1{font-size:min(clamp(64px,14vw,136px),24vh)}
   #titleWrap .tag{margin:4px 0 14px}
   .btn.big{font-size:21px;padding:6px 26px} .btn{font-size:16px;padding:5px 14px} .rowc{margin-top:12px}
-  .story{font-size:15px;line-height:1.38} .story h2{font-size:30px;margin-bottom:8px} .story .officer{font-size:14px;padding:6px 10px} #screen.dlgscr{padding:0 calc(3vw + var(--sr)) 3vh calc(3vw + var(--sl))} .dlg-title h2{font-size:26px;margin-bottom:6px} .dlg-face{width:min(108px,31vh)} .dlg-face svg{width:min(104px,30vh);height:min(104px,30vh)} .dlg-end .pick .face{display:none} .dlg-row{gap:10px} .dlg-box{font-size:15px;line-height:1.35;padding:9px 12px 6px} .dlg-name{font-size:19px;margin-bottom:3px} .dlg-name small{font-size:12px} .dlg-more{bottom:28px} .story .officer .face svg{width:56px;height:56px} .story p.said .face svg{width:36px;height:36px} .lower .faces svg{width:min(84px,20vh);height:min(84px,20vh)} .banner .faces svg{width:min(72px,18vh);height:min(72px,18vh)} .story figure.face svg{width:72px;height:72px} .story figure.face figcaption{font-size:11px;max-width:72px} .picks{gap:16px} .crewfaces svg{width:28px;height:28px;border-width:1.5px}
+  .story{font-size:15px;line-height:1.38} .story h2{font-size:30px;margin-bottom:8px} .story .officer{font-size:14px;padding:6px 10px} #screen.dlgscr{padding:0 calc(3vw + var(--sr)) 3vh calc(3vw + var(--sl))} .dlg-title h2{font-size:26px;margin-bottom:6px} .dlg-face{width:min(108px,31vh)} .dlg-face svg{width:min(104px,30vh);height:min(104px,30vh)} .dlg-end .pick .face{display:none} .dlg-row{gap:10px} .dlg-box{font-size:15px;line-height:1.35;padding:9px 12px 6px} .dlg-name{font-size:19px;margin-bottom:3px} .dlg-name small{font-size:12px}  .story .officer .face svg{width:56px;height:56px} .story p.said .face svg{width:36px;height:36px} .lower .faces svg{width:min(84px,20vh);height:min(84px,20vh)} .banner .faces svg{width:min(72px,18vh);height:min(72px,18vh)} .story figure.face svg{width:72px;height:72px} .story figure.face figcaption{font-size:11px;max-width:72px} .picks{gap:16px} .crewfaces svg{width:28px;height:28px;border-width:1.5px}
   .lower .line{font-size:15px} .lower .hook{font-size:17px;margin:4px 0 10px} .banner .gold{font-size:32px} .stats b{font-size:22px} .keys{font-size:13px;margin-top:8px}
   #screen.low{padding:0 calc(5vw + var(--sl)) 12vh}
 }
