@@ -16,6 +16,7 @@ export function tellSteps(page, end, show) {
 }
 
 function render() {
+  if (D.page.onStep) D.page.onStep(D.i); // the scene behind can follow the story, step by step
   const { page, steps: S, i, end } = D, s = S[i], c = CAST[s.who], last = i === S.length - 1;
   const dots = S.length > 1 ? `<span class="dlg-dots">${S.map((_, j) => `<i class="${j === i ? 'on' : j < i ? 'seen' : ''}"></i>`).join('')}</span>` : '';
   // going on is the usual thing to do, so it is the one big button; back and skip are quiet links beside the dots
