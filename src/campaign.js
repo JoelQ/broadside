@@ -223,13 +223,15 @@ export const CAMP = {
   debrief() {
     const run = CAMP.run, st = CAMP.st, d = CAMP.text(run.key).end || { title: MISSIONS[run.key].title, text: [] };
     let extra = run.summary || '';
-    if (run.joined) { const o = OFFICERS[run.joined], who = (STORY.officers[run.joined] || {})[st.side] || {}; const face = officerFace(run.joined, st.side); extra += `<div class="officer">${face ? `<span class="face">${portrait(face)}</span>` : ''}<div><b>${who.name || o.name}</b> joins you. ${who.line || ''}<small>${o.does}</small></div></div>`; }
-    CAMP.tell({ eyebrow: 'Afterwards', ...d, go: st.done ? 'The end of it' : 'Make port' }, st.done ? 'camp:ending' : 'camp:port', extra);
+    // an officer joining is a step of its own, told by them, so their face is never shown twice
+    let page = d;
+    if (run.joined) { const o = OFFICERS[run.joined], who = (STORY.officers[run.joined] || {})[st.side] || {}; page = { ...d, text: [...(d.text || []), { who: officerFace(run.joined, st.side), text: `<b>Joins you as ${o.name.toLowerCase()}.</b> ${who.line || ''}<span class="does">${o.does}</span>` }] }; }
+    CAMP.tell({ eyebrow: 'Afterwards', ...page, go: st.done ? 'The end of it' : 'Make port' }, st.done ? 'camp:ending' : 'camp:port', extra);
   },
   choose() {
     const c = STORY.choice;
     const pick = (side, who) => `<div class="pick"><figure class="face">${portrait(who)}<figcaption>${CAST[who].name}</figcaption></figure><button class="btn big" data-act="camp:side:${side}">${c[side]}</button></div>`;
-    CAMP.tell({ eyebrow: 'Afterwards', title: c.title, text: c.text }, `<div class="picks">${pick('venice', 'recruiter')}${pick('ottoman', 'secretary')}</div>`, CAMP.run.summary || '');
+    CAMP.tell({ eyebrow: 'Afterwards', title: c.title, text: [...c.text, ''] }, `<div class="picks">${pick('venice', 'recruiter')}${pick('ottoman', 'secretary')}</div>`, CAMP.run.summary || '');
   },
   takeSide(side) {
     const st = CAMP.st;
