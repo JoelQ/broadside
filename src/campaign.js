@@ -14,8 +14,6 @@ const fresh = () => ({
   stable: [{ id: 's1', hull: 'brig', name: NAMES.home, fit: {} }], ship: 's1',
   officers: [], stock: { chain: 6, grape: 6, fire: 3 }, stats: { taken: 0, sunk: 0, time: 0 }, done: false,
 });
-// what the fleet lends you as the war goes on, if you have not taken one already
-const GRANTS = { m0: ['sloop'], m1: ['xebec'], m2: ['galley'], m3: ['merchantman'], m4: [] };
 const JOINS = { m0: 'pilot', m1: 'carpenter', m2: 'gunner', m3: 'marines' };
 const WATCHES = [
   ['hull', 'Patch the hull', '+15% hull, up to 70%'],
@@ -206,10 +204,6 @@ export const CAMP = {
       const h = HULLS[z.hull], worth = Math.round((h.value * (0.5 + 0.5 * z.hullR)) / 10) * 10;
       if (st.stable.some((s) => s.hull === z.hull)) { gold += worth; out.push(`<b>${z.name}</b> condemned as a prize and sold: +${worth} g`); }
       else { st.stable.push({ id: 'p' + st.nextId++, hull: z.hull, name: z.name, fit: {} }); gold += Math.round(worth / 40) * 10; out.push(`<b>${z.name}</b>, ${h.cls.toLowerCase()}, joins your ships in port`); }
-    }
-    for (const hull of GRANTS[key] || []) if (!st.stable.some((s) => s.hull === hull)) {
-      const name = NAMES[st.side || 'venice'].lent[hull];
-      st.stable.push({ id: 's' + st.nextId++, hull, name, fit: {} }); out.push(`The fleet lends you the <b>${name}</b>, ${HULLS[hull].cls.toLowerCase()}`);
     }
     const off = JOINS[key];
     if (off && !st.officers.includes(off)) { st.officers.push(off); run.joined = off; }
