@@ -1282,12 +1282,12 @@ function showEnvoys(arriving) {
     return t;
   });
 }
-const envoysIn = () => (G.envoys || []).every((t) => t.arrive.t >= t.arrive.dur);
 function anchorEnvoys() { for (const t of G.envoys || []) { t.arrive.t = t.arrive.dur; sailIn(t, 0); } }
 // the opening shot: letterbox bars and a card over the two ships coming in. A click or a key, or both ships at anchor, goes on.
 function offersCard(c) {
   setMode(null); $('bars').classList.add('on'); G.envoyCut = { t: 0 };
-  showScreen(`<div class="cut" data-act="camp:offers"><div class="lower"><div class="eyebrow">${c.eyebrow}</div><h1>${c.title}</h1><div class="hook">${c.line}</div></div></div>`, 'clear low');
+  // like a fight's card: the ships sail in behind it and the player moves on with the button when ready
+  showScreen(`<div class="lower"><div class="eyebrow">${c.eyebrow}</div><h1>${c.title}</h1><div class="line">${c.line}</div><button class="btn big" data-act="camp:offers">${c.go || 'Hear them out'}</button></div>`, 'clear low');
 }
 function endOffersCard() { G.envoyCut = null; $('bars').classList.remove('on'); anchorEnvoys(); }
 function sailIn(t, dt) {
@@ -1612,7 +1612,6 @@ function update(dt) {
   const bf = now === 'boarding' && G.bd ? G.bd.foe : null;
   const hush = now === 'intro' && G.mode === 'campaign'; // a leg's card: nothing moves until you engage
   p.update(dt, world, bf || home || hush);
-  if (G.envoyCut && envoysIn() && (G.envoyCut.t += dt) > 1.2) CAMP.act('offers'); // both at anchor: on to the dialog
   if (home) { for (const t of G.envoys || []) sailIn(t, dt); for (const t of [...G.trophyShips, ...(G.envoys || [])]) t.update(dt, world, true); if (!G.fast) harbor.update(dt); }
   else {
     const ss = G.ships, live = now === 'battle' || now === 'ending' || now === 'boarding';
