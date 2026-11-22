@@ -259,8 +259,8 @@ Where the game differs from the proposal above, and why.
     With no way on in a breeze she can still pay off slowly (a sloop quickly, a great ship barely),
     so being caught in irons costs time rather than the fight. In a calm she cannot turn at all; at
     anchor the spring still hauls her round, which is what makes anchoring in a calm worth doing.
-    The spring does not work while the anchor is coming up. `tools/balance/handling.mjs` measures
-    each hull's tack, turning circle, escape from irons and speed to windward.
+    The spring does not work while the anchor is coming up. `tools/handling/` draws each hull's
+    tack, turning circle, escape from irons and beat to windward, laid over each other.
   - Galley oarsmen tire: sprinting spends them fast, rowing slowly. Spent, they stop until they
     have their breath back. An enemy galley's oars bar shows in her panel, and "Oarsmen spent!"
     marks the moment she lies still.
