@@ -164,11 +164,18 @@ if (!flag('no-polar')) for (const [w] of WINDS) { const f = `polar-${w}.svg`; wr
 const chase = flag('no-chase') ? '' : chaseHtml();
 const CSS = `body{background:#0d2433;color:#cde;font:13px system-ui,sans-serif;margin:12px}h1{font-size:16px}h2{font-size:15px;margin-top:28px}h3{font-size:13px;margin:16px 0 4px}
 main{display:grid;grid-template-columns:repeat(auto-fill,minmax(560px,1fr));gap:12px}figure{margin:0}figure svg{width:100%;height:auto;display:block;border-radius:6px}
-table{border-collapse:collapse}td,th{padding:3px 8px;border:1px solid #18384b;text-align:right}th{color:#8aa;font-weight:500}td.c{color:#cde}td.n{color:#678}td.x{background:#0a1c28}td.ch{outline:1px solid #c98500}small{color:#8aa}`;
+table{border-collapse:collapse}td,th{padding:3px 8px;border:1px solid #18384b;text-align:right}th{color:#8aa;font-weight:500}td.c{color:#cde}td.n{color:#678}td.x{background:#0a1c28}td.ch{outline:1px solid #c98500}small{color:#8aa}.guide{max-width:900px;background:#0a1c28;border-radius:6px;padding:8px 14px;margin-bottom:12px}.guide summary{cursor:pointer;font-weight:600}.guide li{margin:3px 0}`;
 writeFileSync(path.join(out, 'chase.html'), `<!doctype html><meta charset="utf-8"><title>Broadside chases</title><style>${CSS}</style>${chase}`);
 writeFileSync(path.join(out, 'index.html'), `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Broadside handling</title><style>${CSS}</style>
 <h1>Broadside handling · ${HULLS.length} hulls · ${WINDS.map((w) => w[0]).join(', ')}${ghost ? ' · dashed lines and brackets are the build before' : ''}</h1>
-<p>Every test is one ship in open water with a steady wind from the north (top of each picture). Little hulls along each track mark where her bow pointed every 2 seconds.</p>
+<details open class="guide"><summary>How to read this page</summary>
+<p><b>Tracks.</b> Every test is one ship alone in open water. The wind blows from the top of each picture. Each coloured line is one ship's path from the small circle. The little triangles show where her bow pointed every 2 seconds, so a line running at an angle to its triangles means she is sliding sideways (leeway).${ghost ? ' Solid lines are this build, dashed lines the build before; numbers in brackets are the build before, green where this build does better and red where worse.' : ''}</p>
+<ul><li><b>Tack, wear, beat:</b> the higher a line ends, the more ground she made to windward. The hook is the turn; a wide hook means she lost ground turning.</li>
+<li><b>Irons:</b> a short hook means she got free fast. A line that first sags downward means she was pushed astern while stuck.</li>
+<li><b>Circle:</b> the size of the loop is her turning circle. <b>Gather:</b> how far she gets from a standing start.</li>
+<li><b>Lee shore:</b> how close each line comes to the brown band (the rocks).</li></ul>
+<p><b>Polar roses</b> (the half-circles): her speed at each angle to the wind. Head to wind is at the top, dead downwind at the bottom. The empty slice at the top is where she cannot sail; a curve that reaches further up and out sails better to windward.</p>
+<p><b>Chase tables</b> (at the bottom): rows chase columns. A time means the chaser closed within 100 yd that fast; a distance is the gap left after 4 minutes, so she never caught her. Speed and steering only, no guns.</p></details>
 <main>${files.map((f) => `<figure>${readFileSync(path.join(out, f), 'utf8')}</figure>`).join('\n')}</main>${chase}`);
 
 // ---- the numbers, as text
