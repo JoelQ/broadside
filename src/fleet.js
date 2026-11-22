@@ -31,7 +31,7 @@ export const HULLS = {
   },
   flagship: {
     cls: 'Great ship', kit: 'gun', value: 1500, L: 64, B: 16, D: 6.2, masts: 4, sailsPerMast: 4, castle: 2, fore: true, rigScale: 0.74, decks: 2,
-    hull: 900, sails: 170, crew: 220, guns: 18, speed: 11.2, turn: 0.21, reload: 6.2, cal: 2, arc: 0.38, point: -0.1, windage: 1.25, grip: 1.05,
+    hull: 900, sails: 170, crew: 220, guns: 18, speed: 11.2, turn: 0.21, reload: 6.2, cal: 2, arc: 0.38, point: -0.1, windage: 1.1, grip: 1.05,
     role: 'A fortress, and as handy as one. Helpless in a calm, and she needs deep water under her.',
     ai: { range: 190, plan: 'mixed', boarder: false, battleSail: true },
   },

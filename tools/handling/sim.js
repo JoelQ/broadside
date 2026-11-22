@@ -5,6 +5,9 @@
 //   HS.polar(hull, str)           -> [{ off, v, leeway }] for every 10 degrees off the wind
 //   HS.chase(a, b, str, how)      -> { caught, t, gap } with a chasing b, guns silent
 (() => {
+  // nothing here is looked at, and drawing every frame in software costs far more than the rules: stop the game's
+  // own frame loop (the tests tick the rules themselves)
+  window.requestAnimationFrame = () => 0;
   const PI = Math.PI, dt = 0.05, wrap = (a) => { a = (a + PI) % (PI * 2); if (a < 0) a += PI * 2; return a - PI; };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), r1 = (x) => Math.round(x * 10) / 10;
   const WIND = PI; // blows toward -z: from the north

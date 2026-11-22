@@ -20,6 +20,9 @@ GHOST=/tmp/before.html node tools/handling/run.mjs --png
 The ghost's tracks are drawn dashed under this build's, and its numbers follow in brackets: green where this build
 does better, red where worse. `DIST=<html>` runs some other build in place of `dist/index.html`.
 
+A full run takes about 20 seconds on 4 cores (40 with `GHOST`); the simulations are shared out among several
+headless browsers, `JOBS=<n>` per build. `--no-chase` skips the slowest part.
+
 Everything goes to `out/handling/` (`--out` to change): `index.html` has every picture and the chase tables on one
 page; `data.json` has the raw tracks and numbers; the tables are also printed.
 
@@ -52,5 +55,6 @@ after 4 minutes.
 
 `sim.js` is injected into the built game after `tools/balance/harness.js`, sets up an empty sea with
 `H.setupLeg`, and drives the player's ship with `G.bot`, ticking the real rules (`G.tick`) so what it measures is
-what the game does. `run.mjs` runs it in headless Chromium (one browser per build, both at once) and draws the SVGs.
+what the game does. `run.mjs` runs it in headless Chromium (several browsers per build, every build at once) and draws the SVGs. The
+game's own frame loop is stopped, since drawing frames in software costs far more than the rules.
 To add a manoeuvre, add it to `MANOEUVRES` and `metrics` in `sim.js` and to `ABOUT` in `run.mjs`.
