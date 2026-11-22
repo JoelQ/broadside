@@ -11,6 +11,7 @@ import { createRequire } from 'module';
 import { mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { pathToFileURL, fileURLToPath } from 'url';
 import path from 'path';
+import os from 'os';
 const { chromium } = createRequire(import.meta.url)('playwright');
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -40,21 +41,32 @@ const ABOUT = {
 const NAMES = only ? only.split(',') : Object.keys(ABOUT);
 
 // ---- run the simulations in one build
+// Every simulation is independent, so they are shared out among several browsers (each on its own
+// core): JOBS=<n> browsers per build, by default enough to fill the machine.
+const JOBS = +(process.env.JOBS || Math.max(1, Math.floor(os.cpus().length / (process.env.GHOST ? 2 : 1))));
 async function sample(file) {
-  const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
-  const page = await browser.newPage({ viewport: { width: 320, height: 200 } });
-  page.on('pageerror', (e) => console.error('PAGE ERROR', e.message));
-  await page.goto(pathToFileURL(path.resolve(file)).href);
-  await page.waitForTimeout(600);
-  for (const f of [path.join(here, '../balance/harness.js'), path.join(here, 'sim.js')]) await page.addScriptTag({ content: readFileSync(f, 'utf8') });
-  const res = { man: {}, polar: {}, chase: {} };
+  const res = { man: {}, polar: {}, chase: {} }, jobs = [];
   for (const [w, str] of WINDS) {
-    for (const name of NAMES) for (const hull of HULLS) res.man[`${name}|${w}|${hull}`] = await page.evaluate(([h, s, n]) => HS.manoeuvre(h, s, n), [hull, str, name]);
-    if (!flag('no-polar')) for (const hull of HULLS) res.polar[`${w}|${hull}`] = (await page.evaluate(([h, s]) => HS.polar(h, s), [hull, str])).polar;
-    if (!flag('no-chase')) for (const how of ['upwind', 'abeam', 'downwind']) for (const a of HULLS) for (const b of HULLS) if (a !== b) res.chase[`${how}|${w}|${a}|${b}`] = await page.evaluate(([a, b, s, how]) => HS.chase(a, b, s, how), [a, b, str, how]);
-    process.stderr.write(`  ${path.basename(file)} ${w} done\n`);
+    for (const name of NAMES) for (const hull of HULLS) jobs.push([res.man, `${name}|${w}|${hull}`, (page) => page.evaluate(([h, s, n]) => HS.manoeuvre(h, s, n), [hull, str, name])]);
+    if (!flag('no-polar')) for (const hull of HULLS) jobs.push([res.polar, `${w}|${hull}`, async (page) => (await page.evaluate(([h, s]) => HS.polar(h, s), [hull, str])).polar]);
+    if (!flag('no-chase')) for (const how of ['upwind', 'abeam', 'downwind']) for (const a of HULLS) for (const b of HULLS) if (a !== b) jobs.push([res.chase, `${how}|${w}|${a}|${b}`, (page) => page.evaluate(([a, b, s, how]) => HS.chase(a, b, s, how), [a, b, str, how])]);
   }
-  await browser.close();
+  let next = 0, done = 0;
+  await Promise.all(Array.from({ length: Math.min(JOBS, jobs.length) }, async () => {
+    // a browser each: pages of one browser showing the same file share a renderer process, and so one core
+    const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+    const page = await browser.newPage({ viewport: { width: 320, height: 200 } });
+    page.on('pageerror', (e) => console.error('PAGE ERROR', e.message));
+    await page.goto(pathToFileURL(path.resolve(file)).href);
+    await page.waitForTimeout(600);
+    for (const f of [path.join(here, '../balance/harness.js'), path.join(here, 'sim.js')]) await page.addScriptTag({ content: readFileSync(f, 'utf8') });
+    while (next < jobs.length) {
+      const [into, key, run] = jobs[next++];
+      into[key] = await run(page);
+      if (++done % 100 === 0) process.stderr.write(`  ${path.basename(file)} ${done}/${jobs.length}\n`);
+    }
+    await browser.close();
+  }));
   return res;
 }
 const dist = process.env.DIST || path.join(here, '../../dist/index.html'), ghostFile = process.env.GHOST;
