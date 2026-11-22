@@ -18,15 +18,25 @@ export const HANDLING = {
   // lighter hulls keep more, heavier less, and in a calm none: there the spring is the only way round
   drag: 0.06, // way lost per second with the helm hard over, for a brig; heavier hulls lose more
   spring: 0.2, // how fast the spring hauls her round at anchor (not while the anchor is coming up)
+  rudder: 1.22, // how fast any hull turns at full way, times her own turn
+  lightAir: [0.4, 0.4], // speed in light airs goes as strength ** (a + b * mass): heavy hulls need a breeze to move
+  leeway: 1.6, // yd/s she slides to leeward broadside-on with no way on, for a brig in a breeze; way on and a deep keel cut it
+  backing: 1, // yd/s she is pushed straight downwind when head to wind with no way on (in irons, her sails aback)
 };
 export const helmFloor = (mass) => clamp(HANDLING.helmFloor / mass ** 1.5, 0.06, 0.4);
-// Sail settings: more canvas is faster, less is a steadier gun platform that turns tighter and is harder to dismast.
+// Sail settings: more canvas is faster; less is a steadier gun platform, harder to dismast, and turns tighter only
+// because she is going slower. Canvas also drives her round when she has no way on, so a ship with her sails shot
+// away, or furled, answers her helm worse when she is slow.
 export const SAILS = [
-  { name: 'Furled', spd: 0, turn: 1, aim: 0.8, dmg: 0.3 },
-  { name: 'Reefed', spd: 0.4, turn: 1.12, aim: 0.8, dmg: 0.5 },
-  { name: 'Battle sails', spd: 0.7, turn: 1.22, aim: 1, dmg: 0.75 },
-  { name: 'Full sail', spd: 1, turn: 0.85, aim: 1.3, dmg: 1.15 },
+  { name: 'Furled', spd: 0, aim: 0.8, dmg: 0.3 },
+  { name: 'Reefed', spd: 0.4, aim: 0.8, dmg: 0.5 },
+  { name: 'Battle sails', spd: 0.7, aim: 1, dmg: 0.75 },
+  { name: 'Full sail', spd: 1, aim: 1.3, dmg: 1.15 },
 ];
+// how much her canvas is pulling, 1 for whole battle sails: furled 0, chain-shot rags about half
+export const drive = (s) => Math.min(1.2, SAILS[s.sailLevel].spd / 0.7) * (0.25 + 0.75 * s.sailR);
+// wind strength as a hull feels it: light airs move a light hull, barely stir a heavy one; a gale adds a little
+export const windFor = (str, mass) => (str <= 1 ? Math.max(0, str) ** (HANDLING.lightAir[0] + HANDLING.lightAir[1] * mass) : 1 + (str - 1) * 0.3);
 export const TOP = SAILS.length - 1;
 // `point` (radians) is how much closer to the wind a rig can sail than a square-rigger.
 export function polar(a, point = 0) {
@@ -136,7 +146,7 @@ export class Ship {
   }
   maxSpeedNow(world) {
     const off = wrap(this.heading - world.wind.dir);
-    const str = world.strAt ? world.strAt(this.pos.x, this.pos.z) : world.wind.str ?? 1, windF = str <= 1 ? str : 1 + (str - 1) * 0.3; // a gale adds less than it takes from the gunnery
+    const str = world.strAt ? world.strAt(this.pos.x, this.pos.z) : world.wind.str ?? 1, windF = windFor(str, this.mass);
     const v = this.spec.speed * SAILS[this.sailLevel].spd * polar(off, this.spec.point) * (0.25 + 0.75 * this.sailR) * (this.hullR < 0.3 ? 0.82 : 1) * windF;
     const s = this.sailLevel > 0 ? Math.max(v, (this.spec.sweeps || 0) * this.crewR) : v; // sweeps: oars give a floor under the wind
     return Math.max(s, this.oarSpeed(world));
@@ -154,10 +164,11 @@ export class Ship {
       const m = this.mass, rowing = oars > 0 && oars >= tgt - 0.01;
       this.speed += (tgt - this.speed) * Math.min(1, (dt * (held ? 2.2 : tgt > this.speed ? (rowing ? 0.8 : HANDLING.gather) : HANDLING.shed)) / m ** 0.8);
       this.rudder += clamp(this.input.turn - this.rudder, -dt * 2.2, dt * 2.2);
-      const floor = helmFloor(m) * clamp(world.strAt ? world.strAt(this.pos.x, this.pos.z) : world.wind.str ?? 1, 0, 1), way = floor + (1 - floor) * clamp(this.speed / (HANDLING.helmAt * sp.speed), 0, 1);
+      const str = world.strAt ? world.strAt(this.pos.x, this.pos.z) : world.wind.str ?? 1;
+      const floor = helmFloor(m) * clamp(str, 0, 1) * drive(this), way = floor + (1 - floor) * clamp(this.speed / (HANDLING.helmAt * sp.speed), 0, 1);
       // the hull swings toward the rate the rudder asks for; a heavy hull takes longer to start and to stop swinging.
       // At anchor she is hauled round on a spring, slowly but whatever the wind; aground she does not answer at all.
-      const rate = this.aground > 0 ? 0 : this.anchored ? (this.weighT > 0 ? 0 : (this.rudder * HANDLING.spring * (0.35 + 0.65 * this.crewR)) / this.mass ** 0.7) : this.rudder * sp.turn * Math.max(way, rowing ? 0.75 : 0) * SAILS[this.sailLevel].turn;
+      const rate = this.aground > 0 ? 0 : this.anchored ? (this.weighT > 0 ? 0 : (this.rudder * HANDLING.spring * (0.35 + 0.65 * this.crewR)) / this.mass ** 0.7) : this.rudder * sp.turn * Math.max(way, rowing ? 0.75 : 0) * HANDLING.rudder;
       this.yaw += (rate - this.yaw) * Math.min(1, dt / (0.35 * m));
       this.heading = wrap(this.heading + this.yaw * dt);
       this.speed *= 1 - Math.abs(this.rudder) * HANDLING.drag * m * dt;
@@ -173,6 +184,18 @@ export class Ship {
       }
       // carrying full sail in a gale tears it
       if ((world.wind.str ?? 1) > 1.3 && this.sailLevel === TOP && !held) { this.sails = Math.max(0, this.sails - 0.9 * dt); this.rigT = 0; }
+      // leeway: the wind pushes her to leeward, hardest close-hauled (her canvas pulls more sideways than ahead) and
+      // when she is slow (her keel has no grip without way on); head to wind with her sails aback it pushes her astern.
+      // High sides and tall rigs catch more wind; a deep keel holds her. It grows with the wind as her speed does, so
+      // her leeway angle is the same in light airs, a breeze or a gale.
+      if (!held && str > 0) {
+        const wf = windFor(str, m), off = wrap(this.heading - world.wind.dir), ref = 0.35 * sp.speed * Math.max(wf * SAILS[this.sailLevel].spd, 0.1), slow = 1 / (1 + this.speed / ref), wd = sp.windage ?? 1;
+        const side = HANDLING.leeway * wf * (wd / (sp.grip ?? 1)) * Math.abs(Math.sin(off)) * (1 - Math.cos(off)) * slow * (0.5 + 0.5 * drive(this));
+        const back = HANDLING.backing * wf * wd * ((1 - Math.cos(off)) / 2) ** 2 * clamp(1 - this.speed / ref, 0, 1) * (0.4 + 0.6 * drive(this));
+        const lx = Math.sin(world.wind.dir), lz = Math.cos(world.wind.dir), px = this.fwdZ, pz = -this.fwdX, sgn = Math.sign(px * lx + pz * lz) || 1;
+        this.drift = [px * sgn * side + lx * back, pz * sgn * side + lz * back];
+        this.pos.x += this.drift[0] * dt; this.pos.z += this.drift[1] * dt;
+      } else this.drift = null;
       if (!held && world.currentAt) { const c = world.currentAt(this.pos.x, this.pos.z); this.pos.x += c[0] * dt; this.pos.z += c[1] * dt; }
       // while a ship burns her gun crews are fighting the fire: she loads at half speed
       for (const s of this.sides) if (this.reload[s] > 0) this.reload[s] = Math.max(0, this.reload[s] - dt * (this.fire > 0 ? 0.5 : 1));

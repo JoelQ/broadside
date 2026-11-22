@@ -1,48 +1,50 @@
 // The campaign's ships: one catalogue of hulls, dressed in the colours of whoever sails them.
 // Numbers here are the hull in good hands (yours). An enemy ship is the same hull under a
 // `grade`, which makes her gunnery and drill a little worse than yours.
+// windage is how much wind her sides and rig catch, grip how well her keel holds her against it (both 1 for a brig):
+// together they set her leeway, the slide to leeward that is worst close-hauled and with little way on.
 
 export const HULLS = {
   sloop: {
     cls: 'Sloop', kit: 'runner', value: 260, L: 20, B: 5.8, D: 2.2, masts: 1, sailsPerMast: 2, castle: false, rigScale: 1.25, rig: 'gaff',
-    hull: 165, sails: 80, crew: 38, guns: 5, speed: 15.6, turn: 0.78, reload: 6.4, cal: 0, arc: 0.7, point: 0.26,
+    hull: 165, sails: 80, crew: 38, guns: 5, speed: 15.6, turn: 0.78, reload: 6.4, cal: 0, arc: 0.7, point: 0.26, windage: 0.8, grip: 1.3,
     role: 'Darts and turns on a coin, sails closer to the wind than anything afloat, and floats over most shoals. Light guns with a wide sweep; a thin hull.',
     ai: { range: 110, plan: 'round', boarder: false, battleSail: false },
   },
   brig: {
     cls: 'Brig', kit: 'line', value: 420, L: 30, B: 8, D: 3, masts: 2, sailsPerMast: 2, castle: false,
-    hull: 300, sails: 100, crew: 80, guns: 7, speed: 14, turn: 0.5, reload: 6, cal: 1, arc: 0.5, point: 0,
+    hull: 300, sails: 100, crew: 80, guns: 7, speed: 14, turn: 0.5, reload: 6, cal: 1, arc: 0.5, point: 0, windage: 1, grip: 1,
     role: 'A sound, balanced ship. Does everything fairly well.',
     ai: { range: 120, plan: 'round', boarder: false, battleSail: true },
   },
   xebec: {
     cls: 'Xebec', kit: 'boarder', value: 580, L: 36, B: 7.2, D: 2.5, masts: 3, sailsPerMast: 2, castle: false, rigScale: 0.72, rig: 'lateen',
-    hull: 215, sails: 110, crew: 135, guns: 7, speed: 13.5, turn: 0.58, reload: 6.4, cal: 0, arc: 0.6, point: 0.2,
+    hull: 215, sails: 110, crew: 135, guns: 7, speed: 13.5, turn: 0.58, reload: 6.4, cal: 0, arc: 0.6, point: 0.2, windage: 0.85, grip: 1.05,
     role: 'Room for a huge crew: made for boarding. Light quick-firing guns, a thin hull, shallow enough for shoal water, and she points well to windward.',
     ai: { range: 90, plan: 'grape', boarder: true, battleSail: false },
   },
   merchantman: {
     cls: 'Armed merchantman', kit: 'gun', value: 780, L: 46, B: 11.2, D: 4.3, masts: 3, sailsPerMast: 3, castle: 1, rigScale: 0.88, decks: 1,
-    hull: 500, sails: 120, crew: 64, guns: 12, speed: 12.4, turn: 0.32, reload: 5.6, cal: 2, arc: 0.42, point: 0,
+    hull: 500, sails: 120, crew: 64, guns: 12, speed: 12.4, turn: 0.32, reload: 5.6, cal: 2, arc: 0.42, point: 0, windage: 1.2, grip: 1,
     role: 'A hired ship with heavy guns that outreach everything smaller, slow to load. Ponderous at the helm, short of hands, and she draws too much for shoal water.',
     ai: { range: 180, plan: 'fire', boarder: false, battleSail: true },
   },
   flagship: {
     cls: 'Great ship', kit: 'gun', value: 1500, L: 64, B: 16, D: 6.2, masts: 4, sailsPerMast: 4, castle: 2, fore: true, rigScale: 0.74, decks: 2,
-    hull: 900, sails: 170, crew: 220, guns: 18, speed: 11.2, turn: 0.21, reload: 6.2, cal: 2, arc: 0.38, point: -0.1,
+    hull: 900, sails: 170, crew: 220, guns: 18, speed: 11.2, turn: 0.21, reload: 6.2, cal: 2, arc: 0.38, point: -0.1, windage: 1.25, grip: 1.05,
     role: 'A fortress, and as handy as one. Helpless in a calm, and she needs deep water under her.',
     ai: { range: 190, plan: 'mixed', boarder: false, battleSail: true },
   },
   galley: {
     cls: 'Galley', kit: 'galley', value: 620, L: 42, B: 6.6, D: 1.8, masts: 2, sailsPerMast: 2, castle: false, rigScale: 0.66, rig: 'lateen',
-    hull: 230, sails: 80, crew: 170, melee: 0.75, guns: 3, speed: 10.5, turn: 0.5, reload: 7.5, cal: 0, arc: 0.5, point: 0.15,
+    hull: 230, sails: 80, crew: 170, melee: 0.75, guns: 3, speed: 10.5, turn: 0.5, reload: 7.5, cal: 0, arc: 0.5, point: 0.15, windage: 0.7, grip: 0.65,
     bow: { n: 3, cal: 2, arc: 0.22, main: true }, oars: 10.5, rowers: 100,
     role: 'Heavy guns that fire ahead, weak sides, a great crew. Under oars she owes the wind nothing, until the oarsmen tire. Only a gale troubles her.',
     ai: { range: 150, plan: 'round', boarder: true, boardAt: 1.5, battleSail: false, bowOn: true },
   },
   galliot: {
     cls: 'Galliot', kit: 'galley', value: 300, L: 27, B: 4.8, D: 1.4, masts: 1, sailsPerMast: 2, castle: false, rigScale: 0.8, rig: 'lateen',
-    hull: 125, sails: 60, crew: 85, melee: 0.8, guns: 2, speed: 11, turn: 0.7, reload: 7, cal: 0, arc: 0.55, point: 0.15,
+    hull: 125, sails: 60, crew: 85, melee: 0.8, guns: 2, speed: 11, turn: 0.7, reload: 7, cal: 0, arc: 0.55, point: 0.15, windage: 0.65, grip: 0.65,
     bow: { n: 1, cal: 1, arc: 0.24, main: true }, oars: 11.5, rowers: 50,
     role: 'A small, quick galley: one good gun in the bow and a crowd of men behind it.',
     ai: { range: 110, plan: 'round', boarder: true, boardAt: 1.3, battleSail: false, bowOn: true },

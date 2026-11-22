@@ -371,7 +371,7 @@ function launch(p) {
     gauge = hasGauge(ship, tgt) ? 0.75 : hasGauge(tgt, ship) ? 1.15 : 1;
   }
   const steady = ship.spec.fixed || ship.anchored ? 0.75 : SAILS[ship.sailLevel].aim; // nothing steadies a gun like not moving
-  const spread = ship.disp * (ammo === 'grape' ? 1.15 : 1) * (1.25 - 0.25 * ship.crewR) * steady * gauge * ((tgt && tgt.evade) || 1) * (world.wind.str > 1.3 ? 1.5 : 1);
+  const spread = ship.disp * (ammo === 'grape' ? 1.15 : 1) * (1.25 - 0.25 * ship.crewR) * steady * gauge * ((tgt && tgt.evade) || 1) * (world.wind.str > 1.3 ? 1 + 0.5 / ship.mass : 1); // a big hull rolls less in a gale
   aim += gauss() * spread * 1.6;
   const v = A.speed * (1 + gauss() * 0.02), v2 = v * v;
   const disc = v2 * v2 - GRAV * (GRAV * dist * dist + 2 * h * v2);
