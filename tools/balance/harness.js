@@ -2,6 +2,9 @@
 // H.fight(cfg) plays one whole battle with a scripted captain at the player's helm against the
 // game's own pirate AI, with nothing drawn, and returns what happened.
 (() => {
+  // Fights tick the rules themselves (G.tick, with G.fast set, draws nothing). Between calls the game's own frame loop
+  // would keep drawing the scene in software and stepping the world on the wall clock: stop it.
+  window.requestAnimationFrame = () => 0;
   const wrap = (a) => { a = (a + Math.PI) % (Math.PI * 2); if (a < 0) a += Math.PI * 2; return a - Math.PI; };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const FULL = { runner: { canvas: 2, helm: 2, pivots: 2, low: 2 }, line: { drill: 2, ports: 2, canvas: 2, oak: 2 }, boarder: { marines: 2, hooks: 2, rail: 2, sweeps: 2 }, gun: { charge: 2, drill: 2, ports: 2, oak: 2 } };
@@ -14,6 +17,7 @@
   // Every fight is seeded, so any result can be played again exactly: pass cfg.seed to replay one.
   // Without one, a fresh seed is drawn and reported in the result.
   function seedFor(cfg) {
+    G.canBoard = false; // older builds kept the last fight's until the first tick of the next
     const seed = cfg.seed != null ? cfg.seed >>> 0 : (Math.random() * 2 ** 31) >>> 0;
     if (G.seedRng) G.seedRng(seed); // an older build has no seeded source: the fight is not replayable
     return seed;

@@ -40,6 +40,11 @@ Every fight is seeded: shot fall, damage, fires, the AI's choices and wind shift
 source (`src/rng.js`), and every result records its seed. Smoke, sparks and the crew stay on
 `Math.random`, so whether anything is drawn never changes what happens.
 
+Each fight also starts from a clean slate, whatever ran before it in the same page: the harness stops the game's
+own frame loop (fights tick the rules directly, with nothing drawn), and resets the one flag that used to carry
+over (`G.canBoard`, which let a few fights open with an instant boarding). Runs made before November 2026 could
+differ in a few fights in a hundred depending on run order, so don't compare them with newer ones.
+
 - **Replay one fight.** `node tools/balance/replay.mjs <jobs.mjs> <label-regex> <seed> [trace-seconds]`
   plays it again exactly. For a campaign leg it also prints where every ship was every few seconds.
   `SEED=<n>` works with `trace.mjs` too.
