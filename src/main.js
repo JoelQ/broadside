@@ -671,7 +671,7 @@ function startIntro() {
   showIntro(es);
 }
 function beginBattle() {
-  G.state = 'battle'; G.focus = 'player'; G.cam.yaw = 0; G.battleT = 0; G.fired = G.raked = false;
+  G.state = 'battle'; G.focus = 'player'; G.cam.yaw = 0; G.battleT = 0; G.fired = G.raked = G.canBoard = false; // canBoard is worked out each tick: don't let the last fight's stand until then
   for (const s of G.ships) { if (!s.anchored && !s.spec.fixed && !s.keepSail) s.sailLevel = TOP; if (G.mode === 'campaign' && s.v0 != null) s.speed = s.v0; }
   $('bars').classList.remove('on');
   hideScreen(); setMode('battle');
