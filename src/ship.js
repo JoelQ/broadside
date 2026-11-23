@@ -25,13 +25,13 @@ export const HANDLING = {
 };
 export const helmFloor = (mass) => clamp(HANDLING.helmFloor / mass ** 1.5, 0.06, 0.4);
 // Sail settings: more canvas is faster; less is a steadier gun platform, harder to dismast, and turns tighter only
-// because she is going slower (full sail is a little slow on the helm). Canvas also drives her round when she has no way on, so a ship with her sails shot
+// because she is going slower. Canvas also drives her round when she has no way on, so a ship with her sails shot
 // away, or furled, answers her helm worse when she is slow.
 export const SAILS = [
   { name: 'Furled', spd: 0, aim: 0.8, dmg: 0.3 },
   { name: 'Reefed', spd: 0.4, aim: 0.8, dmg: 0.5 },
   { name: 'Battle sails', spd: 0.7, aim: 1, dmg: 0.75 },
-  { name: 'Full sail', spd: 1, aim: 1.3, dmg: 1.15, helm: 0.9 }, // all that canvas makes her a little slow to answer
+  { name: 'Full sail', spd: 1, aim: 1.3, dmg: 1.15 },
 ];
 // how much her canvas is pulling, 1 for whole battle sails: furled 0, chain-shot rags about half
 export const drive = (s) => Math.min(1.2, SAILS[s.sailLevel].spd / 0.7) * (0.25 + 0.75 * s.sailR);
@@ -168,7 +168,7 @@ export class Ship {
       const floor = helmFloor(m) * clamp(str, 0, 1) * drive(this), way = floor + (1 - floor) * clamp(this.speed / (HANDLING.helmAt * sp.speed), 0, 1);
       // the hull swings toward the rate the rudder asks for; a heavy hull takes longer to start and to stop swinging.
       // At anchor she is hauled round on a spring, slowly but whatever the wind; aground she does not answer at all.
-      const rate = this.aground > 0 ? 0 : this.anchored ? (this.weighT > 0 ? 0 : (this.rudder * HANDLING.spring * (0.35 + 0.65 * this.crewR)) / this.mass ** 0.7) : this.rudder * sp.turn * Math.max(way, rowing ? 0.75 : 0) * HANDLING.rudder * (SAILS[this.sailLevel].helm ?? 1);
+      const rate = this.aground > 0 ? 0 : this.anchored ? (this.weighT > 0 ? 0 : (this.rudder * HANDLING.spring * (0.35 + 0.65 * this.crewR)) / this.mass ** 0.7) : this.rudder * sp.turn * Math.max(way, rowing ? 0.75 : 0) * HANDLING.rudder;
       this.yaw += (rate - this.yaw) * Math.min(1, dt / (0.35 * m));
       this.heading = wrap(this.heading + this.yaw * dt);
       this.speed *= 1 - Math.abs(this.rudder) * HANDLING.drag * m * dt;
