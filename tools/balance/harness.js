@@ -123,6 +123,22 @@
     return seed;
   }
 
+  // sit on her quarter, out of her arcs, firing into her stern: how a small, handy ship fights a big one
+  function hug(me, foe, d) {
+    const dx = me.pos.x - foe.pos.x, dz = me.pos.z - foe.pos.z, cd = Math.hypot(dx, dz);
+    const off = wrap(Math.atan2(dx, dz) - (foe.heading + Math.PI)), blind = Math.PI / 2 - foe.arc - 0.12;
+    const back = foe.spec.L * 0.5 + 45, tx = foe.pos.x - Math.sin(foe.heading) * back, tz = foe.pos.z - Math.cos(foe.heading) * back;
+    let hd;
+    if (Math.abs(off) > blind || d > me.range() * 0.9) { hd = Math.atan2(tx - me.pos.x, tz - me.pos.z); me.sailLevel = 3; }
+    else {
+      const brg = Math.atan2(-dx, -dz), o1 = brg - Math.PI / 2, o2 = brg + Math.PI / 2;
+      hd = Math.abs(wrap(o1 - me.heading)) < Math.abs(wrap(o2 - me.heading)) ? o1 : o2;
+      if (cd < foe.spec.L * 0.5 + 25) hd = foe.heading;
+      me.sailLevel = me.speed > foe.speed + 3 ? 1 : 2;
+    }
+    me.input.turn = clamp(wrap(hd - me.heading) * 2.5, -1, 1);
+  }
+
   function captain(plan) {
     const ai = G.newAI(), st = { swap: 0, boardMode: plan.board === 'rush' };
     const oddsNow = (me, foe) => G.api.strength(me) / (G.api.strength(foe) || 1);
@@ -146,18 +162,7 @@
       // a boarder stands off and chains until her prey is slow, then closes
       const move = st.boardMode ? (foe.speed > 6.5 && sk.chain > 0 ? 'duel' : 'close') : plan.move;
       if (move === 'hug') {
-        const dx = me.pos.x - foe.pos.x, dz = me.pos.z - foe.pos.z, cd = Math.hypot(dx, dz);
-        const off = wrap(Math.atan2(dx, dz) - (foe.heading + Math.PI)), blind = Math.PI / 2 - foe.arc - 0.12;
-        const back = foe.spec.L * 0.5 + 45, tx = foe.pos.x - Math.sin(foe.heading) * back, tz = foe.pos.z - Math.cos(foe.heading) * back;
-        let hd;
-        if (Math.abs(off) > blind || d > me.range() * 0.9) { hd = Math.atan2(tx - me.pos.x, tz - me.pos.z); me.sailLevel = 3; }
-        else {
-          const brg = Math.atan2(-dx, -dz), o1 = brg - Math.PI / 2, o2 = brg + Math.PI / 2;
-          hd = Math.abs(wrap(o1 - me.heading)) < Math.abs(wrap(o2 - me.heading)) ? o1 : o2;
-          if (cd < foe.spec.L * 0.5 + 25) hd = foe.heading;
-          me.sailLevel = me.speed > foe.speed + 3 ? 1 : 2;
-        }
-        me.input.turn = clamp(wrap(hd - me.heading) * 2.5, -1, 1);
+        hug(me, foe, d);
         for (const s of me.sides) if (G.api.inArc(me, s, foe, 1)) G.api.fire(me, s);
       } else {
         const r = me.range('round');
@@ -224,6 +229,11 @@
       if (want !== me.ammo && st.swap <= 0) { me.setAmmo(want); st.swap = 2.5; }
       const r = me.range('round');
       let move = boardMode ? (foe.speed > 6.5 && sk.chain > 0 ? 'duel' : 'close') : step.move || 'duel';
+      if (move === 'hug') { // sit astern out of her arcs; board when the odds come
+        hug(me, foe, d);
+        for (const s of me.sides) if (G.api.inArc(me, s, foe, 1) || foes.some((o) => o !== foe && G.api.inArc(me, s, o, 1))) G.api.fire(me, s);
+        return;
+      }
       if (step.anchor && !me.anchored && d < r * (step.anchorAt || 0.8) && me.speed < 6) { me.anchored = true; me.weighT = 0; }
       if (step.anchor && !me.anchored && d < r * (step.anchorAt || 0.8)) me.sailLevel = 0;
       me.spec.ai = { range: step.range || (move === 'kite' ? r * 0.85 : move === 'close' ? 20 : move === 'bow' ? r * 0.7 : r * 0.5), plan: 'none', manualAmmo: true, boarder: move === 'close', battleSail: true, bowOn: move === 'bow' };
