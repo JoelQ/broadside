@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 import { World } from './world.js';
 import { FX, Sfx } from './fx.js';
-import { Ship, AMMO, AMMO_KEYS, CAL, SAILS, TOP, noGoHalf, wrap, clamp, polar, pointOfSail } from './ship.js';
+import { Ship, AMMO, AMMO_KEYS, CAL, SAILS, TOP, HANDLING, noGoHalf, wrap, clamp, polar, pointOfSail } from './ship.js';
 import { PLAYER_SPEC, ENEMIES, KITS, KIT_OF, kitCost, SHOPS, REPAIR } from './data.js';
 import { updateAI, newAI } from './ai.js';
 import { buildHarbor } from './harbor.js';
 import { HOMES } from './homes.js';
-import { HULLS, shipSpec, GALLEY_KIT } from './fleet.js';
+import { HULLS, GRADE, OFFICERS, shipSpec, GALLEY_KIT } from './fleet.js';
 import { CAMP } from './campaign.js';
 import { PT } from './playtest.js';
 import { steerTo } from './ai.js';
@@ -85,6 +85,8 @@ window.G = G;
 // The balance harness seeds every fight so it can be replayed. The waves (which shot can hit) run on the
 // world clock, so that starts again too.
 G.seedRng = (seed) => { seedRng(seed); world.time = 0; }; G.rngSeed = rngSeed;
+// The tuning tables, so the balance harness can try other numbers in a fight without a rebuild (tools/balance/README.md).
+G.dials = { HANDLING, AMMO, CAL, SAILS, HULLS, GRADE, OFFICERS, PLAYER_SPEC, ENEMIES, KITS };
 
 // Any ship you have boarded and taken is yours to command. In your hands she keeps her hull
 // and her handling, under your colours and with your gunners.

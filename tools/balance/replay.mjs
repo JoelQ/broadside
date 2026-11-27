@@ -14,6 +14,7 @@ if (!jobsFile || !pattern || seedArg == null) { console.error('usage: replay.mjs
 const cells = (await import(pathToFileURL(path.resolve(jobsFile)))).default, re = new RegExp(pattern);
 const c = cells.find((x) => re.test(x.label));
 if (!c) { console.error(`no cell matches /${pattern}/`); process.exit(2); }
+if (process.env.DIALS) c.dials = { ...JSON.parse(process.env.DIALS), ...(c.dials || {}) }; // the same DIALS as run.mjs
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: 320, height: 200 } });
 page.on('pageerror', (e) => console.error('PAGE ERROR', e.message));
@@ -23,7 +24,7 @@ await page.addScriptTag({ content: readFileSync(path.join(here, 'harness.js'), '
 const seed = +seedArg, every = +everyArg || 0;
 const r = c.mission
   ? await page.evaluate((cfg) => (cfg.routes ? H.cruise(cfg) : H.leg(cfg)), JSON.parse(JSON.stringify({ ...c, seed, trace: every || undefined })))
-  : await page.evaluate((cfg) => H.fight(cfg), { ship: c.ship, fit: c.fit, level: c.level, plan: c.plan, stock: c.stock, maxT: c.maxT, seed });
+  : await page.evaluate((cfg) => H.fight(cfg), { ship: c.ship, fit: c.fit, level: c.level, plan: c.plan, stock: c.stock, maxT: c.maxT, dials: c.dials, seed });
 await browser.close();
 const { trace, legs, ...rest } = r;
 console.log(`== ${c.label} · seed ${seed}`);
