@@ -8,7 +8,7 @@
     "build": "node build.mjs",
     "build:playtest": "node build.mjs --playtest",
     "map": "node tools/map/map.mjs",
-    "test": "node --test tools/map/*.test.mjs"
+    "test": "node --test tools/map/*.test.mjs tools/sim/*.test.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.28.2",

@@ -28,7 +28,12 @@ function render() {
         ${last ? `<div class="dlg-end story">${end}</div>` : ''}${nav}</div></div></div>`, 'dlgscr');
 }
 
-const showing = () => D && document.querySelector('#screen.dlgscr .dlg');
+// whether the page being told is still on screen: the view says (the screen may have moved on to something else)
+let onScreen = () => !!D;
+export function dialogShown(fn) { onScreen = fn; }
+const showing = () => D && onScreen();
+export const dialogOpen = () => !!showing();
+export const dialogLast = () => !!D && D.i >= D.steps.length - 1;
 export function dialogAct(k) {
   if (!showing()) return;
   if (k === 'next' && D.i < D.steps.length - 1) D.i++;
@@ -36,17 +41,4 @@ export function dialogAct(k) {
   else if (k === 'skip') D.i = D.steps.length - 1;
   else return;
   render();
-}
-// keys while a page is being told; true if the key was used
-export function dialogKey(k) {
-  if (!showing()) return false;
-  if (k === ' ' || k === 'enter' || k === 'arrowright') {
-    if (D.i < D.steps.length - 1) { dialogAct('next'); return true; }
-    const btns = document.querySelectorAll('#screen .dlg-end .btn.big');
-    if (btns.length === 1) { btns[0].click(); return true; } // one way on: Enter takes it
-    return false;
-  }
-  if (k === 'arrowleft' || k === 'backspace') { dialogAct('back'); return true; }
-  if (k === 'escape') { dialogAct('skip'); return true; }
-  return false;
 }

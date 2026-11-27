@@ -1,7 +1,7 @@
 import { HULLS, OFFICERS, HANDS } from './fleet.js';
 import { MISSIONS, ORDER, LEG_POOL } from './missions.js';
 import { STORY, NAMES, PORTS, SIDE_NAME } from './story.js';
-import { mulberry } from './geo.js';
+import { mulberry } from './util.js';
 import { portrait, speakerOf, officerFace, captainFace, CAST } from './portraits.js';
 import { tellSteps, dialogAct } from './dialog.js';
 
@@ -59,7 +59,7 @@ export const CAMP = {
     if (st.stage === 0) return CAMP.tell(STORY.opening, 'camp:go');
     CAMP.port();
   },
-  rebuild() { const stock = G.player.stock; if (G.player.arcs) E.dropArcs(G.player); E.scene.remove(G.player.group); G.player = null; E.buildPlayer(true); G.player.stock = { chain: 0, grape: 0, fire: 0, ...stock }; },
+  rebuild() { const stock = G.player.stock; E.dropShip(G.player); G.player = null; E.buildPlayer(true); G.player.stock = { chain: 0, grape: 0, fire: 0, ...stock }; },
   port() { E.showPort(); CAMP.man(); E.renderPort(); E.snapCamera(); CAMP.save(); },
 
   // ---------- telling the story: a page of text over the scene ----------

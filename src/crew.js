@@ -85,8 +85,8 @@ export class Figures {
 // ---------- a ship's crew on deck ----------
 const FIG_MAX = 64, WALK = 3.2;
 export class CrewFigures {
-  constructor(ship) {
-    this.ship = ship;
+  constructor(ship, model) {
+    this.ship = ship; this.decks = model.decks;
     const sp = ship.spec;
     this.per = Math.max(2.5, sp.crew / FIG_MAX);
     this.figs = new Figures(FIG_MAX);
@@ -95,11 +95,11 @@ export class CrewFigures {
     this.f = [];
     for (let i = 0; i < FIG_MAX; i++) {
       const f = { ph: Math.random() * 6.28, yaw: Math.random() * 6.28, r1: Math.random(), r2: Math.random(), s: 1, step: 0, wait: Math.random() * 20 };
-      this.post(f); f.x = f.sx; f.z = f.sz; f.face = f.yaw; f.y = deckLevel(sp, f.z / sp.L + 0.5, ship.model.decks);
+      this.post(f); f.x = f.sx; f.z = f.sz; f.face = f.yaw; f.y = deckLevel(sp, f.z / sp.L + 0.5, this.decks);
       this.f.push(f);
       this.figs.dress(i, cols[i % cols.length], i);
     }
-    ship.group.add(this.mesh);
+    model.group.add(this.mesh);
   }
   // somewhere on deck to stand, clear of the hatches and masts down the middle
   post(f) {
@@ -132,7 +132,7 @@ export class CrewFigures {
       f.s += ((alive ? 1 : 0) - f.s) * Math.min(1, dt * 6);
       if (f.s > 0.01) shown = i + 1;
       const t = clamp(f.z / sp.L + 0.5, 0, 1), fighting = fight && !walk, sw = Math.sin(time * 9 + f.ph);
-      f.y += (deckLevel(sp, t, ship.model.decks) - f.y) * Math.min(1, dt * 9);
+      f.y += (deckLevel(sp, t, this.decks) - f.y) * Math.min(1, dt * 9);
       f.face += wrap((walk ? Math.atan2(dx, dz) : fight ? bd.side * Math.PI / 2 : f.yaw) - f.face) * Math.min(1, dt * 8);
       let leg = Math.sin(f.step) * 0.7 * walk, armL = -leg * 0.8, armR = leg * 0.8;
       if (fighting) { leg = sw * 0.3; armL = -0.5; armR = -1.9 + sw * 0.9; } // cut and parry at the rail

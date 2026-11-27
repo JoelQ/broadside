@@ -1,4 +1,4 @@
-import { mulberry } from './geo.js';
+import { mulberry } from './util.js';
 
 // The one random source for everything that decides a fight: shot fall, damage, fires, the AI's choices,
 // wind shifts. Seed it and a fight plays out the same way every time (the balance harness does, so any
