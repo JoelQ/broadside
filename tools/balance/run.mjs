@@ -14,6 +14,9 @@ const [jobsFile, runsArg, outFile] = process.argv.slice(2);
 const cells = (await import(pathToFileURL(path.resolve(jobsFile)))).default, runs = +runsArg || 4, WORKERS = 4;
 const harness = readFileSync(path.join(here, 'harness.js'), 'utf8');
 const BASE = process.env.SEED != null ? +process.env.SEED : null;
+// DIALS='{"AMMO.grape.hull":0.8}' changes those numbers in every fight (on top of any a cell sets itself).
+const DIALS = process.env.DIALS ? JSON.parse(process.env.DIALS) : null;
+if (DIALS) for (const c of cells) c.dials = { ...DIALS, ...(c.dials || {}) };
 const queue = cells.flatMap((c, i) => Array.from({ length: runs }, (_, k) => [i, k])).reverse();
 const results = cells.map(() => []);
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
@@ -27,7 +30,7 @@ await Promise.all(Array.from({ length: WORKERS }, async () => {
   while (queue.length) {
     const [i, k] = queue.pop(), c = cells[i], seed = c.seed ?? (BASE != null ? BASE + k : undefined);
     if (queue.length % 100 === 0 && queue.length) console.error(`${queue.length} to go, ${((Date.now() - t0) / 1000).toFixed(0)}s`);
-    const res = c.mission ? await page.evaluate((cfg) => (cfg.routes ? H.cruise(cfg) : H.leg(cfg)), JSON.parse(JSON.stringify({ ...c, seed }))) : await page.evaluate((cfg) => H.fight(cfg), { ship: c.ship, fit: c.fit, level: c.level, plan: c.plan, stock: c.stock, maxT: c.maxT, seed });
+    const res = c.mission ? await page.evaluate((cfg) => (cfg.routes ? H.cruise(cfg) : H.leg(cfg)), JSON.parse(JSON.stringify({ ...c, seed }))) : await page.evaluate((cfg) => H.fight(cfg), { ship: c.ship, fit: c.fit, level: c.level, plan: c.plan, stock: c.stock, maxT: c.maxT, dials: c.dials, seed });
     res.k = k; results[i].push(res);
   }
 }));

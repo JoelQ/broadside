@@ -10,6 +10,38 @@
   const FULL = { runner: { canvas: 2, helm: 2, pivots: 2, low: 2 }, line: { drill: 2, ports: 2, canvas: 2, oak: 2 }, boarder: { marines: 2, hooks: 2, rail: 2, sweeps: 2 }, gun: { charge: 2, drill: 2, ports: 2, oak: 2 } };
   const KIT = { wren: 'line', 0: 'runner', 1: 'line', 2: 'boarder', 3: 'gun' };
 
+  // ---------- dials ----------
+  // Any tuning number the game exposes on G.dials can be changed for one fight: cfg.dials maps a path to a value.
+  //   { 'AMMO.grape.hull': 0.8, 'HULLS.sloop.crew': 44, 'AMMO.grape.kills.1': 5 }
+  // A '*' step matches every key there ('HULLS.*.crew'), and a value { mul: 1.2 } or { add: -3 } scales or shifts
+  // what was there. Everything is put back when the fight ends, so the next fight starts from the shipped numbers.
+  let undo = [];
+  function restoreDials() { for (let i = undo.length - 1; i >= 0; i--) { const [o, k, v] = undo[i]; o[k] = v; } undo = []; }
+  function applyDials(dials) {
+    restoreDials();
+    if (!dials) return;
+    if (!G.dials) throw new Error('this build exposes no G.dials: rebuild it to use cfg.dials');
+    for (const [path, val] of Object.entries(dials)) {
+      const keys = path.split('.');
+      let objs = [G.dials];
+      for (const k of keys.slice(0, -1)) objs = objs.flatMap((o) => (k === '*' ? Object.values(o) : [o[k]])).filter((o) => o && typeof o === 'object');
+      const last = keys[keys.length - 1];
+      let hit = 0;
+      for (const o of objs) for (const k of last === '*' ? Object.keys(o) : [last]) {
+        if (!(k in o)) continue;
+        const was = o[k];
+        if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+          const f = (x) => (val.mul != null ? x * val.mul : x + (val.add || 0));
+          if (typeof was === 'number') o[k] = f(was);
+          else if (Array.isArray(was) && was.every((x) => typeof x === 'number')) o[k] = was.map(f); // e.g. grape's kills [lo, hi]
+          else continue;
+        } else o[k] = val;
+        undo.push([o, k, was]); hit++;
+      }
+      if (!hit) { restoreDials(); throw new Error(`dial ${path} matches nothing in G.dials`); }
+    }
+  }
+
   // A captain is a way of moving, a shot policy and a boarding policy.
   //   move:  duel (broadsides at half range) | kite (broadsides at long range) | hug (sit astern) | close (run alongside)
   //   ammo:  round | chain (until her sails are under 45%) | fire | grape (when close) | combo (chain, then fire, grape when close)
@@ -149,9 +181,11 @@
     return { o, t: Math.round(t), hull: +P.hullR.toFixed(2), crew: +P.crewR.toFixed(2) };
   }
   window.H = {
+    applyDials, restoreDials,
     // a whole mission, leg after leg, with damage carried and the watches spent where they are needed most:
     // { side, mission, hull, fit, routes: { [leg title]: steps }, maxT }
     cruise(cfg) {
+      applyDials(cfg.dials);
       const C = G.CAMP;
       G.paused = true; G.fast = true; G.mode = 'campaign';
       const st = (C.st = C.fresh());
@@ -171,12 +205,13 @@
         for (let w = 0; w < 4; w++) { const p = G.player; C.watch(p.hullR < 0.7 && p.hullR <= p.sailR ? 'hull' : p.sailR < 0.8 ? 'sails' : p.hullR < 0.7 ? 'hull' : 'crew'); }
         C.act('next');
       }
-      G.state = 'story'; G.outcome = null; G.player.sinking = 0; G.fast = false;
+      G.state = 'story'; G.outcome = null; G.player.sinking = 0; G.fast = false; restoreDials();
       return { seed: st.seed, o, win: o === 'won', t: legs.reduce((a, l) => a + l.t, 0), hull: legs[legs.length - 1].hull, crew: legs[legs.length - 1].crew, legs, aground: 0, boarded: 0, foes: legs.map((l) => `${l.title}:${l.o}@${l.hull}`).join(' > '), pos: '' };
     },
     // one campaign leg: { side, mission: 'm1', leg: 0 | pool key, hull, fit, officers, route: [steps], state: { hull, sails, crew }, stock, maxT }
     // Sets up one leg of a mission and beats to quarters, without playing it (screenshots use this).
     setupLeg(cfg) {
+      applyDials(cfg.dials);
       const C = G.CAMP;
       G.paused = true; G.fast = true; G.mode = 'campaign';
       const st = (C.st = C.fresh());
@@ -212,11 +247,12 @@
       const res = { seed: st.seed, o, win: o === 'won', t: Math.round(t), hull: +(Math.max(0, P.hull) / P.hullMax).toFixed(2), crew: +(P.crew / P.crewMax).toFixed(2), aground: Math.round(aground), boarded,
         foes: G.ships.filter((s) => s.side === 1).map((s) => s.out || (s.aground > 0 ? 'aground' : 'up')).join(','), prizes: run.prizes.length, trace, pos: [Math.round(P.pos.x), Math.round(P.pos.z)] };
       if (G.state === 'boarding') G.api.cutGrapples();
-      G.bot = null; G.state = 'story'; G.outcome = null; P.sinking = 0; G.fast = false;
+      G.bot = null; G.state = 'story'; G.outcome = null; P.sinking = 0; G.fast = false; restoreDials();
       return res;
     },
 
     fight(cfg) {
+      applyDials(cfg.dials);
       G.paused = true; G.fast = true; const seed = seedFor(cfg);
       G.trophies = cfg.ship === 'wren' ? [] : [cfg.ship]; G.ship = cfg.ship;
       G.fit = cfg.fit ? { [cfg.ship]: cfg.fit === 'full' ? FULL[KIT[cfg.ship]] : cfg.fit } : {};
@@ -243,7 +279,7 @@
       G.stats.shots = G.stats.hits = 0;
       // leave the game in a state the next fight can start from
       if (G.state === 'boarding') G.api.cutGrapples();
-      G.state = 'battle'; G.outcome = null; G.api.endBattle('sunk'); P.sinking = 0; G.bot = null; G.fast = false;
+      G.state = 'battle'; G.outcome = null; G.api.endBattle('sunk'); P.sinking = 0; G.bot = null; G.fast = false; restoreDials();
       return res;
     },
   };

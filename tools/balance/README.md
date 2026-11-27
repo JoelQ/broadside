@@ -64,6 +64,26 @@ that flipped changed because of the rules, not the dice, so a small change shows
 than comparing two unseeded win rates. It's still the same captains on the same few seeds, so confirm
 anything that matters with more runs or a different `SEED`.
 
+## Trying other numbers without a rebuild
+
+The game puts its tuning tables on `G.dials` (`HANDLING`, `AMMO`, `CAL`, `SAILS`, `HULLS`, `GRADE`, `OFFICERS`, and the
+skirmish ships `PLAYER_SPEC`, `ENEMIES`, `KITS`). A cell's `dials` changes any number in them for that fight only,
+and everything is put back when it ends:
+
+```js
+{ label: 'brig | duel grape | v xebec | grape x3', ..., dials: { 'AMMO.grape.kills': { mul: 3 } } }
+```
+
+- A key is a path into `G.dials`: `'AMMO.grape.hull'`, `'HULLS.sloop.crew'`, `'AMMO.grape.kills.1'`.
+- `*` matches every key at that step: `'HULLS.*.crew'` is every campaign hull's crew.
+- A plain value replaces what was there. `{ mul: 1.2 }` or `{ add: -3 }` scales or shifts it (a list of numbers too).
+- A path that matches nothing stops the run with an error, so a typo can't quietly test the shipped numbers.
+- `DIALS='{"AMMO.chain.sail":3}'` on `run.mjs` or `replay.mjs` applies to every fight, under whatever a cell sets.
+
+Seeds don't move, so a run with dials pairs up with one without in `compare.mjs`, fight by fight. Only numbers in
+those tables can be dialled: a loose constant such as `BELOW` has to move into one of them first. Hull numbers reach
+campaign fights through `HULLS`; skirmish fights (`grid.mjs`) take theirs from `PLAYER_SPEC` and `ENEMIES` instead.
+
 ## Campaign legs
 
 The same harness plays campaign fights. `H.leg(cfg)` sets up one leg of one mission for a given
