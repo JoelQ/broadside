@@ -56,6 +56,8 @@
     let last = new Map(G.ships.map((x) => [x, { hull: x.hull, sails: x.sails, crew: x.crew }]));
     let hits = new Map(); // what this tick's hits explain of each ship's losses
     const arcs = { mine: 0, hers: 0, both: 0, neither: 0, boarding: 0 }, samples = [];
+    // after the first moment either side's guns bore: how long neither did (the approach is not dead time), and who held the weather gauge
+    let contact = null, idle = 0; const gauge = { mine: 0, hers: 0 };
     let lull = 0, longestLull = 0, t = 0, next = 0, was0 = G.state; // the state this tick began in
     G.onHit = (b, ship, hd, sd, kills) => {
       const h = hits.get(ship) || zero(); h.hull += hd; h.sails += sd; h.crew += kills; hits.set(ship, h);
@@ -81,6 +83,10 @@
         const hers = live.some((f) => f.sides && f.sides.some((sd) => G.api.inArc(f, sd, P, 1)));
         const k = G.state === 'boarding' ? 'boarding' : mine && hers ? 'both' : mine ? 'mine' : hers ? 'hers' : 'neither';
         arcs[k] += dt;
+        if (contact == null && k !== 'neither') contact = t;
+        if (contact != null && k === 'neither') idle += dt;
+        const g = G.api.nearest(P, live);
+        if (g && G.api.hasGauge) { if (G.api.hasGauge(P, g)) gauge.mine += dt; else if (G.api.hasGauge(g, P)) gauge.hers += dt; }
         lull = k === 'neither' ? lull + dt : 0; longestLull = Math.max(longestLull, lull);
         t += dt;
         if (t >= next) {
@@ -104,7 +110,7 @@
           : `${o}: ${won ? 'her' : 'our'} ${res} ${top.map(([c, v]) => `${c} ${Math.round(v * 100)}%`).join(', ') || '(no damage recorded)'}`;
         const T = t || 1;
         return { cause, decisive: res, dealt: round(dealt), taken: round(taken), share: { dealt: { hull: share(dealt, 'hull'), sails: share(dealt, 'sails'), crew: share(dealt, 'crew') }, taken: { hull: share(taken, 'hull'), sails: share(taken, 'sails'), crew: share(taken, 'crew') } },
-          arcs: Object.fromEntries(Object.entries(arcs).map(([k, v]) => [k, +(v / T).toFixed(2)])), longestLull: Math.round(longestLull), samples,
+          arcs: Object.fromEntries(Object.entries(arcs).map(([k, v]) => [k, +(v / T).toFixed(2)])), longestLull: Math.round(longestLull), contact: contact == null ? null : Math.round(contact), idle: +(idle / T).toFixed(2), gauge: { mine: +(gauge.mine / T).toFixed(2), hers: +(gauge.hers / T).toFixed(2) }, samples,
           start: { me: start.get(P), foes: [...start].filter(([x]) => x.side !== P.side).map(([x, v]) => ({ id: x.id || x.spec.cls, ...v })) } };
       },
     };
@@ -181,6 +187,8 @@
   //   { go: [x, z] | 'zone:name', r }                 sail there (firing at whatever bears on the way)
   //   { kill: id | 'all', move, ammo, board, anchor }  fight that ship until she is out
   // move: duel | kite | hug | close | bow.  anchor: true drops an anchor on a spring once in range.
+  // keepOff: true (or a distance) bears away from a stronger boarder inside 75 yd. windward: true beats up to a station
+  // upwind of her before fighting, whenever she holds the weather gauge.
   // range: the distance she keeps (yd), or rangeK: that as a share of her round-shot range.
   const fake = (x, z) => ({ pos: { x, z }, fwdX: 0, fwdZ: 0, speed: 0, crewR: 1, sailR: 1, fire: 0, exposed: 0, crew: 1, melee: 1, hullR: 1, active: false, isPlayer: false, spec: { L: 1, B: 1 }, stock: {} });
   function routeBot(steps) {
@@ -231,6 +239,23 @@
       if (want !== me.ammo && st.swap <= 0) { me.setAmmo(want); st.swap = 2.5; }
       const r = me.range('round');
       let move = boardMode ? (foe.speed > 6.5 && sk.chain > 0 ? 'duel' : 'close') : step.move || 'duel';
+      const keep = step.range || (step.rangeK ? r * step.rangeK : move === 'kite' ? r * 0.85 : move === 'close' ? 20 : move === 'bow' ? r * 0.7 : r * 0.5);
+      // keepOff: a ship that would lose a deck fight does not let a boarder come alongside: she bears away from her
+      if (step.keepOff && !boardMode && d < (step.keepOff === true ? 75 : step.keepOff) && G.api.strength(foe) > G.api.strength(me) * 0.9) {
+        const ax = me.pos.x - foe.pos.x, az = me.pos.z - foe.pos.z, al = Math.hypot(ax, az) || 1;
+        me.spec.ai = { range: 1, plan: 'none', manualAmmo: true, boarder: false, battleSail: false };
+        G.api.updateAI(ai, me, fake(me.pos.x + (ax / al) * 250, me.pos.z + (az / al) * 250), G.world, dt, G.api.aiApi);
+        for (const s of me.sides) if (foes.some((o) => G.api.inArc(me, s, o, 1))) G.api.fire(me, s);
+        return;
+      }
+      // windward: win the weather gauge first, beating up to a station upwind of her at the range she means to fight
+      if (step.windward && !boardMode && G.world.wind.str > 0.3 && !me.anchored && !G.api.hasGauge(me, foe) && d > Math.min(keep, 60)) {
+        const wx = Math.sin(G.world.wind.dir), wz = Math.cos(G.world.wind.dir), R = Math.max(keep, 70);
+        me.spec.ai = { range: 1, plan: 'none', manualAmmo: true, boarder: false, battleSail: false };
+        G.api.updateAI(ai, me, fake(foe.pos.x - wx * R, foe.pos.z - wz * R), G.world, dt, G.api.aiApi);
+        for (const s of me.sides) if (foes.some((o) => G.api.inArc(me, s, o, 1))) G.api.fire(me, s);
+        return;
+      }
       if (move === 'hug') { // sit astern out of her arcs; board when the odds come
         const sk2 = me.stock, next = (a === 'chain' || a === 'combo') && sk2.chain > 0 && foe.sailR > 0.45 ? 'chain' : (a === 'grape' || a === 'combo' || boardMode) && sk2.grape > 0 && foe.exposed > 2 ? 'grape' : 'round';
         hug(me, foe, d, next);
@@ -239,7 +264,7 @@
       }
       if (step.anchor && !me.anchored && d < r * (step.anchorAt || 0.8) && me.speed < 6) { me.anchored = true; me.weighT = 0; }
       if (step.anchor && !me.anchored && d < r * (step.anchorAt || 0.8)) me.sailLevel = 0;
-      me.spec.ai = { range: step.range || (step.rangeK ? r * step.rangeK : move === 'kite' ? r * 0.85 : move === 'close' ? 20 : move === 'bow' ? r * 0.7 : r * 0.5), plan: 'none', manualAmmo: true, boarder: move === 'close', battleSail: true, bowOn: move === 'bow' };
+      me.spec.ai = { range: keep, plan: 'none', manualAmmo: true, boarder: move === 'close', battleSail: true, bowOn: move === 'bow' };
       const sail = me.sailLevel;
       G.api.updateAI(ai, me, foe, G.world, dt, G.api.aiApi);
       if (step.anchor && !me.anchored && d < r * (step.anchorAt || 0.8)) me.sailLevel = Math.min(sail, 1);
@@ -346,6 +371,11 @@
       const r = H.leg({ ...cfg, mission: 'm0', leg: 0, hull: cfg.a, maxT: cfg.maxT || 480, route: (S) => {
         const old = S.by.pirate, [x, z, h] = [old.pos.x, old.pos.z, old.heading];
         G.api.clearShips();
+        if (cfg.flip) { // trade places: she starts where you would have, you where she would have
+          const P = G.player, [px, pz, ph] = [P.pos.x, P.pos.z, P.heading];
+          P.pos.x = x; P.pos.z = z; P.heading = h;
+          S.by.pirate = G.api.addShip(specB, 1, px, pz, ph, { id: 'pirate', speed: 6 });
+        } else
         S.by.pirate = G.api.addShip(specB, 1, x, z, h, { id: 'pirate', speed: 6 });
         return steps;
       } });

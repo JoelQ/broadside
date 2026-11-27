@@ -136,6 +136,8 @@ node tools/balance/story.mjs /tmp/run.json --only 'prep board'
   fights on its own?"
 - **Guns bearing**: the share of the fight with only our guns bearing, only hers, both, neither, or boarding, and the
   longest stretch where neither side could fire.
+  The record also keeps `contact` (the second either side's guns first bore), `idle` (the share of the fight after that
+  with neither bearing: dead time, not counting the approach) and `gauge` (the share each side held the weather gauge).
 - `out/story/index.html` has the table, and the first few fights of each cell drawn as strips: hull, sails and crew
   for both ships, what bore, and what shot was loaded (`--fights 3`, `--out`).
 - `STORY=1` works with `replay.mjs` too (the record is in its JSON line), and campaign legs keep it as well. Booking
@@ -161,6 +163,9 @@ node tools/balance/matrix.mjs --hulls sloop,brig,xebec --captains guns,hug,prep
   in the attempt. This is the "can a small ship board a big one?" table.
 - **Dominance**: a hull that does no better against anyone than another hull and is no harder to beat. One that is
   dominated has no reason to be sailed.
+- A duel cell with `flip: true` trades the two ships' starting places, so the attacker starts upwind instead of the
+  defender. The start decides a lot: on the stock captains the great ship is beaten 29% of the time from the
+  defender's usual (upwind) start and 59% from the other.
 - `out/matrix/index.html` draws both as heatmaps (hover a cell for every captain's figure); `data.json` keeps every
   fight's seed. `DIALS`, `STORY` and `SEED` work as with `run.mjs`.
 
@@ -254,6 +259,8 @@ node tools/balance/run.mjs tools/balance/legs.mjs 4 /tmp/legs.json
 node tools/balance/legreport.mjs /tmp/legs.json
 ```
 
+- A fight step can also take `keepOff: true` (bear away from a stronger boarder inside 75 yd rather than be grappled)
+  and `windward: true` (beat up to a station upwind of her before fighting, whenever she holds the weather gauge).
 - `legs.mjs` is the grid: every leg x six hulls x that leg's routes. Filter with `LEGS=<regex>`,
   `HULLS=sloop,brig`, `ROUTES=<regex>`; `FIT=1` fits every ship out fully.
 - `legreport.mjs` prints a table per leg and flags any leg that fewer than three kinds of ship, or
