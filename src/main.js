@@ -690,6 +690,7 @@ function beginBattle() {
   const tip = G.mode === 'skirmish' ? ENEMIES[G.level].tip : G.sc.tip;
   if (!G.coach && tip) setTimeout(() => G.state === 'battle' && toast(tip, '', 6000), 1500);
   sfx.horn(true);
+  if (__PLAYTEST__) PT.battleStart();
 }
 // A ship leaves the fight: sunk, struck as a wreck, taken by boarding, or (a battery) silenced.
 function shipOut(s, how) {
@@ -719,6 +720,7 @@ function endBattle(outcome) {
   if (G.state === 'ending') return;
   const p = G.player, bad = outcome === 'lost' || outcome === 'overrun' || outcome === 'failed';
   G.outcome = outcome; G.state = 'ending';
+  if (__PLAYTEST__) PT.battleEnd(outcome);
   G.endT = outcome === 'sunk' ? 6.5 : bad ? 5 : 3.2;
   G.pending.length = 0; G.bd = null;
   setMode('battle');
@@ -1501,6 +1503,7 @@ function togglePause() {
 const keys = {};
 function tap(k) {
   const p = G.player;
+  if (__PLAYTEST__) PT.input(k); // the fight recorder
   if (k === 'p' || k === 'escape') return togglePause();
   if (k === 'm') return toast(sfx.toggleMute() ? 'Sound off' : 'Sound on', '', 1200);
   if (G.paused) return;
@@ -1546,8 +1549,8 @@ document.addEventListener('click', (e) => {
   const d = t.dataset;
   if (d.fs) toggleFull();
   else if (d.act) act(d.act);
-  else if (d.ammo) selectAmmo(d.ammo);
-  else if (d.fire) fire(G.player, d.fire);
+  else if (d.ammo) { if (__PLAYTEST__) PT.input(String(AMMO_KEYS.indexOf(d.ammo) + 1)); selectAmmo(d.ammo); } // recorded as the key that does the same
+  else if (d.fire) { if (__PLAYTEST__) PT.input({ port: 'q', stbd: 'e', bow: 'f' }[d.fire]); fire(G.player, d.fire); }
   else if (d.spot) { G.shop = G.shop === d.spot ? null : d.spot; sfx.init(); sfx.ui(); renderPort(); }
   else if (d.tapkey) tap(d.tapkey);
 });
@@ -1610,6 +1613,7 @@ canvas.addEventListener('dblclick', () => (G.cam.yaw = 0));
 // ---------- main loop ----------
 const hush0 = (now) => now === 'intro' && G.mode === 'campaign';
 function update(dt) {
+  if (__PLAYTEST__) dt = PT.frame(dt); // the fight recorder
   G.t += dt;
   const st = G.state;
   if (st === 'battle') battleUpdate(dt);

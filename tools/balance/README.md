@@ -209,6 +209,26 @@ planned for dominates" (look at it with `STORY=1`). The first search found that 
 range beats the great ship 75% of the time, where every stock captain lost all 20 fights. That plan is now the
 matrix's `bow` captain.
 
+## Fights a person played: recorded playtests
+
+The playtest build (`npm run build:playtest`) records every campaign fight from the moment you engage: the seed the
+rules run on from then, every ship's state at that moment, then each frame's time step, the rudder and every key
+(HUD clicks are recorded as the keys that do the same). Copy one from the pause menu ("Copy this fight so far") or
+from the playtest panel's Recorded fights (the last six are kept), save it to a file, and play it again headless:
+
+```bash
+node tools/balance/replay-play.mjs fight.json
+STORY=1 node tools/balance/replay-play.mjs fight.json --out /tmp/played.json && node tools/balance/story.mjs /tmp/played.json
+DIALS='{"AMMO.round.hull":{"mul":1.5}}' node tools/balance/replay-play.mjs fight.json
+```
+
+It reports the outcome against the recorded one, and whether the ship kept to the recorded track (checked every 60
+frames). On the same rules it keeps to it exactly: a 55-second fight with hits on both sides replays with no drift.
+With other rules (`DIALS`, or `DIST=` an older or newer build) the replay shows where that very fight, played the
+same way, would have gone differently. Inputs are replayed blind, so once a fight drifts, later keys land in a
+different situation: read the outcome after a drift as a hint, not a verdict. A fight where the playtest controls
+(win, heal, unsinkable) were used is marked and won't match.
+
 ## Campaign legs
 
 The same harness plays campaign fights. `H.leg(cfg)` sets up one leg of one mission for a given

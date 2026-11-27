@@ -100,7 +100,7 @@
         const lostOn = o === 'overrun' || o === 'captured' || (o === 'won' && viaBoard) ? 'crew' : 'hull';
         const book = won ? dealt : taken, res = won ? lostOn : o === 'overrun' ? 'crew' : 'hull';
         const sh = share(book, res), top = Object.entries(sh).sort((a, b) => b[1] - a[1]);
-        const cause = o === 'timeout' ? `timed out${longestLull > 30 ? `, ${Math.round(longestLull)}s with neither side's guns bearing` : ''}`
+        const cause = o === 'timeout' || o === 'unfinished' ? `${o === 'timeout' ? 'timed out' : 'still going'}${longestLull > 30 ? `, ${Math.round(longestLull)}s with neither side's guns bearing` : ''}`
           : `${o}: ${won ? 'her' : 'our'} ${res} ${top.map(([c, v]) => `${c} ${Math.round(v * 100)}%`).join(', ') || '(no damage recorded)'}`;
         const T = t || 1;
         return { cause, decisive: res, dealt: round(dealt), taken: round(taken), share: { dealt: { hull: share(dealt, 'hull'), sails: share(dealt, 'sails'), crew: share(dealt, 'crew') }, taken: { hull: share(taken, 'hull'), sails: share(taken, 'sails'), crew: share(taken, 'crew') } },
@@ -299,7 +299,7 @@
       st.side = cfg.side || null; st.stage = C.order.indexOf(cfg.mission); st.officers = cfg.officers || ['pilot', 'carpenter', 'gunner', 'marines'].slice(0, Math.max(0, st.stage));
       st.stable = [{ id: 'h1', hull: cfg.hull, name: 'Test', fit: {} }]; st.seed = seedFor(cfg);
       const kit = { runner: FULL.runner, line: FULL.line, boarder: FULL.boarder, gun: FULL.gun, galley: { marines: 2, hooks: 2, stroke: 2, oak: 2 } };
-      G.ship = 'h1'; G.fit = cfg.fit ? { h1: kit[{ sloop: 'runner', brig: 'line', xebec: 'boarder', merchantman: 'gun', flagship: 'gun', galley: 'galley', galliot: 'galley' }[cfg.hull]] } : {};
+      G.ship = 'h1'; G.fit = cfg.fitSet ? { h1: cfg.fitSet } : cfg.fit ? { h1: kit[{ sloop: 'runner', brig: 'line', xebec: 'boarder', merchantman: 'gun', flagship: 'gun', galley: 'galley', galliot: 'galley' }[cfg.hull]] } : {};
       C.rebuild(); C.man();
       const P0 = G.player; P0.stock = { chain: 8, grape: 8, fire: 5, ...(cfg.stock || {}) };
       C.startMission();
@@ -351,6 +351,53 @@
       } });
       r.how = r.foes.includes('captured') ? 'board' : r.o === 'won' ? 'guns' : r.o;
       return r;
+    },
+    // play a fight a person recorded in the playtest build (src/playtest.js), exactly: the same leg, ship and
+    // fittings, every ship as it was when they engaged, the same dice, then their rudder and keys frame by frame.
+    // { rec, dials, story } -> the usual leg result, plus how far the replay kept to the recording.
+    replay(cfg) {
+      const r = cfg.rec, P0 = () => G.player;
+      H.setupLeg({ side: r.side, mission: r.mission, leg: r.leg, hull: r.hull, fitSet: r.fit, officers: r.officers, carry: r.carry, seed: r.seed, dials: cfg.dials });
+      if (G.ships.length !== r.start.ships.length) return { o: 'mismatch', why: `${G.ships.length} ships here, ${r.start.ships.length} in the recording` };
+      G.ships.forEach((s, i) => {
+        const o = r.start.ships[i];
+        if (o.seedSign != null) s.spec.seedSign = o.seedSign;
+        for (const [k, v] of Object.entries(o)) {
+          if (k === 'id' || k === 'cls' || k === 'seedSign' || k === 'target') continue;
+          if (v && typeof v === 'object' && 'x' in v && 'z' in v && s[k] && typeof s[k].set === 'function') s[k].set(v.x, v.y, v.z);
+          else if (v && typeof v === 'object' && !Array.isArray(v)) s[k] = Object.assign(s[k] || {}, v);
+          else s[k] = v;
+        }
+        s.target = o.target >= 0 ? G.ships[o.target] : null;
+      });
+      Object.assign(G.world.wind, r.start.wind); Object.assign(G, r.start.g);
+      G.seedRng(r.seed);
+      const turns = r.turn.flatMap(([v, n]) => Array(n).fill(v)), keys = new Map();
+      for (const [f, k] of r.keys) { if (!keys.has(f)) keys.set(f, []); keys.get(f).push(k); }
+      const SKIP = new Set(['p', 'escape', 'm', 'v', 'h']), checks = new Map(r.checks.map((c) => [c[0], c]));
+      let turn = 0, drift = null, i = 0, boarded = 0, aground = 0;
+      G.bot = (me) => { me.input.turn = turn; };
+      const P = P0(), rec = cfg.story ? recorder(P) : null;
+      for (; i < r.dt.length && (G.state === 'battle' || G.state === 'boarding'); i++) {
+        const c = checks.get(i);
+        if (c && !drift) { const d = Math.hypot(P.pos.x - c[1] / 100, P.pos.z - c[2] / 100); const dh = P.hull - c[3] / 100; if (d > 1 || Math.abs(dh) > 0.5) drift = { frame: i, t: +r.dt.slice(0, i).reduce((a, b) => a + b / 10000, 0).toFixed(1), yards: +d.toFixed(1), hull: +dh.toFixed(1) }; }
+        G.paused = false;
+        for (const k of keys.get(i) || []) if (!SKIP.has(k)) G.api.tap(k);
+        turn = turns[i] || 0;
+        const dt = r.dt[i] / 10000;
+        if (G.state === 'boarding') boarded = 1;
+        if (P.aground > 0) aground += dt;
+        G.tick(dt, 1);
+        if (rec) rec.tick(dt);
+      }
+      G.paused = true;
+      const o = G.state === 'battle' || G.state === 'boarding' ? 'unfinished' : G.outcome;
+      const res = { seed: r.seed, o, win: o === 'won', recorded: r.outcome, same: o === r.outcome, drift, frames: i, t: Math.round(G.battleT), hull: +(Math.max(0, P.hull) / P.hullMax).toFixed(3), recHull: r.hull, crew: +(P.crew / P.crewMax).toFixed(2), boarded, aground: Math.round(aground),
+        foes: G.ships.filter((s) => s.side !== P.side).map((s) => s.out || 'up').join(','), pos: [Math.round(P.pos.x), Math.round(P.pos.z)] };
+      if (rec) res.story = rec.finish(o, boarded);
+      if (G.state === 'boarding') G.api.cutGrapples();
+      G.bot = null; G.state = 'story'; G.outcome = null; P.sinking = 0; G.fast = false; restoreDials();
+      return res;
     },
     fight(cfg) {
       applyDials(cfg.dials);
