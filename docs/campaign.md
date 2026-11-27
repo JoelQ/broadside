@@ -112,8 +112,8 @@ where most players will fill their stable.
 enemy galleys come out to fight; the wind fills in during the battle and brings an enemy
 sailing ship with it. In a sailing ship you must live through the calm and then turn on them.
 In a galley you meet them oar to oar and try to finish before the wind arrives. Heavy:
-anchor on a spring, hold them off with grape and wait for the breeze. Nimble: use every
-cat's-paw of wind to keep your broadside on their bows. Oared: fight them on their own terms.
+anchor on a spring, hold them off with grape and wait for the breeze. Nimble: a light hull
+still moves in the calm, so keep your broadside on their bows. Oared: fight them on their own terms.
 
 **4. The straits.** Venice carries the war to the enemy's door by blockading the Dardanelles.
 It is the furthest the story goes from Crete, and it reverses the roles: Venice is the
@@ -252,7 +252,7 @@ Where the game differs from the proposal above, and why.
     ground anything, even a sloop; plain shoals stop only deeper ships. With the pilot aboard
     every bank carries its depth, in red where your ship would stick. A ship aground lists over.
   - In the straits, white lines on the water run with the current, and a note gives its set.
-  - Cat's-paws are local: dark ripple patches drifting downwind, with real wind inside them.
+  - Cat's-paws (local puffs in a calm) were removed in November 2026: hardly anyone met one.
   - Wind shifts are larger (25 to 55 degrees), swing round in a few seconds, and are reported in
     points with what they mean for your heading.
   - A ship carries her way through a turn and answers her helm fully from 30% of her top speed.
