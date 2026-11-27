@@ -118,17 +118,6 @@ function canvasTex(n, draw) {
   const c = document.createElement('canvas'); c.width = c.height = n; draw(c.getContext('2d'), n);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
-// dark ripples, densest in the middle
-const rippleTexture = () => canvasTex(256, (x, n) => {
-  const rnd = mulberry(7);
-  for (let i = 0; i < 900; i++) {
-    const a = rnd() * 6.28, d = Math.sqrt(rnd()) * n * 0.48, px = n / 2 + Math.cos(a) * d, py = n / 2 + Math.sin(a) * d;
-    x.strokeStyle = `rgba(255,255,255,${(0.55 * (1 - d / (n * 0.5))).toFixed(3)})`; x.lineWidth = 1 + rnd() * 1.5;
-    x.beginPath(); x.moveTo(px, py); x.lineTo(px + 6 + rnd() * 10, py + (rnd() - 0.5) * 3); x.stroke();
-  }
-  const g = x.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2); g.addColorStop(0, 'rgba(255,255,255,0.45)'); g.addColorStop(1, 'rgba(255,255,255,0)');
-  x.fillStyle = g; x.fillRect(0, 0, n, n);
-});
 // a sand bank seen through the water: bright in the middle, fading out
 const bankTexture = () => canvasTex(128, (x, n) => {
   const g = x.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2);
@@ -190,8 +179,7 @@ export class WorldView {
   constructor(scene, sea) {
     this.scene = scene; this.sea = sea; sea.view = this;
     this.shoalGroup = new THREE.Group(); scene.add(this.shoalGroup);
-    this.pawGroup = new THREE.Group(); scene.add(this.pawGroup);
-    this.tex = { ripple: rippleTexture(), bank: bankTexture(), foam: foamTexture() };
+    this.tex = { bank: bankTexture(), foam: foamTexture() };
     // current marks: foam lines that ride the current, so the set of the water is something you can see
     const NF = 150;
     this.flow = Array.from({ length: NF }, () => ({ x: 0, z: 0, life: 0, max: 1, vx: 0, vz: 0 }));
@@ -316,25 +304,8 @@ export class WorldView {
       }
     }
   }
-  // cat's-paws: in a calm the air comes in patches you can see as dark ripples, and a ship inside one has wind (sea.strAt)
-  clearPaws() { for (const p of this.sea.paws) { this.pawGroup.remove(p.mesh); p.mesh.geometry.dispose(); } }
   updateFeatures(dt, focus) {
-    const sea = this.sea, w = sea.wind, wx = Math.sin(w.dir), wz = Math.cos(w.dir);
-    if (w.base < 0.3 && w.str < 0.5 && sea.paws.length < 6 && Math.random() < dt * 0.6) {
-      const a = Math.random() * 6.28, d = 90 + Math.random() * 330, r = 45 + Math.random() * 35;
-      const g = new THREE.CircleGeometry(r, 32); g.rotateX(-Math.PI / 2);
-      const mesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: this.tex.ripple, color: 0x0e2638, transparent: true, opacity: 0, depthWrite: false, fog: false }));
-      mesh.renderOrder = 1; this.pawGroup.add(mesh);
-      sea.paws.push({ x: focus.x + Math.sin(a) * d - wx * 60, z: focus.z + Math.cos(a) * d - wz * 60, r, life: 0, max: 20 + Math.random() * 14, f: 0, mesh });
-    }
-    for (let i = sea.paws.length - 1; i >= 0; i--) {
-      const p = sea.paws[i];
-      p.life += dt; p.x += wx * 2.5 * dt; p.z += wz * 2.5 * dt;
-      p.f = Math.min(1, p.life / 3, (p.max - p.life) / 3);
-      if (w.base >= 0.3) p.f = Math.min(p.f, 0), p.life = Math.max(p.life, p.max);
-      p.mesh.position.set(p.x, 0.8, p.z); p.mesh.material.opacity = 0.55 * Math.max(0, p.f); p.mesh.rotation.y += dt * 0.02;
-      if (p.life >= p.max) { this.pawGroup.remove(p.mesh); p.mesh.geometry.dispose(); sea.paws.splice(i, 1); }
-    }
+    const sea = this.sea;
     for (const r of this.shoalRings || []) r.material.opacity = 0.5 + 0.25 * Math.sin(sea.time * 1.7 + r.userData.ph);
     // current marks
     const pos = this.flowMesh.geometry.attributes.position, col = this.flowMesh.geometry.attributes.color;

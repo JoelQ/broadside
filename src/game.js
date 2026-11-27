@@ -976,7 +976,6 @@ function worldNews(p) {
     if (s.spent && !s.wasSpent && s === p) toast('Your oarsmen are spent: she lies still until they have their breath', 'bad', 3500);
     s.wasSpent = s.spent;
   }
-  if (world.paws.length && w.base < 0.3) toastOnce('paws', 9999, 'Dark ripples on the water are cat’s-paws: there is wind inside them', '', 5000);
   if (world.currentAt && G.state === 'battle') {
     const c = world.currentAt(p.pos.x, p.pos.z), v = Math.hypot(c[0], c[1]);
     if (v > 1.5) toastOnce('current', 9999, `The current sets ${(v * 0.9).toFixed(1)} knots ${c[1] < 0 ? 'south, down the strait' : 'north'}: the white lines on the water show where it runs`, '', 5000);

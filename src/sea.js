@@ -68,7 +68,7 @@ export const ENVS = {
 };
 
 
-const NONE = { env() {}, island() {}, islands() {}, coast() {}, clearIslands() {}, shoals() {}, clearPaws() {} };
+const NONE = { env() {}, island() {}, islands() {}, coast() {}, clearIslands() {}, shoals() {} };
 
 export class Sea {
   constructor(view = NONE) {
@@ -77,7 +77,6 @@ export class Sea {
     this.amp = 1;
     this.wind = { dir: 0.6, target: 0.6, timer: 40, str: 1, strTarget: 1, base: 1, steady: false };
     this.shoals = []; this.currentAt = null; this.envName = 'noon';
-    this.paws = []; // cat's-paws, made by the view (see world.js)
     this.islands = []; this.coasts = []; this.moles = []; this.pieces = []; this.pieceGrid = new Map();
     this.setEnv('noon');
   }
@@ -126,7 +125,7 @@ export class Sea {
     }
     return y;
   }
-  clearIslands() { this.islands = []; this.coasts = []; this.moles = []; this.pieces = []; this.pieceGrid = new Map(); this.view.clearIslands(); this.setShoals([]); this.currentAt = null; this.clearPaws(); this.setWind(undefined, 1, true); this.wind.steady = false; this.wind.next = null; }
+  clearIslands() { this.islands = []; this.coasts = []; this.moles = []; this.pieces = []; this.pieceGrid = new Map(); this.view.clearIslands(); this.setShoals([]); this.currentAt = null; this.setWind(undefined, 1, true); this.wind.steady = false; this.wind.next = null; }
   // wind strength: 0 is a dead calm, 1 a working breeze, 1.6 a gale
   setWind(dir, str, now) {
     const w = this.wind;
@@ -148,12 +147,6 @@ export class Sea {
     this.shoals = list.map(makeShoal);
     this.view.shoals(this.shoals, marked, draught);
   }
-  clearPaws() { this.view.clearPaws(); this.paws = []; }
-  strAt(x, z) {
-    let s = this.wind.str;
-    for (const p of this.paws) { const d = Math.hypot(x - p.x, z - p.z); if (d < p.r) s += 0.75 * p.f * (1 - (d / p.r) ** 2); }
-    return s;
-  }
   shoalAt(x, z, draught) {
     for (const s of this.shoals) if (draught > s.depth && s.at(x, z) > 0) return s;
     return null;
@@ -172,7 +165,6 @@ export class Sea {
     if (w.timer <= 12 && w.next == null && !w.steady && w.base >= 0.3) w.next = (rng() < 0.5 ? -1 : 1) * (0.45 + rng() * 0.55);
     if (w.timer <= 0) { w.timer = 45 + rng() * 35; if (w.next != null) { w.target = w.dir + w.next; w.shifted = w.next; } w.next = null; }
     w.dir += (w.target - w.dir) * Math.min(1, dt * 0.22);
-    // in a calm the air comes in cat's-paws: brief puffs a light ship can use
     w.strTarget = w.base;
     w.str += (w.strTarget - w.str) * Math.min(1, dt * 0.25);
     this.amp = this.baseAmp * (0.25 + 0.75 * Math.min(1, w.str)) * (w.str > 1.25 ? 1.5 : 1);

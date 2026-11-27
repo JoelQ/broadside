@@ -143,7 +143,7 @@ export class Ship {
   }
   maxSpeedNow(world) {
     const off = wrap(this.heading - world.wind.dir);
-    const str = world.strAt ? world.strAt(this.pos.x, this.pos.z) : world.wind.str ?? 1, windF = windFor(str, this.mass);
+    const str = world.wind.str ?? 1, windF = windFor(str, this.mass);
     const v = this.spec.speed * SAILS[this.sailLevel].spd * polar(off, this.spec.point) * (0.25 + 0.75 * this.sailR) * (this.hullR < 0.3 ? 0.82 : 1) * windF;
     const s = this.sailLevel > 0 ? Math.max(v, (this.spec.sweeps || 0) * this.crewR) : v; // sweeps: oars give a floor under the wind
     return Math.max(s, this.oarSpeed(world));
@@ -161,7 +161,7 @@ export class Ship {
       const m = this.mass, rowing = oars > 0 && oars >= tgt - 0.01;
       this.speed += (tgt - this.speed) * Math.min(1, (dt * (held ? 2.2 : tgt > this.speed ? (rowing ? 0.8 : HANDLING.gather) : HANDLING.shed)) / m ** 0.8);
       this.rudder += clamp(this.input.turn - this.rudder, -dt * 2.2, dt * 2.2);
-      const str = world.strAt ? world.strAt(this.pos.x, this.pos.z) : world.wind.str ?? 1;
+      const str = world.wind.str ?? 1;
       const floor = helmFloor(m) * clamp(str, 0, 1) * drive(this), way = floor + (1 - floor) * clamp(this.speed / (HANDLING.helmAt * sp.speed), 0, 1);
       // the hull swings toward the rate the rudder asks for; a heavy hull takes longer to start and to stop swinging.
       // At anchor she is hauled round on a spring, slowly but whatever the wind; aground she does not answer at all.
