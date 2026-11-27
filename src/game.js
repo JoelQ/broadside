@@ -24,6 +24,14 @@ const gauss = () => (rng() + rng() + rng() - 1.5) * 2; // ~unit std
 const GRAV = 22;
 let BOARD_SPEED = 6.5;
 // The boarding numbers, in one place so the balance harness can dial them (tools/balance/README.md).
+// What a collision costs, as a share of her own hull for each yd/s she was making (closing speed, between two
+// ships). A share, so a big ship pays as much as a small one and running into another ship is never worth it.
+const COLLIDE = {
+  ship: 0.006, // another ship: both pay
+  rock: 0.01, // an island, a coast, a sea wall or a fort: the worst of it
+  shoal: 0.003, // running onto a bank: she sticks, and a little damage
+  min: 3, // slower than this (yd/s) against rock or another ship, she only scrapes
+};
 const BOARD = {
   slow: 7, // grapples only hold a ship making less than this (about 6 knots): slow her first
   hullReady: 0.5, // share of a crew's fighting strength that depends on her hull: a sinking ship fights at 1 - this
@@ -63,7 +71,7 @@ const G = {
 // world clock, so that starts again too.
 G.seedRng = (seed) => { seedRng(seed); sea.time = 0; }; G.rngSeed = rngSeed;
 // The tuning tables, so the balance harness can try other numbers in a fight without a rebuild (tools/balance/README.md).
-G.dials = { BOARD, HANDLING, AMMO, CAL, SAILS, HULLS, GRADE, OFFICERS, PLAYER_SPEC, ENEMIES, KITS };
+G.dials = { BOARD, COLLIDE, HANDLING, AMMO, CAL, SAILS, HULLS, GRADE, OFFICERS, PLAYER_SPEC, ENEMIES, KITS };
 
 // Any ship you have boarded and taken is yours to command. In your hands she keeps her hull
 // and her handling, under your colours and with your gunners.
@@ -367,10 +375,9 @@ function collide(a, b) {
     const nx = dx / d, nz = dz / d, rel = relSpeed(a, b);
     a.pos.x -= nx * ov * 0.5; a.pos.z -= nz * ov * 0.5; b.pos.x += nx * ov * 0.5; b.pos.z += nz * ov * 0.5;
     if (a.fire > 0 && b.fire === 0 && rng() < 0.02) { b.fire = 1; b.fireT = 11; } else if (b.fire > 0 && a.fire === 0 && rng() < 0.02) { a.fire = 1; a.fireT = 11; }
-    if (a.ramCd <= 0 && rel > 5 && (G.state === 'battle' || G.state === 'boarding')) {
+    if (a.ramCd <= 0 && rel > COLLIDE.min && (G.state === 'battle' || G.state === 'boarding')) {
       a.ramCd = b.ramCd = 1.6;
-      const dmg = rel * 1.3;
-      a.hull -= dmg; b.hull -= dmg; a.speed *= 0.6; b.speed *= 0.6;
+      a.hull -= a.hullMax * COLLIDE.ship * rel; b.hull -= b.hullMax * COLLIDE.ship * rel; a.speed *= 0.6; b.speed *= 0.6;
       fx.wood(new Vec3((ca[0] + cb[0]) / 2, 2, (ca[1] + cb[1]) / 2), 18);
       if (a.isPlayer || b.isPlayer) { sfx.thud(1); G.shake = 1; toastOnce('ram', 2, 'Collision!', 'bad'); }
     }
@@ -384,7 +391,7 @@ function collideIslands(s) {
     const bx = s.pos.x + s.fwdX * s.spec.L * 0.3, bz = s.pos.z + s.fwdZ * s.spec.L * 0.3;
     const sh = world.shoalAt(bx, bz, s.spec.D) || world.shoalAt(s.pos.x, s.pos.z, s.spec.D);
     if (sh) {
-      s.aground = 7 + (s.spec.D - sh.depth) * 6 + s.speed * 0.6; s.hull -= 3 + s.speed; s.speed = 0; s.shoal = sh;
+      s.aground = 7 + (s.spec.D - sh.depth) * 6 + s.speed * 0.6; s.hull -= s.hullMax * COLLIDE.shoal * s.speed; s.speed = 0; s.shoal = sh;
       sfx.thud(camVol(s.pos));
       if (s.isPlayer) { toast('Aground! The hands are working her off', 'bad', 3500); G.shake = 1; }
       else if (s.side !== G.player.side && G.state === 'battle') floater('Aground!', 'good rake', _v.set(s.pos.x, s.mastH * 0.8, s.pos.z).clone());
@@ -411,8 +418,8 @@ function collideIslands(s) {
     const dx = c[0] - isl.x, dz = c[1] - isl.z, d = Math.hypot(dx, dz) || 0.01, ov = isl.r + s.spec.B * 0.5 - d;
     if (ov <= 0) continue;
     s.pos.x += (dx / d) * ov; s.pos.z += (dz / d) * ov;
-    if (s.ramCd <= 0 && s.speed > 3) {
-      s.ramCd = 1.6; s.hull -= 6 + s.speed; sfx.thud(camVol(s.pos));
+    if (s.ramCd <= 0 && s.speed > COLLIDE.min) {
+      s.ramCd = 1.6; s.hull -= s.hullMax * COLLIDE.rock * s.speed; sfx.thud(camVol(s.pos));
       if (s.isPlayer) { toast('Aground on the rocks!', 'bad'); G.shake = 1; }
     }
     s.speed *= 0.9;
