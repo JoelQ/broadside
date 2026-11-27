@@ -7,13 +7,8 @@ moving (`duel`, `kite`, `hug` the stern, `close` to board), a shot policy (`roun
 `fire`, `combo`) and a boarding policy (`never`, `rush`, `odds`). Any ownable ship, stock or fully
 fitted, against any of the five pirates.
 
-It drives a headless browser, so it needs [Playwright](https://playwright.dev) and its Chromium
-(`npm install --no-save playwright && npx playwright install chromium`). Build the game first, then run
-a jobs file:
-
-```bash
-npm run build
-```
+It runs the game's rules in plain Node, straight from `src/`, one worker thread per core (`tools/sim/`): no build
+and no browser. Run a jobs file:
 
 ```bash
 node tools/balance/run.mjs tools/balance/grid.mjs 6 /tmp/grid.json
@@ -23,13 +18,13 @@ node tools/balance/run.mjs tools/balance/grid.mjs 6 /tmp/grid.json
 node tools/balance/report.mjs /tmp/grid.json
 ```
 
-- `harness.js` is injected into the built page and exposes `H.fight(cfg)`.
-- `run.mjs` plays a list of fights across four headless pages (`play.mjs`) and prints one line per cell.
+- `harness.js` runs on top of the game (in Node, or injected into a built page) and exposes `H.fight(cfg)`.
+- `run.mjs` plays a list of fights across every core (`play.mjs`) and prints one line per cell.
 - `grid.mjs` is the full grid: every ship x stock/fitted x captain x pirate.
 - `report.mjs` prints win-rate tables, which victory types are reachable, what each shot type adds
   over round shot, and what fittings add.
 
-About 3 fights a second. With 6 runs per cell each figure is rough (one fight is 17 points), so
+About 40 skirmish fights or 9 campaign legs a second on 4 cores (a built page in Chromium managed about 2 legs a second). With 6 runs per cell each figure is rough (one fight is 17 points), so
 confirm anything surprising with a focused jobs file at 20 runs per cell before changing numbers.
 The captains are competent, not clever: a result of 0% means "not with these captains", and a
 person may do better or worse.
@@ -40,7 +35,7 @@ Every fight is seeded: shot fall, damage, fires, the AI's choices and wind shift
 source (`src/rng.js`), and every result records its seed. Smoke, sparks and the crew stay on
 `Math.random`, so whether anything is drawn never changes what happens.
 
-Each fight also starts from a clean slate, whatever ran before it in the same page: the harness stops the game's
+Each fight also starts from a clean slate, whatever ran before it in the same worker: the harness stops the game's
 own frame loop (fights tick the rules directly, with nothing drawn), and resets the one flag that used to carry
 over (`G.canBoard`, which let a few fights open with an instant boarding). Runs made before November 2026 could
 differ in a few fights in a hundred depending on run order, so don't compare them with newer ones.
@@ -54,7 +49,7 @@ differ in a few fights in a hundred depending on run order, so don't compare the
 
 ```bash
 SEED=1000 node tools/balance/run.mjs tools/balance/grid.mjs 6 /tmp/before.json
-# change the rules, npm run build
+# change the rules
 SEED=1000 node tools/balance/run.mjs tools/balance/grid.mjs 6 /tmp/after.json
 node tools/balance/compare.mjs /tmp/before.json /tmp/after.json
 ```
@@ -63,6 +58,19 @@ It lists the cells whose win rate moved, biggest first, with how many fights fli
 that flipped changed because of the rules, not the dice, so a small change shows up with far fewer runs
 than comparing two unseeded win rates. It's still the same captains on the same few seeds, so confirm
 anything that matters with more runs or a different `SEED`.
+
+### Other versions of the game
+
+`SRC=<checkout>` plays another checkout's `src/` (a `git worktree` of main, say) with this checkout's harness, so
+both versions are played the same way. A version from before `tools/sim/` existed can only be played as a build, in
+headless Chromium: build it, and pass `DIST=<its dist/index.html>`. That needs [Playwright](https://playwright.dev)
+and its Chromium (`npm install --no-save playwright && npx playwright install chromium`). `BROWSER=1` plays this
+checkout's `dist/index.html` the same way.
+
+Node and Chromium agree on every fight's result to the last digit nearly always, but not quite always: their maths
+libraries round `Math.sin`, `Math.exp` and the like differently in the last bit for a few inputs in a hundred, and
+in a long fight that can grow into a different outcome (3 of 674 cells in the parity check below). So compare Node
+with Node and a build with a build, as `checks.yml` does; never a Node run with a browser run.
 
 ## Trying other numbers without a rebuild
 
@@ -224,7 +232,8 @@ DIALS='{"AMMO.round.hull":{"mul":1.5}}' node tools/balance/replay-play.mjs fight
 
 It reports the outcome against the recorded one, and whether the ship kept to the recorded track (checked every 60
 frames). On the same rules it keeps to it exactly: a 55-second fight with hits on both sides replays with no drift.
-With other rules (`DIALS`, or `DIST=` an older or newer build) the replay shows where that very fight, played the
+It plays in Node by default; `DIST=<html>` plays it on a build in Chromium, as a recording made in Chromium will
+replay there with no drift at all. With other rules (`DIALS`, `SRC=` another checkout, or `DIST=` an older or newer build) the replay shows where that very fight, played the
 same way, would have gone differently. Inputs are replayed blind, so once a fight drifts, later keys land in a
 different situation: read the outcome after a drift as a hint, not a verdict. A fight where the playtest controls
 (win, heal, unsinkable) were used is marked and won't match.
@@ -236,7 +245,7 @@ side and hull and follows a **route**: a list of steps such as "sail to this poi
 this way", "board her", "anchor on a spring once in range".
 
 ```bash
-NODE_PATH=... node tools/balance/run.mjs tools/balance/legs.mjs 4 /tmp/legs.json
+node tools/balance/run.mjs tools/balance/legs.mjs 4 /tmp/legs.json
 ```
 
 ```bash

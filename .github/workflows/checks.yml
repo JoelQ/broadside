@@ -63,17 +63,21 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
-      - run: npm install --no-save playwright && npx playwright install --with-deps chromium
-      - name: Build this branch and the branch it merges into
+      # the game runs headless in plain Node (tools/sim), straight from src/: no build, no browser. A base branch
+      # from before that is built and played in headless Chromium instead.
+      - name: Check out the branch it merges into
         run: |
-          npm run build
           git worktree add ../base "origin/$BASE"
-          (cd ../base && npm ci && npm run build)
-      # both builds play the same jobs on the same seeds, so a fight that changed outcome changed because of the rules
-      - name: Play every campaign leg on both builds
+          if [ ! -f ../base/tools/sim/headless.mjs ]; then
+            npm install --no-save playwright && npx playwright install --with-deps chromium
+            (cd ../base && npm ci && npm run build)
+          fi
+      # both versions play the same jobs on the same seeds, with this branch's harness, so a fight that changed outcome changed because of the rules
+      - name: Play every campaign leg on both versions
         run: |
-          STORY=lite node tools/balance/run.mjs tools/balance/legs.mjs "$RUNS" after.json > after.txt
-          STORY=lite DIST=../base/dist/index.html node tools/balance/run.mjs tools/balance/legs.mjs "$RUNS" before.json > before.txt || echo 'the base build could not be played' > before.txt
+          if [ -f ../base/tools/sim/headless.mjs ]; then export SRC=../base; else export DIST=../base/dist/index.html; fi
+          STORY=lite SRC= DIST= node tools/balance/run.mjs tools/balance/legs.mjs "$RUNS" after.json > after.txt
+          STORY=lite node tools/balance/run.mjs tools/balance/legs.mjs "$RUNS" before.json > before.txt || echo 'the base version could not be played' > before.txt
       - name: Report
         if: always()
         run: |

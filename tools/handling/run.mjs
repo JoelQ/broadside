@@ -2,17 +2,17 @@
 // from above with all the tracks laid over each other, plus polar roses and a chase table.
 //   node tools/handling/run.mjs [manoeuvre,...] [--hulls a,b] [--winds light,breeze,gale] [--out dir] [--png]
 //                               [--no-polar] [--no-chase]
-// Runs on dist/index.html (npm run build first); DIST=<html> runs another build. GHOST=<html> also runs a second
-// build (say a copy of dist from before a change) and draws its tracks dashed under this one's, with its numbers
+// Runs this checkout's src/ in plain Node (no build, no browser); DIST=<html or checkout> runs another version.
+// GHOST=<html or checkout> also runs a second version (say a worktree of main, or a copy of dist from before a change) and draws its tracks dashed under this one's, with its numbers
 // in brackets, so a rules change shows as the gap between the solid and the dashed line.
 // Writes <out>/<manoeuvre>-<wind>.svg, polar-<wind>.svg, chase.html, index.html (everything on one page) and
 // data.json; --png also writes PNGs and contact.png. Prints the numbers as tables. See README.md.
 import { createRequire } from 'module';
-import { mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'fs';
+import { Worker } from 'worker_threads';
 import { pathToFileURL, fileURLToPath } from 'url';
 import path from 'path';
 import os from 'os';
-const { chromium } = createRequire(import.meta.url)('playwright');
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 const args = process.argv.slice(2), flag = (n) => args.includes('--' + n), opt = (n, d) => (args.includes('--' + n) ? args[args.indexOf('--' + n) + 1] : d);
@@ -40,37 +40,63 @@ const ABOUT = {
 };
 const NAMES = only ? only.split(',') : Object.keys(ABOUT);
 
-// ---- run the simulations in one build
-// Every simulation is independent, so they are shared out among several browsers (each on its own
-// core): JOBS=<n> browsers per build, by default enough to fill the machine.
-const JOBS = +(process.env.JOBS || Math.max(1, Math.floor(os.cpus().length / (process.env.GHOST ? 2 : 1))));
-async function sample(file) {
+// ---- run the simulations in one version of the game
+// Every simulation is independent, so they are shared out among workers, one per core. A version is a checkout's
+// src/ (played in plain Node, in worker threads) or a built page (played in headless Chromium, a browser per job
+// runner, which needs Playwright). JOBS=<n> runners per version, by default enough to fill the machine.
+const repo = path.join(here, '../..');
+const JOBS = +(process.env.JOBS || Math.max(1, Math.floor(os.availableParallelism() / (process.env.GHOST ? 2 : 1))));
+async function sample(from) {
   const res = { man: {}, polar: {}, chase: {} }, jobs = [];
   for (const [w, str] of WINDS) {
-    for (const name of NAMES) for (const hull of HULLS) jobs.push([res.man, `${name}|${w}|${hull}`, (page) => page.evaluate(([h, s, n]) => HS.manoeuvre(h, s, n), [hull, str, name])]);
-    if (!flag('no-polar')) for (const hull of HULLS) jobs.push([res.polar, `${w}|${hull}`, async (page) => (await page.evaluate(([h, s]) => HS.polar(h, s), [hull, str])).polar]);
-    if (!flag('no-chase')) for (const how of ['upwind', 'abeam', 'downwind']) for (const a of HULLS) for (const b of HULLS) if (a !== b) jobs.push([res.chase, `${how}|${w}|${a}|${b}`, (page) => page.evaluate(([a, b, s, how]) => HS.chase(a, b, s, how), [a, b, str, how])]);
+    for (const name of NAMES) for (const hull of HULLS) jobs.push([res.man, `${name}|${w}|${hull}`, 'HS.manoeuvre', [hull, str, name]]);
+    if (!flag('no-polar')) for (const hull of HULLS) jobs.push([res.polar, `${w}|${hull}`, 'HS.polar', [hull, str], (r) => r.polar]);
+    if (!flag('no-chase')) for (const how of ['upwind', 'abeam', 'downwind']) for (const a of HULLS) for (const b of HULLS) if (a !== b) jobs.push([res.chase, `${how}|${w}|${a}|${b}`, 'HS.chase', [a, b, str, how]]);
   }
+  const name = from.dist ? path.basename(from.dist) : path.basename(path.resolve(from.root));
   let next = 0, done = 0;
+  const runner = from.dist ? browserRunner(from.dist) : nodeRunner(from.root);
   await Promise.all(Array.from({ length: Math.min(JOBS, jobs.length) }, async () => {
-    // a browser each: pages of one browser showing the same file share a renderer process, and so one core
-    const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
-    const page = await browser.newPage({ viewport: { width: 320, height: 200 } });
-    page.on('pageerror', (e) => console.error('PAGE ERROR', e.message));
-    await page.goto(pathToFileURL(path.resolve(file)).href);
-    await page.waitForTimeout(600);
-    for (const f of [path.join(here, '../balance/harness.js'), path.join(here, 'sim.js')]) await page.addScriptTag({ content: readFileSync(f, 'utf8') });
+    const call = await runner();
     while (next < jobs.length) {
-      const [into, key, run] = jobs[next++];
-      into[key] = await run(page);
-      if (++done % 100 === 0) process.stderr.write(`  ${path.basename(file)} ${done}/${jobs.length}\n`);
+      const [into, key, fn, a, pick] = jobs[next++], r = await call(fn, a);
+      into[key] = pick ? pick(r) : r;
+      if (++done % 100 === 0) process.stderr.write(`  ${name} ${done}/${jobs.length}\n`);
     }
-    await browser.close();
+    await call.close();
   }));
   return res;
 }
-const dist = process.env.DIST || path.join(here, '../../dist/index.html'), ghostFile = process.env.GHOST;
-const [cur, ghost] = await Promise.all([sample(dist), ghostFile ? sample(ghostFile) : null]);
+// a game in a worker thread, from a checkout's src/ (tools/sim)
+const nodeRunner = (root) => async () => {
+  if (!existsSync(path.join(root, 'tools/sim/worker.mjs'))) throw new Error(`${root} has no headless game (tools/sim): give its built page instead`);
+  const w = new Worker(path.join(root, 'tools/sim/worker.mjs'), { workerData: { root, extra: [path.join(here, 'sim.js')] } });
+  let wait = null, id = 0;
+  w.on('message', (m) => { const f = wait; wait = null; if (m.ready) f(); else if (m.error) f(null, m.error); else f(m.res); });
+  w.on('error', (e) => { console.error(e); process.exit(1); });
+  const ask = (msg) => new Promise((ok, no) => { wait = (r, e) => (e ? no(new Error(e)) : ok(r)); if (msg) w.postMessage(msg); });
+  await ask(null);
+  const call = (fn, args) => ask({ id: id++, kind: 'call', cfg: { fn, args } });
+  call.close = () => w.terminate();
+  return call;
+};
+// a built page in headless Chromium: a browser each, as pages of one browser share a renderer process, so one core
+const browserRunner = (file) => async () => {
+  const { chromium } = createRequire(import.meta.url)('playwright');
+  const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  const page = await browser.newPage({ viewport: { width: 320, height: 200 } });
+  page.on('pageerror', (e) => console.error('PAGE ERROR', e.message));
+  await page.goto(pathToFileURL(path.resolve(file)).href);
+  await page.waitForTimeout(600);
+  for (const f of [path.join(here, '../balance/harness.js'), path.join(here, 'sim.js')]) await page.addScriptTag({ content: readFileSync(f, 'utf8') });
+  const call = (fn, args) => page.evaluate(([fn, args]) => fn.split('.').reduce((o, k) => o[k], window)(...args), [fn, args]);
+  call.close = () => browser.close();
+  return call;
+};
+// DIST and GHOST each name a version: a built page (.html) or a checkout (its directory); by default this checkout
+const version = (v) => (!v ? { root: repo } : v.endsWith('.html') ? { dist: v } : { root: v });
+const dist = process.env.DIST || 'src', ghostFile = process.env.GHOST;
+const [cur, ghost] = await Promise.all([sample(version(process.env.DIST)), ghostFile ? sample(version(ghostFile)) : null]);
 mkdirSync(out, { recursive: true });
 writeFileSync(path.join(out, 'data.json'), JSON.stringify({ dist, ghost: ghostFile || null, hulls: HULLS, winds: WINDS, cur, ghostData: ghost }));
 
@@ -204,6 +230,7 @@ for (const [w] of WINDS) {
 }
 
 if (flag('png')) {
+  const { chromium } = createRequire(import.meta.url)('playwright');
   const browser = await chromium.launch(), page = await browser.newPage({ viewport: { width: 1200, height: 800 } });
   for (const f of files) { await page.goto(pathToFileURL(path.join(out, f)).href); await page.locator('svg').screenshot({ path: path.join(out, f.replace(/\.svg$/, '.png')) }); }
   await page.setViewportSize({ width: 1800, height: 1000 }); await page.goto(pathToFileURL(path.join(out, 'index.html')).href);
