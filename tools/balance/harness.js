@@ -55,6 +55,7 @@
     const start = new Map(G.ships.map((x) => [x, { hull: x.hull, sails: x.sails, crew: x.crew }]));
     let last = new Map(G.ships.map((x) => [x, { hull: x.hull, sails: x.sails, crew: x.crew }]));
     let hits = new Map(); // what this tick's hits explain of each ship's losses
+    const style = { rake: 0, hull: 0, range: 0, w: 0 };
     const arcs = { mine: 0, hers: 0, both: 0, neither: 0, boarding: 0 }, samples = [];
     // after the first moment either side's guns bore: how long neither did (the approach is not dead time), and who held the weather gauge
     let contact = null, idle = 0; const gauge = { mine: 0, hers: 0 };
@@ -63,6 +64,12 @@
       const h = hits.get(ship) || zero(); h.hull += hd; h.sails += sd; h.crew += kills; hits.set(ship, h);
       const book = b.owner === P ? dealt : ship === P ? taken : null;
       if (book) { const e = book[b.ammo]; e.hull += hd; e.sails += sd; e.crew += kills; }
+      if (book === dealt && !ship.spec.fixed) {
+        // how she fought: the share of hull damage done raking (end-on, as in hullHit), and the range her hits came from
+        const hv = Math.hypot(b.vel.x, b.vel.z) || 1, w = hd + sd + kills * 3;
+        if (Math.abs((b.vel.x * ship.fwdX + b.vel.z * ship.fwdZ) / hv) > 0.78) style.rake += hd;
+        style.hull += hd; style.w += w; style.range += w * Math.hypot(b.owner.pos.x - ship.pos.x, b.owner.pos.z - ship.pos.z);
+      }
     };
     return {
       tick(dt) {
@@ -110,7 +117,7 @@
           : `${o}: ${won ? 'her' : 'our'} ${res} ${top.map(([c, v]) => `${c} ${Math.round(v * 100)}%`).join(', ') || '(no damage recorded)'}`;
         const T = t || 1;
         return { cause, decisive: res, dealt: round(dealt), taken: round(taken), share: { dealt: { hull: share(dealt, 'hull'), sails: share(dealt, 'sails'), crew: share(dealt, 'crew') }, taken: { hull: share(taken, 'hull'), sails: share(taken, 'sails'), crew: share(taken, 'crew') } },
-          arcs: Object.fromEntries(Object.entries(arcs).map(([k, v]) => [k, +(v / T).toFixed(2)])), longestLull: Math.round(longestLull), contact: contact == null ? null : Math.round(contact), idle: +(idle / T).toFixed(2), gauge: { mine: +(gauge.mine / T).toFixed(2), hers: +(gauge.hers / T).toFixed(2) }, samples,
+          arcs: Object.fromEntries(Object.entries(arcs).map(([k, v]) => [k, +(v / T).toFixed(2)])), longestLull: Math.round(longestLull), contact: contact == null ? null : Math.round(contact), idle: +(idle / T).toFixed(2), gauge: { mine: +(gauge.mine / T).toFixed(2), hers: +(gauge.hers / T).toFixed(2) }, rake: style.hull > 0 ? +(style.rake / style.hull).toFixed(2) : null, hitRange: style.w > 0 ? Math.round(style.range / style.w) : null, samples,
           start: { me: start.get(P), foes: [...start].filter(([x]) => x.side !== P.side).map(([x, v]) => ({ id: x.id || x.spec.cls, ...v })) } };
       },
     };

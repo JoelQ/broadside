@@ -143,39 +143,48 @@ node tools/balance/story.mjs /tmp/run.json --only 'prep board'
 - `STORY=1` works with `replay.mjs` too (the record is in its JSON line), and campaign legs keep it as well. Booking
   hits needs a build with `G.onHit` (any build from this change on).
 
-## Who beats whom: the hull matrix
+## Is each hull viable, and distinct? The hull matrix
 
 `matrix.mjs` plays every campaign hull against every other, one on one in open water (`H.duel`: Home waters with
-the pirate swapped for the defender, in good hands under the game's AI), with eight captains: `guns`, `kite`, `hug`,
-`burn`, `prep` (chain and grape, board at 1.25 to 1), `hugBoard`, `rush`, and for galleys `bow` (bow guns at close range).
+the pirate swapped for the defender, in good hands under the game's AI), with 17 captains: the plain plans (`guns`,
+`kite`, `hug`, `burn`, `prep` (chain and grape, board at 1.25 to 1), `hugBoard`, `rush`, and for galleys `bow`) and
+variants that keep off a stronger boarder (`wary`, `kiteWary`, `hugWary`, `prepWary`) or win the wind first
+(`weather`, `hugWeather`, `prepWeather`, `hugBoardWeather`, `bowWeather`).
 
 ```bash
 node tools/balance/matrix.mjs
 ```
 
 ```bash
-node tools/balance/matrix.mjs --hulls sloop,brig,xebec --captains guns,hug,prep
+node tools/balance/matrix.mjs --hulls sloop,brig,xebec --captains guns,hug,prep --runs 10
 ```
 
-- **Win**: each cell is the best captain's win rate, with that captain's letter. It reads "the best this hull can do
-  against that one with these captains".
-- **Capture**: the best boarding captain's share of fights ended by taking her, and how often she was taken herself
-  in the attempt. This is the "can a small ship board a big one?" table.
-- **Dominance**: a hull that does no better against anyone than another hull and is no harder to beat. One that is
-  dominated has no reason to be sailed.
-- **Starts**: half of each pair's fights (20 by default, `--runs`) start the usual way, with the defender upwind, and half
-  with the starts traded (a duel cell with `flip: true`); `--start usual` or `--start flipped` keeps to one. The start
-  decides a lot, since nobody wins the wind back once the fight is on: on the stock captains the great ship is beaten
-  29% of the time from the usual start and 59% from the other.
-- **Fair score**: each pair played both ways round, (her win as attacker + her survival as defender) / 2, averaged over
-  the other hulls. The attacker always has the best of the scripted captains and the defender the game's AI, which
-  sails some hulls (the great ship) far better than others, so rank hulls by this, not by either column alone.
-- `out/matrix/index.html` draws both as heatmaps (hover a cell for every captain's figure); `data.json` keeps every
-  fight's seed. `DIALS`, `STORY` and `SEED` work as with `run.mjs`.
+It answers three questions:
 
-The attacker has a scripted captain and the defender the game's AI, so the diagonal (a hull against itself) shows the
-script's edge over the AI rather than 50%. Compare rows and columns, or the fair score, not single cells against 50%:
-at 4 to 6 fights a single cell can read 100% and replay at 40%.
+- **Viable?** The row hull's chance of beating the column hull with its best captain, each pair played both ways
+  round (half its win as attacker, half its survival as defender), so each side has the scripted captain once. A
+  pair under 15% is flagged: the row hull has no real way to win it.
+- **How much skill matters.** As attacker, the typical captain (the median of all of hers) against the best. A big
+  gap is a matchup where one plan wins and most lose.
+- **Identity.** A card per hull: what did the deciding damage in her wins at her best (each shot, burning,
+  boarding), the share of her hull damage done raking, the range her hits came from, how fast she wins, her plays
+  (the kinds of fight that win her at least half her fights, and against whom), and the same for how she is beaten
+  as defender. Hulls whose wins look much alike (fingerprint distance under 0.2) are flagged.
+
+Also a capture table (the best boarding captain's share of fights ended by taking her, and how often she was taken
+herself in the attempt). `out/matrix/index.html` draws it all (hover a cell for every captain's figure); `data.json`
+keeps every fight's seed and cause. `DIALS` and `SEED` work as with `run.mjs`. 20 fights per captain per pair by
+default (`--runs`), about 15,000 fights, a little over two minutes on 4 cores.
+
+- **Starts**: half of each pair's fights start the usual way, with the defender upwind, and half with the starts
+  traded (a duel cell with `flip: true`); `--start usual` or `--start flipped` keeps to one. The start decides a lot,
+  since nobody wins the wind back once the fight is on: on the plain captains the great ship is beaten 29% of the
+  time from the usual start and 59% from the other.
+- The attacker always has the scripted captains and the defender the game's AI, which sails some hulls (the great
+  ship) far better than others. That is why the viable table plays each pair both ways round. Read rows, columns and
+  cards, not single cells against 50%: even at 20 fights a cell moves 10 to 20 points between seeds.
+- What the matrix does not say: anything about the campaign, where the wind, the coast, forts and enemy grades are
+  part of each leg. That is `legs.mjs` and `rules.mjs`.
 
 ## Design rules as checks
 
