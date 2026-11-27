@@ -334,6 +334,23 @@
       return res;
     },
 
+    // one hull against another in open water, one on one: Home waters with her pirate swapped for hull b in good
+    // hands (your gunnery and drill), fighting back with the game's own AI. Hull a has the route at her helm.
+    // { a, b, route, seed, maxT, foeStock, dials, story }
+    duel(cfg) {
+      H.setupLeg({ mission: 'm0', leg: 0, hull: cfg.b, seed: cfg.seed, dials: cfg.dials });
+      const specB = JSON.parse(JSON.stringify(G.player.spec));
+      specB.stock = cfg.foeStock || { chain: 3, grape: 3, fire: 0 };
+      const steps = cfg.route;
+      const r = H.leg({ ...cfg, mission: 'm0', leg: 0, hull: cfg.a, maxT: cfg.maxT || 480, route: (S) => {
+        const old = S.by.pirate, [x, z, h] = [old.pos.x, old.pos.z, old.heading];
+        G.api.clearShips();
+        S.by.pirate = G.api.addShip(specB, 1, x, z, h, { id: 'pirate', speed: 6 });
+        return steps;
+      } });
+      r.how = r.foes.includes('captured') ? 'board' : r.o === 'won' ? 'guns' : r.o;
+      return r;
+    },
     fight(cfg) {
       applyDials(cfg.dials);
       G.paused = true; G.fast = true; const seed = seedFor(cfg);

@@ -133,6 +133,32 @@ node tools/balance/story.mjs /tmp/run.json --only 'prep board'
 - `STORY=1` works with `replay.mjs` too (the record is in its JSON line), and campaign legs keep it as well. Booking
   hits needs a build with `G.onHit` (any build from this change on).
 
+## Who beats whom: the hull matrix
+
+`matrix.mjs` plays every campaign hull against every other, one on one in open water (`H.duel`: Home waters with
+the pirate swapped for the defender, in good hands under the game's AI), with seven captains: `guns`, `kite`, `hug`,
+`burn`, `prep` (chain and grape, board at 1.25 to 1), `hugBoard` and `rush`.
+
+```bash
+node tools/balance/matrix.mjs --runs 4
+```
+
+```bash
+node tools/balance/matrix.mjs --hulls sloop,brig,xebec --captains guns,hug,prep
+```
+
+- **Win**: each cell is the best captain's win rate, with that captain's letter. It reads "the best this hull can do
+  against that one with these captains".
+- **Capture**: the best boarding captain's share of fights ended by taking her, and how often she was taken herself
+  in the attempt. This is the "can a small ship board a big one?" table.
+- **Dominance**: a hull that does no better against anyone than another hull and is no harder to beat. One that is
+  dominated has no reason to be sailed.
+- `out/matrix/index.html` draws both as heatmaps (hover a cell for every captain's figure); `data.json` keeps every
+  fight's seed. `DIALS`, `STORY` and `SEED` work as with `run.mjs`.
+
+The attacker has a scripted captain and the defender the game's AI, so the diagonal (a hull against itself) shows the
+script's edge over the AI rather than 50%. Compare rows and columns, not single cells against 50%.
+
 ## Campaign legs
 
 The same harness plays campaign fights. `H.leg(cfg)` sets up one leg of one mission for a given
