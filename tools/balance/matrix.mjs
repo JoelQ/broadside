@@ -32,7 +32,7 @@ const cells = [];
 for (const cap of caps) for (const a of HULLS) for (const b of HULLS) cells.push({ label: `${a} v ${b} | ${cap}`, duel: true, a, b, cap, route: CAPTAINS[cap].route, dials: DIALS });
 console.error(`${cells.length} cells x ${runs} runs = ${cells.length * runs} fights, about ${Math.ceil((cells.length * runs) / 3.5 / 60)} min`);
 const t0 = Date.now();
-const results = await play(cells, runs, { seed, story: !!process.env.STORY });
+const results = await play(cells, runs, { seed, story: process.env.STORY === 'lite' ? 'lite' : !!process.env.STORY });
 console.error(`${cells.length * runs} fights in ${((Date.now() - t0) / 1000).toFixed(0)}s`);
 
 const rate = (rs, f) => rs.filter(f).length / (rs.length || 1);

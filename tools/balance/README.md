@@ -159,6 +159,32 @@ node tools/balance/matrix.mjs --hulls sloop,brig,xebec --captains guns,hug,prep
 The attacker has a scripted captain and the defender the game's AI, so the diagonal (a hull against itself) shows the
 script's edge over the AI rather than 50%. Compare rows and columns, not single cells against 50%.
 
+## Design rules as checks
+
+`rules.mjs` checks the design rules in `docs/campaign.md` against a legs run, leg by leg, and with a second run on
+the same seeds says which rules a change newly broke or now keeps:
+
+```bash
+STORY=lite SEED=1000 node tools/balance/run.mjs tools/balance/legs.mjs 2 /tmp/after.json
+node tools/balance/rules.mjs /tmp/after.json /tmp/before.json
+```
+
+| Rule | Level |
+| --- | --- |
+| Winnable by at least three kinds of ship (rule 1) | fail |
+| Winnable by at least three different routes (rule 1) | fail |
+| A route for a heavy ship, a nimble one and an oared or boarding one (rule 5) | fail |
+| Running is never the only answer (rule 5) | fail |
+| No route works for every ship every time | warn |
+| Some ship is in doubt | warn |
+| Fights end: under 10% of a leg's fights time out | warn |
+| Grape and chain set up wins, never finish them alone (needs fight records) | warn |
+
+A route wins a leg for a hull at 50% of its fights (`WIN=<x>` to change). `--md` prints the Markdown table the pull
+request job puts in its summary; `--strict` exits 1 on a broken "fail" rule. `STORY=lite` keeps each fight's record
+without its second-by-second samples, which is all the rules need. A rule is a function over one leg's results in
+the `RULES` list at the top of the file: add one there when a new design rule is written down.
+
 ## Campaign legs
 
 The same harness plays campaign fights. `H.leg(cfg)` sets up one leg of one mission for a given

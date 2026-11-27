@@ -3,7 +3,7 @@
 // ({ mission, leg, hull, route }), a whole mission ({ mission, routes }) or one hull against another
 // ({ duel: true, a, b, route }); see harness.js.
 //   play(cells, runs, { seed, dist, workers, story }) -> results[i] = the runs of cells[i], in order of k
-// story: every result carries a fight record (see story.mjs).
+// story: every result carries a fight record (see story.mjs); 'lite' keeps its summary without the samples.
 // With a seed, run k of every cell is played on seed + k, so two calls with the same seed face the same luck.
 import { createRequire } from 'module';
 import { readFileSync } from 'fs';
@@ -29,10 +29,11 @@ export async function play(cells, runs, opts = {}) {
       const [i, k] = queue.pop(), c = cells[i], seed = c.seed ?? (base != null ? base + k : undefined);
       if (queue.length % 100 === 0 && queue.length) console.error(`${queue.length} to go, ${((Date.now() - t0) / 1000).toFixed(0)}s`);
       const res = c.duel
-        ? await page.evaluate((cfg) => H.duel(cfg), JSON.parse(JSON.stringify({ ...c, seed, story: opts.story })))
+        ? await page.evaluate((cfg) => H.duel(cfg), JSON.parse(JSON.stringify({ ...c, seed, story: !!opts.story })))
         : c.mission
-        ? await page.evaluate((cfg) => (cfg.routes ? H.cruise(cfg) : H.leg(cfg)), JSON.parse(JSON.stringify({ ...c, seed, story: opts.story })))
-        : await page.evaluate((cfg) => H.fight(cfg), { ship: c.ship, fit: c.fit, level: c.level, plan: c.plan, stock: c.stock, maxT: c.maxT, dials: c.dials, story: opts.story, seed });
+        ? await page.evaluate((cfg) => (cfg.routes ? H.cruise(cfg) : H.leg(cfg)), JSON.parse(JSON.stringify({ ...c, seed, story: !!opts.story })))
+        : await page.evaluate((cfg) => H.fight(cfg), { ship: c.ship, fit: c.fit, level: c.level, plan: c.plan, stock: c.stock, maxT: c.maxT, dials: c.dials, story: !!opts.story, seed });
+      if (opts.story === 'lite' && res.story) delete res.story.samples; // the summary without the second-by-second record
       res.k = k; results[i].push(res);
     }
   }));
