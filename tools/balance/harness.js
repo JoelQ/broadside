@@ -124,12 +124,12 @@
   }
 
   // sit on her quarter, out of her arcs, firing into her stern: how a small, handy ship fights a big one
-  function hug(me, foe, d) {
+  function hug(me, foe, d, shot = 'round') { // sits close enough astern for the shot she means to fire next
     const dx = me.pos.x - foe.pos.x, dz = me.pos.z - foe.pos.z, cd = Math.hypot(dx, dz);
     const off = wrap(Math.atan2(dx, dz) - (foe.heading + Math.PI)), blind = Math.PI / 2 - foe.arc - 0.12;
-    const back = foe.spec.L * 0.5 + 45, tx = foe.pos.x - Math.sin(foe.heading) * back, tz = foe.pos.z - Math.cos(foe.heading) * back;
+    const stand = Math.min(45, me.range(shot) * 0.6), back = foe.spec.L * 0.5 + stand, tx = foe.pos.x - Math.sin(foe.heading) * back, tz = foe.pos.z - Math.cos(foe.heading) * back;
     let hd;
-    if (Math.abs(off) > blind || d > me.range() * 0.9) { hd = Math.atan2(tx - me.pos.x, tz - me.pos.z); me.sailLevel = 3; }
+    if (Math.abs(off) > blind || d > me.range(shot) * 0.9) { hd = Math.atan2(tx - me.pos.x, tz - me.pos.z); me.sailLevel = 3; }
     else {
       const brg = Math.atan2(-dx, -dz), o1 = brg - Math.PI / 2, o2 = brg + Math.PI / 2;
       hd = Math.abs(wrap(o1 - me.heading)) < Math.abs(wrap(o2 - me.heading)) ? o1 : o2;
@@ -162,7 +162,8 @@
       // a boarder stands off and chains until her prey is slow, then closes
       const move = st.boardMode ? (foe.speed > 6.5 && sk.chain > 0 ? 'duel' : 'close') : plan.move;
       if (move === 'hug') {
-        hug(me, foe, d);
+        const sk2 = me.stock, next = (a === 'chain' || a === 'combo') && sk2.chain > 0 && foe.sailR > 0.45 ? 'chain' : (a === 'grape' || a === 'combo' || st.boardMode) && sk2.grape > 0 && foe.exposed > 2 ? 'grape' : 'round';
+        hug(me, foe, d, next);
         for (const s of me.sides) if (G.api.inArc(me, s, foe, 1)) G.api.fire(me, s);
       } else {
         const r = me.range('round');
@@ -230,7 +231,8 @@
       const r = me.range('round');
       let move = boardMode ? (foe.speed > 6.5 && sk.chain > 0 ? 'duel' : 'close') : step.move || 'duel';
       if (move === 'hug') { // sit astern out of her arcs; board when the odds come
-        hug(me, foe, d);
+        const sk2 = me.stock, next = (a === 'chain' || a === 'combo') && sk2.chain > 0 && foe.sailR > 0.45 ? 'chain' : (a === 'grape' || a === 'combo' || boardMode) && sk2.grape > 0 && foe.exposed > 2 ? 'grape' : 'round';
+        hug(me, foe, d, next);
         for (const s of me.sides) if (G.api.inArc(me, s, foe, 1) || foes.some((o) => o !== foe && G.api.inArc(me, s, o, 1))) G.api.fire(me, s);
         return;
       }
