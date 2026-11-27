@@ -39,7 +39,8 @@ Three ways to win, and each pirate favours a different one:
 - **Out-sail her.** A big ship's guns only bear nearly square off her sides. Get past them, sit
   astern and rake. This is how a small ship beats a big one.
 - **Board her.** Grapples only hold a ship that has been slowed, so cut up her sails with chain
-  first. Guns reach only the crew on deck (30% are always below), and a crew fights worse when
+  first. Every shot takes a share of what is left: a full deck or a full suit of sail is easy to hit,
+  a thinned crew and rags are hard, and torn canvas stays torn until the next pause. A crew fights worse when
   its ship is holed or burning. A boarded prize pays up to double and is yours to sail.
 
 Each shot has a job: round for hulls, chain to slow a ship so she can be boarded, grape to thin a

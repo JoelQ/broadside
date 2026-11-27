@@ -19,6 +19,14 @@ export const HANDLING = {
   rudder: 1.22, // how fast any hull turns at full way, times her own turn
   lightAir: [0.4, 0.4], // speed in light airs goes as strength ** (a + b * mass): heavy hulls need a breeze to move
   leeway: 1.6, // yd/s she slides to leeward broadside-on with no way on, for a brig in a breeze; way on and a deep keel cut it
+  bare: 0.3, // a ship under bare poles still makes this share of her speed: masts, yards and rags still catch the wind
+  // Shot takes a share of what is left: every kill or tear is scaled by the share of crew or canvas still there, to
+  // this power. A full deck or a full suit of sail is easy to hit; a thinned crew and rags are hard. No floor: what
+  // limits grape and chain is the rounds aboard and the time spent under the other ship's guns.
+  cover: 1,
+  // 0: the share above is of her own full crew. Above 0: of a crowded deck instead, this many men a yard of her
+  // length, so a big crew is easier to hit than a small one and a thinned big crew is as hard to hit as a small one.
+  crowd: 0, crowdMax: 2,
   backing: 1, // yd/s she is pushed straight downwind when head to wind with no way on (in irons, her sails aback)
 };
 export const helmFloor = (mass) => clamp(HANDLING.helmFloor / mass ** 1.5, 0.06, 0.4);
@@ -32,7 +40,7 @@ export const SAILS = [
   { name: 'Full sail', spd: 1, aim: 1.3, dmg: 1.15 },
 ];
 // how much her canvas is pulling, 1 for whole battle sails: furled 0, chain-shot rags about half
-export const drive = (s) => Math.min(1.2, SAILS[s.sailLevel].spd / 0.7) * (0.25 + 0.75 * s.sailR);
+export const drive = (s) => Math.min(1.2, SAILS[s.sailLevel].spd / 0.7) * (HANDLING.bare + (1 - HANDLING.bare) * s.sailR);
 // wind strength as a hull feels it: light airs move a light hull, barely stir a heavy one; a gale adds a little
 export const windFor = (str, mass) => (str <= 1 ? Math.max(0, str) ** (HANDLING.lightAir[0] + HANDLING.lightAir[1] * mass) : 1 + (str - 1) * 0.3);
 export const TOP = SAILS.length - 1;
@@ -59,8 +67,8 @@ export function pointOfSail(a, point = 0) {
 
 export const AMMO = {
   round: { name: 'Round', long: 'Round shot', range: 250, speed: 128, hull: 6.2, sail: 0.6, crew: 0.3, reload: 1, tip: 'Smashes hulls at long range' },
-  chain: { name: 'Chain', long: 'Chain shot', range: 175, speed: 108, hull: 1, sail: 4.5, crew: 0.1, reload: 1, tip: 'Shreds sails. Grapples only hold a ship that has been slowed' },
-  grape: { name: 'Grape', long: 'Grapeshot', range: 100, speed: 98, hull: 0.6, sail: 0.5, crew: 0, kills: [2, 4], reload: 0.9, tip: 'Kills the crew on deck. The hatched part of her crew bar is below, out of reach' },
+  chain: { name: 'Chain', long: 'Chain shot', range: 175, speed: 108, hull: 1, sail: 4.5, crew: 0.1, reload: 1, tip: 'Shreds sails; rags are harder to hit than full canvas. Grapples only hold a ship that has been slowed' },
+  grape: { name: 'Grape', long: 'Grapeshot', range: 100, speed: 98, hull: 0.6, sail: 0.5, crew: 0, kills: [2, 4], reload: 0.9, tip: 'Kills the crew on deck. The fewer are left, the harder they are to hit' },
   fire: { name: 'Heated', long: 'Heated shot', range: 185, speed: 112, hull: 4.2, sail: 2, crew: 0.2, ignite: 0.4, reload: 1.3, tip: 'Starts fires. The bigger the ship the more there is to burn, and she loads at half speed while it lasts' },
 };
 export const AMMO_KEYS = ['round', 'chain', 'grape', 'fire'];
@@ -73,8 +81,7 @@ export const CAL = [
 // Mass, relative to a brig. Heavy ships gather way, lose way and answer the helm slowly.
 export const massOf = (spec) => clamp(Math.sqrt((spec.L * spec.B) / 240) * 0.95 + 0.05, 0.6, 2.3);
 export const noGoHalf = (spec) => Math.max(0.2, 0.6 - (spec.point || 0)); // half-width of the no-sail wedge
-export const JURY = 0.34; // sails jury-rig back to this fraction
-export const BELOW = 0.3; // share of a crew below decks, out of reach of gunfire // broadside half-angle (rad)
+// Shot takes a share of what is left: see HANDLING.cover. A ship under bare poles: see HANDLING.bare.
 
 // ---------- ship simulation ----------
 export class Ship {
@@ -104,14 +111,16 @@ export class Ship {
     this.dmgMult = spec.dmg || 1; this.disp = spec.disp || 0.022; this.reloadMult = 1; this.melee = spec.melee || 1;
     this.sinking = 0; this.dead = false; this.struck = false;
     this.ramCd = 0; this.fxT = 0;
-    this.target = null; this.rigT = 0;
+    this.target = null;
   }
   get fwdX() { return Math.sin(this.heading); }
   get fwdZ() { return Math.cos(this.heading); }
   get hullR() { return clamp(this.hull / this.hullMax, 0, 1); }
   get sailR() { return clamp(this.sails / this.sailsMax, 0, 1); }
   get crewR() { return clamp(this.crew / this.crewMax, 0, 1); }
-  get exposed() { return Math.max(0, this.crew - this.crewMax * BELOW); } // men a broadside can reach
+  get exposed() { return this.crew * this.cover; } // how many men a broadside is likely to find on deck
+  get cover() { return HANDLING.crowd > 0 ? Math.min(HANDLING.crowdMax, this.crew / this.spec.L / HANDLING.crowd) ** HANDLING.cover : this.crewR ** HANDLING.cover; } // share of a full crew's losses a hit inflicts now
+  get rigCover() { return this.sailR ** HANDLING.cover; } // share of a full suit's tearing a hit does now
   get active() { return !this.out && this.sinking <= 0 && !this.struck; } // still in the fight
   range(ammo = this.ammo, side) { return AMMO[ammo].range * (this.bat[side] || this.main).cal.range * (this.spec.reach || 1); }
   dmgOf(side) { return this.dmgMult * (this.bat[side] || this.main).cal.dmg; }
@@ -144,7 +153,7 @@ export class Ship {
   maxSpeedNow(world) {
     const off = wrap(this.heading - world.wind.dir);
     const str = world.wind.str ?? 1, windF = windFor(str, this.mass);
-    const v = this.spec.speed * SAILS[this.sailLevel].spd * polar(off, this.spec.point) * (0.25 + 0.75 * this.sailR) * (this.hullR < 0.3 ? 0.82 : 1) * windF;
+    const v = this.spec.speed * SAILS[this.sailLevel].spd * polar(off, this.spec.point) * (HANDLING.bare + (1 - HANDLING.bare) * this.sailR) * (this.hullR < 0.3 ? 0.82 : 1) * windF;
     const s = this.sailLevel > 0 ? Math.max(v, (this.spec.sweeps || 0) * this.crewR) : v; // sweeps: oars give a floor under the wind
     return Math.max(s, this.oarSpeed(world));
   }
@@ -180,7 +189,7 @@ export class Ship {
         else if (this.spent && this.stamina >= 0.35) this.spent = false;
       }
       // carrying full sail in a gale tears it
-      if ((world.wind.str ?? 1) > 1.3 && this.sailLevel === TOP && !held) { this.sails = Math.max(0, this.sails - 0.9 * dt); this.rigT = 0; }
+      if ((world.wind.str ?? 1) > 1.3 && this.sailLevel === TOP && !held) this.sails = Math.max(0, this.sails - 0.9 * dt);
       // leeway: the wind pushes her to leeward, hardest close-hauled (her canvas pulls more sideways than ahead) and
       // when she is slow (her keel has no grip without way on); head to wind with her sails aback it pushes her astern.
       // High sides and tall rigs catch more wind; a deep keel holds her. It grows with the wind as her speed does, so
@@ -201,9 +210,6 @@ export class Ship {
     }
     this.pos.x += this.fwdX * this.speed * dt; this.pos.z += this.fwdZ * this.speed * dt;
     this.ramCd -= dt;
-    // a crew left alone for a few seconds jury-rigs torn canvas back to about a third
-    this.rigT += dt;
-    if (this.rigT > 4 && this.sinking <= 0 && this.sails < this.sailsMax * JURY) this.sails = Math.min(this.sailsMax * JURY, this.sails + 1.4 * dt);
     this.float(world);
   }
 
