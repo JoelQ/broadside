@@ -181,6 +181,7 @@
   //   { go: [x, z] | 'zone:name', r }                 sail there (firing at whatever bears on the way)
   //   { kill: id | 'all', move, ammo, board, anchor }  fight that ship until she is out
   // move: duel | kite | hug | close | bow.  anchor: true drops an anchor on a spring once in range.
+  // range: the distance she keeps (yd), or rangeK: that as a share of her round-shot range.
   const fake = (x, z) => ({ pos: { x, z }, fwdX: 0, fwdZ: 0, speed: 0, crewR: 1, sailR: 1, fire: 0, exposed: 0, crew: 1, melee: 1, hullR: 1, active: false, isPlayer: false, spec: { L: 1, B: 1 }, stock: {} });
   function routeBot(steps) {
     const ai = G.newAI(), st = { i: 0, swap: 0 };
@@ -238,7 +239,7 @@
       }
       if (step.anchor && !me.anchored && d < r * (step.anchorAt || 0.8) && me.speed < 6) { me.anchored = true; me.weighT = 0; }
       if (step.anchor && !me.anchored && d < r * (step.anchorAt || 0.8)) me.sailLevel = 0;
-      me.spec.ai = { range: step.range || (move === 'kite' ? r * 0.85 : move === 'close' ? 20 : move === 'bow' ? r * 0.7 : r * 0.5), plan: 'none', manualAmmo: true, boarder: move === 'close', battleSail: true, bowOn: move === 'bow' };
+      me.spec.ai = { range: step.range || (step.rangeK ? r * step.rangeK : move === 'kite' ? r * 0.85 : move === 'close' ? 20 : move === 'bow' ? r * 0.7 : r * 0.5), plan: 'none', manualAmmo: true, boarder: move === 'close', battleSail: true, bowOn: move === 'bow' };
       const sail = me.sailLevel;
       G.api.updateAI(ai, me, foe, G.world, dt, G.api.aiApi);
       if (step.anchor && !me.anchored && d < r * (step.anchorAt || 0.8)) me.sailLevel = Math.min(sail, 1);

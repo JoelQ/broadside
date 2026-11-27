@@ -136,8 +136,8 @@ node tools/balance/story.mjs /tmp/run.json --only 'prep board'
 ## Who beats whom: the hull matrix
 
 `matrix.mjs` plays every campaign hull against every other, one on one in open water (`H.duel`: Home waters with
-the pirate swapped for the defender, in good hands under the game's AI), with seven captains: `guns`, `kite`, `hug`,
-`burn`, `prep` (chain and grape, board at 1.25 to 1), `hugBoard` and `rush`.
+the pirate swapped for the defender, in good hands under the game's AI), with eight captains: `guns`, `kite`, `hug`,
+`burn`, `prep` (chain and grape, board at 1.25 to 1), `hugBoard`, `rush`, and for galleys `bow` (bow guns at close range).
 
 ```bash
 node tools/balance/matrix.mjs --runs 4
@@ -184,6 +184,30 @@ A route wins a leg for a hull at 50% of its fights (`WIN=<x>` to change). `--md`
 request job puts in its summary; `--strict` exits 1 on a broken "fail" rule. `STORY=lite` keeps each fight's record
 without its second-by-second samples, which is all the rules need. A rule is a function over one leg's results in
 the `RULES` list at the top of the file: add one there when a new design rule is written down.
+
+## The best a captain can do: captain search
+
+The stock captains are a handful of fixed plans, so a 0% means "not with these plans". `search.mjs` tries many more
+for one matchup (how she moves, what she fires, whether and when she boards, the range she keeps, and on a leg
+which of its routes' waypoints she sails first) and keeps the best:
+
+```bash
+node tools/balance/search.mjs duel galley flagship
+```
+
+```bash
+node tools/balance/search.mjs leg 'm1O' sloop --budget 64
+```
+
+It plays every candidate on 2 seeds, the best quarter on 6, then the best three and every stock plan on 20
+(`--seeds 2,6,20`), so most fights go to the promising plans: about 370 fights, a minute and a half, for the
+default 48 candidates. Candidates are drawn from `SEED`, so a search repeats exactly. It prints the finalists, the
+gap between the best found and the best stock plan, and the best plan's route to paste into a jobs file.
+
+Read a big gap as "the stock captains undersell this hull here" (add the plan as a stock route) or "a tactic nobody
+planned for dominates" (look at it with `STORY=1`). The first search found that a galley holding bow-on at close
+range beats the great ship 75% of the time, where every stock captain lost all 20 fights. That plan is now the
+matrix's `bow` captain.
 
 ## Campaign legs
 

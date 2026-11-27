@@ -21,7 +21,9 @@ const CAPTAINS = {
   prep: { k: 'p', board: true, route: [{ kill: 'all', move: 'duel', ammo: 'combo', board: 'odds' }] },
   hugBoard: { k: 'b', board: true, route: [{ kill: 'all', move: 'hug', ammo: 'combo', board: 'odds' }] },
   rush: { k: 'r', board: true, route: [{ kill: 'all', move: 'duel', ammo: 'grape', board: 'rush' }] },
+  bow: { k: 'o', oared: true, route: [{ kill: 'all', move: 'bow', ammo: 'round', rangeK: 0.3 }] }, // galleys only: bow guns at close range (found by search.mjs)
 };
+const OARED = ['galley', 'galliot'];
 const runs = +flags.runs || 4, seed = process.env.SEED != null ? +process.env.SEED : 1000;
 const HULLS = (flags.hulls || 'galliot,sloop,galley,xebec,brig,merchantman,flagship').split(',');
 const caps = (flags.captains || Object.keys(CAPTAINS).join(',')).split(',');
@@ -29,15 +31,15 @@ const DIALS = process.env.DIALS ? JSON.parse(process.env.DIALS) : undefined;
 const out = path.resolve(flags.out || 'out/matrix');
 
 const cells = [];
-for (const cap of caps) for (const a of HULLS) for (const b of HULLS) cells.push({ label: `${a} v ${b} | ${cap}`, duel: true, a, b, cap, route: CAPTAINS[cap].route, dials: DIALS });
+for (const cap of caps) for (const a of HULLS) for (const b of HULLS) if (!CAPTAINS[cap].oared || OARED.includes(a)) cells.push({ label: `${a} v ${b} | ${cap}`, duel: true, a, b, cap, route: CAPTAINS[cap].route, dials: DIALS });
 console.error(`${cells.length} cells x ${runs} runs = ${cells.length * runs} fights, about ${Math.ceil((cells.length * runs) / 3.5 / 60)} min`);
 const t0 = Date.now();
 const results = await play(cells, runs, { seed, story: process.env.STORY === 'lite' ? 'lite' : !!process.env.STORY });
 console.error(`${cells.length * runs} fights in ${((Date.now() - t0) / 1000).toFixed(0)}s`);
 
 const rate = (rs, f) => rs.filter(f).length / (rs.length || 1);
-const cellOf = (a, b, cap) => results[cells.findIndex((c) => c.a === a && c.b === b && c.cap === cap)];
-const best = (a, b, list) => list.map((cap) => ({ cap, win: rate(cellOf(a, b, cap), (r) => r.win), board: rate(cellOf(a, b, cap), (r) => r.how === 'board') })).sort((x, y) => y.win - x.win)[0];
+const cellOf = (a, b, cap) => results[cells.findIndex((c) => c.a === a && c.b === b && c.cap === cap)] || [];
+const best = (a, b, list) => list.filter((cap) => !CAPTAINS[cap].oared || OARED.includes(a)).map((cap) => ({ cap, win: rate(cellOf(a, b, cap), (r) => r.win), board: rate(cellOf(a, b, cap), (r) => r.how === 'board') })).sort((x, y) => y.win - x.win)[0];
 const bestBoard = (a, b) => caps.filter((c) => CAPTAINS[c].board).map((cap) => ({ cap, v: rate(cellOf(a, b, cap), (r) => r.how === 'board'), over: rate(cellOf(a, b, cap), (r) => r.o === 'overrun') })).sort((x, y) => y.v - x.v)[0];
 const W = Object.fromEntries(HULLS.map((a) => [a, Object.fromEntries(HULLS.map((b) => [b, best(a, b, caps)]))]));
 const B = Object.fromEntries(HULLS.map((a) => [a, Object.fromEntries(HULLS.map((b) => [b, bestBoard(a, b)]))]));
