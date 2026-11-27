@@ -1,7 +1,8 @@
 // Plays a list of cells in parallel headless pages and returns every fight's result, cell by cell.
 // run.mjs and sweep.mjs both use it. A cell is a skirmish fight ({ ship, fit, level, plan }) or a campaign leg
 // ({ mission, leg, hull, route }) or a whole mission ({ mission, routes }); see harness.js.
-//   play(cells, runs, { seed, dist, workers }) -> results[i] = the runs of cells[i], in order of k
+//   play(cells, runs, { seed, dist, workers, story }) -> results[i] = the runs of cells[i], in order of k
+// story: every result carries a fight record (see story.mjs).
 // With a seed, run k of every cell is played on seed + k, so two calls with the same seed face the same luck.
 import { createRequire } from 'module';
 import { readFileSync } from 'fs';
@@ -27,8 +28,8 @@ export async function play(cells, runs, opts = {}) {
       const [i, k] = queue.pop(), c = cells[i], seed = c.seed ?? (base != null ? base + k : undefined);
       if (queue.length % 100 === 0 && queue.length) console.error(`${queue.length} to go, ${((Date.now() - t0) / 1000).toFixed(0)}s`);
       const res = c.mission
-        ? await page.evaluate((cfg) => (cfg.routes ? H.cruise(cfg) : H.leg(cfg)), JSON.parse(JSON.stringify({ ...c, seed })))
-        : await page.evaluate((cfg) => H.fight(cfg), { ship: c.ship, fit: c.fit, level: c.level, plan: c.plan, stock: c.stock, maxT: c.maxT, dials: c.dials, seed });
+        ? await page.evaluate((cfg) => (cfg.routes ? H.cruise(cfg) : H.leg(cfg)), JSON.parse(JSON.stringify({ ...c, seed, story: opts.story })))
+        : await page.evaluate((cfg) => H.fight(cfg), { ship: c.ship, fit: c.fit, level: c.level, plan: c.plan, stock: c.stock, maxT: c.maxT, dials: c.dials, story: opts.story, seed });
       res.k = k; results[i].push(res);
     }
   }));

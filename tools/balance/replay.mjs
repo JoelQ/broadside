@@ -23,8 +23,8 @@ await page.waitForTimeout(600);
 await page.addScriptTag({ content: readFileSync(path.join(here, 'harness.js'), 'utf8') });
 const seed = +seedArg, every = +everyArg || 0;
 const r = c.mission
-  ? await page.evaluate((cfg) => (cfg.routes ? H.cruise(cfg) : H.leg(cfg)), JSON.parse(JSON.stringify({ ...c, seed, trace: every || undefined })))
-  : await page.evaluate((cfg) => H.fight(cfg), { ship: c.ship, fit: c.fit, level: c.level, plan: c.plan, stock: c.stock, maxT: c.maxT, dials: c.dials, seed });
+  ? await page.evaluate((cfg) => (cfg.routes ? H.cruise(cfg) : H.leg(cfg)), JSON.parse(JSON.stringify({ ...c, seed, trace: every || undefined, story: !!process.env.STORY })))
+  : await page.evaluate((cfg) => H.fight(cfg), { ship: c.ship, fit: c.fit, level: c.level, plan: c.plan, stock: c.stock, maxT: c.maxT, dials: c.dials, story: !!process.env.STORY, seed });
 await browser.close();
 const { trace, legs, ...rest } = r;
 console.log(`== ${c.label} · seed ${seed}`);

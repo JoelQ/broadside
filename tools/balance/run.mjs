@@ -14,11 +14,12 @@ const cells = (await import(pathToFileURL(path.resolve(jobsFile)))).default, run
 const DIALS = process.env.DIALS ? JSON.parse(process.env.DIALS) : null;
 if (DIALS) for (const c of cells) c.dials = { ...DIALS, ...(c.dials || {}) };
 const t0 = Date.now();
-const results = await play(cells, runs, { seed: process.env.SEED, dist: process.env.DIST }); // DIST=<html> plays another build
+// STORY=1 keeps a record of every fight in the out file, for story.mjs
+const results = await play(cells, runs, { seed: process.env.SEED, dist: process.env.DIST, story: !!process.env.STORY }); // DIST=<html> plays another build
 const avg = (a, f) => (a.length ? a.reduce((s, x) => s + f(x), 0) / a.length : 0);
 const rows = cells.map((c, i) => {
   const r = results[i], w = r.filter((x) => x.win);
-  return { ...c, runs: r.map((x) => ({ k: x.k, seed: x.seed, win: !!x.win, o: x.o, t: x.t })), n: r.length, win: w.length / r.length, guns: r.filter((x) => x.how === 'guns').length, board: r.filter((x) => x.how === 'board').length,
+  return { ...c, runs: r.map((x) => ({ k: x.k, seed: x.seed, win: !!x.win, o: x.o, t: x.t, ...(x.story ? { story: x.story } : {}) })), n: r.length, win: w.length / r.length, guns: r.filter((x) => x.how === 'guns').length, board: r.filter((x) => x.how === 'board').length,
     lost: r.filter((x) => x.o === 'lost').length, overrun: r.filter((x) => x.o === 'overrun').length, timeout: r.filter((x) => x.o === 'timeout').length,
     t: Math.round(avg(r, (x) => x.t)), hull: +avg(w, (x) => x.hull).toFixed(2), eHull: +avg(r, (x) => x.eHull).toFixed(2), exposed: +avg(r, (x) => x.exposed).toFixed(2), acc: +avg(r, (x) => x.hits / (x.shots || 1)).toFixed(2) };
 });

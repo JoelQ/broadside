@@ -110,6 +110,29 @@ between two values changed because of the number. Read a flat line as "this dial
 "a small change flips the game here", and look for the values where small, middling and big hulls all sit in a band
 you like. It costs cells x values x runs fights at about 3 a second: it prints the estimate before it starts.
 
+## How fights were won: fight stories
+
+`STORY=1` makes every fight keep a record: both sides sampled every second, every hit booked to the shot that made
+it, the time each side had the other under its guns, and a one-line cause (`captured: her crew boarding 80%, grape
+14%`). `story.mjs` turns a run's records into tables and pictures:
+
+```bash
+STORY=1 SEED=1000 node tools/balance/run.mjs tools/balance/grid.mjs 6 /tmp/run.json
+node tools/balance/story.mjs /tmp/run.json --only 'prep board'
+```
+
+- **Wins decided by**: of the damage that decided each win (her crew for a capture, her hull for a sinking or a
+  striking), the share done by each cause: the four shots, `burning`, `boarding` (the deck fight and the swivels),
+  `other` (rocks, collisions). **Losses decided by** is the same for our side.
+- **Alone**: the wins where one cause did at least 80% of it. This is the number for "does grape (or chain) decide
+  fights on its own?"
+- **Guns bearing**: the share of the fight with only our guns bearing, only hers, both, neither, or boarding, and the
+  longest stretch where neither side could fire.
+- `out/story/index.html` has the table, and the first few fights of each cell drawn as strips: hull, sails and crew
+  for both ships, what bore, and what shot was loaded (`--fights 3`, `--out`).
+- `STORY=1` works with `replay.mjs` too (the record is in its JSON line), and campaign legs keep it as well. Booking
+  hits needs a build with `G.onHit` (any build from this change on).
+
 ## Campaign legs
 
 The same harness plays campaign fights. `H.leg(cfg)` sets up one leg of one mission for a given
