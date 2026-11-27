@@ -24,9 +24,6 @@ export const HANDLING = {
   // this power. A full deck or a full suit of sail is easy to hit; a thinned crew and rags are hard. No floor: what
   // limits grape and chain is the rounds aboard and the time spent under the other ship's guns.
   cover: 1,
-  // 0: the share above is of her own full crew. Above 0: of a crowded deck instead, this many men a yard of her
-  // length, so a big crew is easier to hit than a small one and a thinned big crew is as hard to hit as a small one.
-  crowd: 0, crowdMax: 2,
   backing: 1, // yd/s she is pushed straight downwind when head to wind with no way on (in irons, her sails aback)
 };
 export const helmFloor = (mass) => clamp(HANDLING.helmFloor / mass ** 1.5, 0.06, 0.4);
@@ -119,7 +116,7 @@ export class Ship {
   get sailR() { return clamp(this.sails / this.sailsMax, 0, 1); }
   get crewR() { return clamp(this.crew / this.crewMax, 0, 1); }
   get exposed() { return this.crew * this.cover; } // how many men a broadside is likely to find on deck
-  get cover() { return HANDLING.crowd > 0 ? Math.min(HANDLING.crowdMax, this.crew / this.spec.L / HANDLING.crowd) ** HANDLING.cover : this.crewR ** HANDLING.cover; } // share of a full crew's losses a hit inflicts now
+  get cover() { return this.crewR ** HANDLING.cover; } // share of a full crew's losses a hit inflicts now
   get rigCover() { return this.sailR ** HANDLING.cover; } // share of a full suit's tearing a hit does now
   get active() { return !this.out && this.sinking <= 0 && !this.struck; } // still in the fight
   range(ammo = this.ammo, side) { return AMMO[ammo].range * (this.bat[side] || this.main).cal.range * (this.spec.reach || 1); }
