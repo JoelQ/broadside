@@ -41,7 +41,7 @@ export const LEGS = [
     middle: [{ go: [0, 40], r: 50 }, { kill: 'flag', move: 'duel', ammo: 'round', anchor: true, anchorAt: 1.0 }, { go: 'zone:out', r: 40, wait: true }],
     westBurn: [...[[-230, -520], [-290, -400], [-190, -240], [-125, -120], [-108, -40], [-160, 60], [-200, 150]].map((p) => ({ go: p, r: 40 })), { kill: 'flag', move: 'duel', ammo: 'fire', anchor: true, anchorAt: 0.85 }, { go: 'zone:out', r: 40, wait: true }],
     eastBoard: [...[[270, -560], [330, -400], [200, -240], [132, -120], [112, -30], [175, 80], [120, 200]].map((p) => ({ go: p, r: 40 })), { kill: 'flag', move: 'duel', ammo: 'grape', board: 'rush' }],
-    silence: [{ go: [-30, -280], r: 40, sail: 2 }, { kill: 'west', move: 'duel', ammo: 'round', anchor: true, anchorAt: 1.2 }, { go: [-60, 120], r: 50 }, { kill: 'flag', move: 'duel', ammo: 'round', anchor: true, anchorAt: 1.0 }, { go: 'zone:out', r: 40, wait: true }],
+    silence: [{ go: [-30, -280], r: 40, sail: 2 }, { kill: 'west', move: 'duel', ammo: 'round', anchor: true, anchorAt: 0.9 }, { go: [-60, 120], r: 50 }, { kill: 'flag', move: 'duel', ammo: 'round', anchor: true, anchorAt: 1.0 }, { go: 'zone:out', r: 40, wait: true }],
     guardFirst: [{ go: [0, 100], r: 50 }, { kill: 'guard', move: 'duel', ammo: 'round' }, { kill: 'flag', move: 'duel', ammo: 'combo', board: 'odds' }, { go: 'zone:out', r: 40, wait: true }],
   } },
   { name: 'm4O Down the strait', mission: 'm4', leg: 0, side: O, maxT: 700, routes: {
