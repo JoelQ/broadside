@@ -414,6 +414,7 @@ function hullHit(b, ship) {
   if (b.ammo === 'grape') fx.grape(p); else fx.wood(p, rake ? 16 : 10);
   sfx.thud(0.2 + 0.8 * camVol(p));
   tally(ship, hd, sd, kills, !!rake, p);
+  if (G.onHit) G.onHit(b, ship, hd, sd, kills); // the balance harness's fight record
   if (b.owner.isPlayer) { G.stats.hits++; if (rake) G.raked = true; }
   if (ship.isPlayer) G.shake = Math.max(G.shake, 0.7);
 }
@@ -423,6 +424,7 @@ function rigHit(b, ship, amt) {
   fx.canvas(b.mesh.position, new THREE.Color(ship.spec.sailCol));
   sfx.rip(0.2 + 0.8 * camVol(b.mesh.position));
   tally(ship, 0, d, 0, false, b.mesh.position);
+  if (G.onHit) G.onHit(b, ship, 0, d, 0);
   if (b.owner.isPlayer) G.stats.hits++;
 }
 function testHit(b, ship) {

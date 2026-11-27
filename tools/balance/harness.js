@@ -42,6 +42,74 @@
     }
   }
 
+  // ---------- fight record ----------
+  // With cfg.story the result carries a record of how the fight went: both sides sampled every second, every hit
+  // by the shot that made it, the time each side spent with the other under its guns, and a one-line cause.
+  // tools/balance/story.mjs turns a run's records into tables and pictures.
+  const SHOTS = ['round', 'chain', 'grape', 'fire'];
+  function recorder(P) {
+    const zero = () => ({ hull: 0, sails: 0, crew: 0 });
+    const dealt = {}, taken = {}; // by cause: a shot type, or burning, boarding, other
+    for (const k of [...SHOTS, 'burning', 'boarding', 'other']) { dealt[k] = zero(); taken[k] = zero(); }
+    const foes = () => G.ships.filter((x) => x.side !== P.side);
+    const start = new Map(G.ships.map((x) => [x, { hull: x.hull, sails: x.sails, crew: x.crew }]));
+    let last = new Map(G.ships.map((x) => [x, { hull: x.hull, sails: x.sails, crew: x.crew }]));
+    let hits = new Map(); // what this tick's hits explain of each ship's losses
+    const arcs = { mine: 0, hers: 0, both: 0, neither: 0, boarding: 0 }, samples = [];
+    let lull = 0, longestLull = 0, t = 0, next = 0, was0 = G.state; // the state this tick began in
+    G.onHit = (b, ship, hd, sd, kills) => {
+      const h = hits.get(ship) || zero(); h.hull += hd; h.sails += sd; h.crew += kills; hits.set(ship, h);
+      const book = b.owner === P ? dealt : ship === P ? taken : null;
+      if (book) { const e = book[b.ammo]; e.hull += hd; e.sails += sd; e.crew += kills; }
+    };
+    return {
+      tick(dt) {
+        // whatever a ship lost this tick that no hit explains: the fire, the deck fight, or the rocks
+        for (const x of G.ships) {
+          const was = last.get(x); if (!was) { last.set(x, { hull: x.hull, sails: x.sails, crew: x.crew }); continue; }
+          const h = hits.get(x) || zero(), book = x === P ? taken : x.side !== P.side ? dealt : null;
+          if (book) {
+            const why = G.state === 'boarding' || was0 === 'boarding' ? 'boarding' : x.fire > 0 ? 'burning' : 'other';
+            for (const k of ['hull', 'sails', 'crew']) { const rest = Math.max(0, was[k] - x[k] - h[k]); if (rest > 1e-6) book[why][k] += rest; }
+          }
+          last.set(x, { hull: x.hull, sails: x.sails, crew: x.crew });
+        }
+        hits = new Map();
+        was0 = G.state;
+        const fs = foes().filter((x) => !x.out), live = fs.filter((x) => x.active !== false);
+        const mine = live.some((f) => P.sides.some((sd) => G.api.inArc(P, sd, f, 1)));
+        const hers = live.some((f) => f.sides && f.sides.some((sd) => G.api.inArc(f, sd, P, 1)));
+        const k = G.state === 'boarding' ? 'boarding' : mine && hers ? 'both' : mine ? 'mine' : hers ? 'hers' : 'neither';
+        arcs[k] += dt;
+        lull = k === 'neither' ? lull + dt : 0; longestLull = Math.max(longestLull, lull);
+        t += dt;
+        if (t >= next) {
+          next += 1;
+          const f = G.api.nearest(P, fs.length ? fs : foes()) || fs[0];
+          const r = (x) => [+x.hullR.toFixed(3), +x.sailR.toFixed(3), Math.round(x.crew)];
+          samples.push({ t: Math.round(t), me: r(P), foe: f ? r(f) : null, foeId: f ? f.id || f.spec.cls : null, d: f ? Math.round(G.api.reach(P, f)) : null, ammo: P.ammo, fAmmo: f ? f.ammo : null, v: +P.speed.toFixed(1), fv: f ? +f.speed.toFixed(1) : null, arc: k, fire: [P.fire, f ? f.fire : 0] });
+        }
+      },
+      finish(o, viaBoard) {
+        G.onHit = null;
+        const total = (book, k) => Object.values(book).reduce((a, e) => a + e[k], 0);
+        const share = (book, k) => { const n = total(book, k); return n > 0 ? Object.fromEntries(Object.entries(book).filter(([, e]) => e[k] / n >= 0.005).map(([c, e]) => [c, +(e[k] / n).toFixed(2)])) : {}; };
+        const round = (book) => Object.fromEntries(Object.entries(book).filter(([, e]) => e.hull >= 0.5 || e.sails >= 0.5 || e.crew >= 0.5).map(([c, e]) => [c, { hull: Math.round(e.hull), sails: Math.round(e.sails), crew: Math.round(e.crew) }]));
+        // what decided it: a capture is won on her crew, a sinking or a striking on her hull, a loss on yours
+        const won = o === 'won' || o === 'struck' || o === 'sunk' || o === 'captured';
+        const lostOn = o === 'overrun' || o === 'captured' || (o === 'won' && viaBoard) ? 'crew' : 'hull';
+        const book = won ? dealt : taken, res = won ? lostOn : o === 'overrun' ? 'crew' : 'hull';
+        const sh = share(book, res), top = Object.entries(sh).sort((a, b) => b[1] - a[1]);
+        const cause = o === 'timeout' ? `timed out${longestLull > 30 ? `, ${Math.round(longestLull)}s with neither side's guns bearing` : ''}`
+          : `${o}: ${won ? 'her' : 'our'} ${res} ${top.map(([c, v]) => `${c} ${Math.round(v * 100)}%`).join(', ') || '(no damage recorded)'}`;
+        const T = t || 1;
+        return { cause, decisive: res, dealt: round(dealt), taken: round(taken), share: { dealt: { hull: share(dealt, 'hull'), sails: share(dealt, 'sails'), crew: share(dealt, 'crew') }, taken: { hull: share(taken, 'hull'), sails: share(taken, 'sails'), crew: share(taken, 'crew') } },
+          arcs: Object.fromEntries(Object.entries(arcs).map(([k, v]) => [k, +(v / T).toFixed(2)])), longestLull: Math.round(longestLull), samples,
+          start: { me: start.get(P), foes: [...start].filter(([x]) => x.side !== P.side).map(([x, v]) => ({ id: x.id || x.spec.cls, ...v })) } };
+      },
+    };
+  }
+
   // A captain is a way of moving, a shot policy and a boarding policy.
   //   move:  duel (broadsides at half range) | kite (broadsides at long range) | hug (sit astern) | close (run alongside)
   //   ammo:  round | chain (until her sails are under 45%) | fire | grape (when close) | combo (chain, then fire, grape when close)
@@ -237,15 +305,18 @@
       G.bot = routeBot(steps);
       const dt = 0.05, maxT = cfg.maxT || 600;
       let t = 0, aground = 0, boarded = 0; const trace = [];
+      const rec = cfg.story ? recorder(P) : null;
       while (t < maxT && (G.state === 'battle' || G.state === 'boarding')) {
         if (G.state === 'boarding') { boarded = 1; G.api.boardSwivel(); }
         if (P.aground > 0) aground += dt;
         if (cfg.trace && Math.round(t / dt) % Math.round(cfg.trace / dt) === 0) trace.push(`${String(Math.round(t)).padStart(3)}s me ${Math.round(P.pos.x)},${Math.round(P.pos.z)} h${Math.round(P.hullR * 100)} c${Math.round(P.crew)} v${P.speed.toFixed(0)}${P.anchored ? ' anch' : ''}${P.aground > 0 ? ' AGROUND' : ''} ${P.ammo} | ` + G.ships.filter((x) => x !== P).map((x) => `${x.id}:${Math.round(x.pos.x)},${Math.round(x.pos.z)} h${Math.round(x.hullR * 100)} c${Math.round(x.crew)} v${x.speed.toFixed(0)}${x.out ? ' ' + x.out : ''}${x.aground > 0 ? ' AGROUND' : ''}${x.anchored ? ' anch' : ''}${x.fire ? ' fire' + x.fire : ''}`).join(' | ') + (G.state === 'boarding' ? ' BOARDING' : ''));
         G.tick(dt, 1); t += dt;
+        if (rec) rec.tick(dt);
       }
       const o = G.state === 'battle' || G.state === 'boarding' ? 'timeout' : G.outcome;
       const res = { seed: st.seed, o, win: o === 'won', t: Math.round(t), hull: +(Math.max(0, P.hull) / P.hullMax).toFixed(2), crew: +(P.crew / P.crewMax).toFixed(2), aground: Math.round(aground), boarded,
         foes: G.ships.filter((s) => s.side === 1).map((s) => s.out || (s.aground > 0 ? 'aground' : 'up')).join(','), prizes: run.prizes.length, trace, pos: [Math.round(P.pos.x), Math.round(P.pos.z)] };
+      if (rec) res.story = rec.finish(o, boarded);
       if (G.state === 'boarding') G.api.cutGrapples();
       G.bot = null; G.state = 'story'; G.outcome = null; P.sinking = 0; G.fast = false; restoreDials();
       return res;
@@ -263,12 +334,14 @@
       G.bot = captain(cfg.plan);
       const dt = 0.05, maxT = cfg.maxT || 420;
       let t = 0, boardedBy = null, exposed = 0, minOdds = 1e9;
+      const rec = cfg.story ? recorder(P) : null;
       while (t < maxT && (G.state === 'battle' || G.state === 'boarding')) {
         if (G.state === 'boarding') { if (!boardedBy) boardedBy = G.bd.by; G.api.boardSwivel(); }
         else {
           if (E.sides.some((s) => G.api.inArc(E, s, P, 1))) exposed += dt;
         }
         G.tick(dt, 1); t += dt;
+        if (rec) rec.tick(dt);
       }
       const o = G.outcome || 'timeout';
       const res = {
@@ -276,6 +349,7 @@
         t: Math.round(t), hull: +(Math.max(0, P.hull) / P.hullMax).toFixed(2), crew: Math.round(P.crew), eHull: +(Math.max(0, E.hull) / E.hullMax).toFixed(2), eCrew: Math.round(E.crew),
         eSails: +E.sailR.toFixed(2), boardedBy, exposed: +(exposed / (t || 1)).toFixed(2), shots: G.stats.shots, hits: G.stats.hits,
       };
+      if (rec) res.story = rec.finish(o);
       G.stats.shots = G.stats.hits = 0;
       // leave the game in a state the next fight can start from
       if (G.state === 'boarding') G.api.cutGrapples();
