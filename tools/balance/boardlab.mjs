@@ -2,7 +2,7 @@
 //   node tools/balance/boardlab.mjs [runs] [attackers] [defenders]     (after npm run build; DIST=<html> plays another build)
 // The attacker is held on the defender's quarter, out of her arcs and with her stern on our beam, and fires grape
 // whenever a battery is loaded, until the odds reach ODDS (default 1.25) or the grape is gone; then she boards. The
-// defender sails straight on at 6 knots and never fires back except at the rail. So this measures the rules alone:
+// defender sails straight on at 6 knots and never fires back. So this measures the rules alone:
 // how many rounds and seconds it takes, and who wins on deck. How risky it is to get there is for the boarding
 // matrix (boarding.mjs) and for a person to judge.
 //   DIALS='{"AMMO.grape.kills":{"mul":2}}' tries other numbers; GRAPE=<n> is the grape aboard (default 40); HANDS=<n>

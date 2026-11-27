@@ -31,7 +31,6 @@ const BOARD = {
   pace: 0.028, paceRise: 0.0035, // how fast the deck fight kills, and how fast that climbs so no fight drags
   rush: 1.15, // the side that boards fights this much harder for the first seconds
   breaks: 0.3, // a crew gives up the deck when it is down to this share of the men it brought
-  rail: { grape: 2.6, round: 0.9, fire: 0.7, chain: 0.3 }, // men killed per gun in the volley at the rail
 };
 let BOARD_RANGE = 33; // set from the two ships' beams whenever the target changes
 
@@ -648,30 +647,12 @@ function battleUpdate(dt) {
 
 // ---------- boarding ----------
 // The deck fight is short and decided mostly by what you did before the grapples flew: how many
-// of her crew you killed, how many of yours are left, and what was loaded in the guns facing her.
+// of her crew you killed and how many of yours are left.
 // Both sides see the odds beforehand. During it you choose when to spend grapeshot in the swivel
 // gun, and whether to cut loose before it is lost.
 // A crew fights worse when its ship is in trouble: hands are at the pumps, or fighting a fire.
 const readiness = (s) => (1 - BOARD.hullReady + BOARD.hullReady * s.hullR) * (s.fire > 0 ? BOARD.fireReady : 1);
 const strength = (s) => s.crew * s.melee * readiness(s);
-function pointBlank(from, to, side, name) {
-  // a loaded battery facing the other ship goes off at the rail as the hulls touch
-  if (!from.bat[side] || from.reload[side] > 0) return;
-  const guns = Math.round(from.muzzles[side].length * from.crewR), a = from.ammo; // only the guns she still has men to work
-  if (!guns) return;
-  if (a !== 'round') { if (from.stock[a] <= 0) return; from.stock[a]--; }
-  const dm = from.dmgOf(side);
-  const kills = Math.max(0, Math.min(to.crew - 1, Math.round(guns * BOARD.rail[a] * dm * (from.spec.mods ? from.spec.mods.swivel : 1))));
-  const hull = guns * (a === 'round' ? 4.5 : a === 'fire' ? 3.2 : 0.6) * dm;
-  to.crew -= kills; to.hull = Math.max(1, to.hull - hull);
-  from.startReload(side);
-  for (const m of from.muzzles[side]) { const q = from.toWorld(m, _m); fx.cannon(q, Math.sin(from.normal(side)), Math.cos(from.normal(side))); }
-  sfx.cannon(1); G.shake = 1;
-  const q = to.toWorld(_l.set(0, to.spec.D + 8, 0), new Vec3());
-  fx.grape(q);
-  floater(`${name}  −${kills} crew` + (hull >= 5 ? `  −${Math.round(hull)} hull` : ''), to.isPlayer ? 'bad rake' : 'good rake', q);
-  toast(from.isPlayer ? `Point-blank ${AMMO[a].long.toLowerCase()}: ${kills} of her crew cut down` : `Her guns at the rail: ${kills} of ours cut down`, from.isPlayer ? 'good' : 'bad', 3500);
-}
 function startBoarding(by, foe = G.enemy) {
   const p = G.player, e = foe;
   setTarget(e);
@@ -679,8 +660,6 @@ function startBoarding(by, foe = G.enemy) {
   for (const s of G.ships) s.grapple = 0;
   const side = wrap(Math.atan2(e.pos.x - p.pos.x, e.pos.z - p.pos.z) - p.heading) > 0 ? 1 : -1;
   const same = Math.abs(wrap(e.heading - p.heading)) < Math.PI / 2, eSide = same ? -side : side;
-  pointBlank(p, e, side > 0 ? 'port' : 'stbd', 'Point-blank!');
-  pointBlank(e, p, e.spec.fixed ? 'bow' : eSide > 0 ? 'port' : 'stbd', 'Her guns!');
   G.bd = { foe: e, side, off: p.spec.B / 2 + e.spec.B / 2 + 1.4, th: same ? 0 : Math.PI, by, t: 0, fxT: 0, cd: 1.5, eCd: 5, p0: p.crew, e0: e.crew, warned: false };
   p.boardView = { side, lanes: [0, 0, 0], won: [false, false, false], flip: false, reach: e.spec.B * 0.5 };
   e.boardView = { side: eSide, lanes: [0, 0, 0], won: [false, false, false], flip: !same, reach: p.spec.B * 0.5 };
@@ -713,7 +692,7 @@ function boardingUpdate(dt) {
     shipOut(e, 'blown'); retarget(true);
     return;
   }
-  if (b.t < 2.4) return; // a beat to take in the opening volley before blades meet
+  if (b.t < 2.4) return; // a beat as the grapples bite before blades meet
   // each side cuts the other down in proportion to its own strength, so the bigger crew pulls
   // ahead faster and faster; the pace climbs so no fight drags
   const rush = b.t < 6 ? (b.by === 'player' ? BOARD.rush : 1 / BOARD.rush) : 1, pace = BOARD.pace + BOARD.paceRise * b.t;

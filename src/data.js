@@ -75,7 +75,7 @@ export const KITS = {
   boarder: { name: 'Boarder', items: [
     { id: 'marines', at: 'tavern', name: 'Marines', desc: '+20 crew and +20% strength in a boarding', add: { crew: 20 }, mul: { melee: 1.2 } },
     { id: 'hooks', at: 'wright', name: 'Grappling crews', desc: 'Board from 30% further off, at a bigger speed gap', mul: { boardReach: 1.3, boardSpeed: 1.4 } },
-    { id: 'rail', at: 'guns', name: 'Rail guns', desc: 'Point-blank volley and swivel gun kill 50% more', mul: { swivel: 1.5 } },
+    { id: 'rail', at: 'guns', name: 'Rail guns', desc: 'Swivel gun kills 50% more', mul: { swivel: 1.5 } },
     { id: 'sweeps', at: 'sails', name: 'Sweeps', desc: 'Oars: +3 knots whatever the wind, even dead into it', add: { sweeps: 3.4 } },
   ] },
   gun: { name: 'Gun platform', items: [
