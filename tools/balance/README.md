@@ -24,7 +24,7 @@ node tools/balance/report.mjs /tmp/grid.json
 ```
 
 - `harness.js` is injected into the built page and exposes `H.fight(cfg)`.
-- `run.mjs` plays a list of fights across four headless pages and prints one line per cell.
+- `run.mjs` plays a list of fights across four headless pages (`play.mjs`) and prints one line per cell.
 - `grid.mjs` is the full grid: every ship x stock/fitted x captain x pirate.
 - `report.mjs` prints win-rate tables, which victory types are reachable, what each shot type adds
   over round shot, and what fittings add.
@@ -83,6 +83,32 @@ and everything is put back when it ends:
 Seeds don't move, so a run with dials pairs up with one without in `compare.mjs`, fight by fight. Only numbers in
 those tables can be dialled: a loose constant such as `BELOW` has to move into one of them first. Hull numbers reach
 campaign fights through `HULLS`; skirmish fights (`grid.mjs`) take theirs from `PLAYER_SPEC` and `ENEMIES` instead.
+
+## Sweeping a number
+
+`sweep.mjs` plays the same seeded fights at every value of one dial and draws each hull's win rate against it:
+
+```bash
+LEGS='m2 brothers' node tools/balance/sweep.mjs tools/balance/legs.mjs 'AMMO.grape.kills=x0.5:x2:0.5' --runs 6
+```
+
+```bash
+node tools/balance/sweep.mjs tools/balance/grid.mjs 'HULLS.*.crew=x0.8,x1,x1.2' 'AMMO.grape.hull=0.3,0.6,1' --only 'prep board'
+```
+
+- Values are a list (`0.1,0.2,0.4`), a range (`0.1:0.5:0.1`), multiples of the shipped number (`x0.5:x1.5:x0.25`,
+  where `x1` is the game as it ships), or a JSON list for values that are lists (`'[[1,3],[2,4]]'`).
+- `--by` picks what one line is (`hull`, `shipName`, `pirate`, `planName`, `routeName`, `legName`, `label`); the rest
+  are averaged into it. `--metric` is `win`, `board` (won by boarding), `guns` or `t` (seconds). `--only` filters
+  cells by label; the jobs file's own filters (`LEGS`, `HULLS`, `ROUTES`) work too.
+- Two dials give a heatmap per line instead of a chart.
+- It writes `out/sweep/<dial>/index.html` (chart, table, and the cliffs: cells that change most between neighbouring
+  values, with the fights that flipped) and `data.json`, and prints the table.
+
+Every value plays run k of every cell on seed `SEED + k` (`SEED` defaults to 1000), so a fight that changes outcome
+between two values changed because of the number. Read a flat line as "this dial doesn't matter here", a cliff as
+"a small change flips the game here", and look for the values where small, middling and big hulls all sit in a band
+you like. It costs cells x values x runs fights at about 3 a second: it prints the estimate before it starts.
 
 ## Campaign legs
 
