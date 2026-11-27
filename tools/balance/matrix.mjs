@@ -9,32 +9,10 @@
 import { mkdirSync, writeFileSync } from 'fs';
 import path from 'path';
 import { play } from './play.mjs';
+import { CAPTAINS, OARED } from './captains.mjs';
 
 const args = process.argv.slice(2), flags = {};
 for (let i = 0; i < args.length; i++) if (args[i].startsWith('--')) flags[args[i].slice(2)] = args[++i];
-const step = (o) => [{ kill: 'all', ...o }];
-// play: the kind of fight she makes, for the identity cards. keepOff bears away from a stronger boarder; windward
-// beats up to her weather side before fighting (see harness.js).
-const CAPTAINS = {
-  guns: { k: 'g', play: 'broadsides', route: step({ move: 'duel', ammo: 'round' }) },
-  wary: { k: 'w', play: 'broadsides', route: step({ move: 'duel', ammo: 'round', keepOff: true }) },
-  weather: { k: 'e', play: 'broadsides', route: step({ move: 'duel', ammo: 'round', windward: true }) },
-  kite: { k: 'k', play: 'long range', route: step({ move: 'kite', ammo: 'round' }) },
-  kiteWary: { k: 'l', play: 'long range', route: step({ move: 'kite', ammo: 'round', keepOff: true }) },
-  hug: { k: 'h', play: 'under her stern', route: step({ move: 'hug', ammo: 'round' }) },
-  hugWary: { k: 's', play: 'under her stern', route: step({ move: 'hug', ammo: 'round', keepOff: true }) },
-  hugWeather: { k: 'u', play: 'under her stern', route: step({ move: 'hug', ammo: 'round', windward: true }) },
-  burn: { k: 'f', play: 'fire', route: step({ move: 'duel', ammo: 'fire' }) },
-  prep: { k: 'p', board: true, play: 'cripple and board', route: step({ move: 'duel', ammo: 'combo', board: 'odds' }) },
-  prepWary: { k: 'q', board: true, play: 'cripple and board', route: step({ move: 'duel', ammo: 'combo', board: 'odds', keepOff: true }) },
-  prepWeather: { k: 'v', board: true, play: 'cripple and board', route: step({ move: 'duel', ammo: 'combo', board: 'odds', windward: true }) },
-  hugBoard: { k: 'b', board: true, play: 'cripple and board', route: step({ move: 'hug', ammo: 'combo', board: 'odds' }) },
-  hugBoardWeather: { k: 'x', board: true, play: 'cripple and board', route: step({ move: 'hug', ammo: 'combo', board: 'odds', windward: true }) },
-  rush: { k: 'r', board: true, play: 'rush aboard', route: step({ move: 'duel', ammo: 'grape', board: 'rush' }) },
-  bow: { k: 'o', oared: true, play: 'bow guns', route: step({ move: 'bow', ammo: 'round', rangeK: 0.3 }) }, // found by search.mjs
-  bowWeather: { k: 'y', oared: true, play: 'bow guns', route: step({ move: 'bow', ammo: 'round', rangeK: 0.3, windward: true }) },
-};
-const OARED = ['galley', 'galliot'];
 const VIABLE = 0.15; // a hull should beat each other hull at least this often, at best
 const runs = +flags.runs || 20, starts = flags.start === 'usual' ? [false] : flags.start === 'flipped' ? [true] : [false, true];
 const perStart = Math.ceil(runs / starts.length), seed = process.env.SEED != null ? +process.env.SEED : 1000;

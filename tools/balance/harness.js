@@ -198,12 +198,21 @@
   // upwind of her before fighting, whenever she holds the weather gauge.
   // range: the distance she keeps (yd), or rangeK: that as a share of her round-shot range.
   const fake = (x, z) => ({ pos: { x, z }, fwdX: 0, fwdZ: 0, speed: 0, crewR: 1, sailR: 1, fire: 0, exposed: 0, crew: 1, melee: 1, hullR: 1, active: false, isPlayer: false, spec: { L: 1, B: 1 }, stock: {} });
-  function routeBot(steps) {
-    const ai = G.newAI(), st = { i: 0, swap: 0 };
+  // until: { t, foeSails, foeCrew, foeHull, hull, crew } ends a fight step early, as soon as any of them is met (seconds
+  // on this step; her sails, crew or hull as a share at or under; yours likewise), and the next step takes over: an
+  // opener such as chain until her sails are down to 60%, then round shot.
+  const met = (u, me, foe, t) => (u.t != null && t >= u.t) || (foe && ((u.foeSails != null && foe.sailR <= u.foeSails) || (u.foeCrew != null && foe.crewR <= u.foeCrew) || (u.foeHull != null && foe.hullR <= u.foeHull))) || (u.hull != null && me.hullR <= u.hull) || (u.crew != null && me.crewR <= u.crew);
+  // own: she is the player's ship. Otherwise she is an enemy driven through the game's bot hook (ship.bot), and boards
+  // the way the game's AI does, by wanting to (her grapples catch only a slow player).
+  function routeBot(steps, own = true) {
+    let ai = own ? G.newAI() : null;
+    const st = { i: 0, swap: 0, t: 0 };
     return (me, _e, dt) => {
+      if (!ai) ai = me.ai;
       const S = G.sc.S, foes = G.api.foesOf(me);
       let step = steps[Math.min(st.i, steps.length - 1)];
-      const done = () => { st.i++; step = steps[Math.min(st.i, steps.length - 1)]; };
+      const done = () => { st.i++; st.t = 0; step = steps[Math.min(st.i, steps.length - 1)]; };
+      st.t += dt;
       // advance past finished steps
       for (let guard = 0; guard < 6 && st.i < steps.length; guard++) {
         if (step.go) {
@@ -213,6 +222,7 @@
         } else if (step.kill) {
           const t = step.kill === 'all' ? foes.find((o) => !o.spec.fixed) || foes[0] : S.by[step.kill];
           if (!t || t.out) { done(); continue; }
+          if (step.until && st.i < steps.length - 1 && met(step.until, me, t, st.t)) { done(); continue; }
         }
         break;
       }
@@ -231,7 +241,7 @@
       }
       const foe = step.kill === 'all' ? G.api.nearest(me, foes.filter((o) => !o.spec.fixed)) || G.api.nearest(me, foes) : S.by[step.kill];
       if (!foe) return;
-      G.api.setTarget(foe);
+      if (own) G.api.setTarget(foe); else me.target = foe;
       const d = G.api.reach(me, foe), sk = me.stock, a = step.ammo || 'round';
       let boardMode = step.board === 'rush' || (step.board === 'odds' && G.api.strength(me) / (G.api.strength(foe) || 1) >= (step.odds || 1.25));
       if (foe.spec.fixed && step.board !== 'rush') boardMode = step.board === 'odds' && G.api.strength(me) / (G.api.strength(foe) || 1) >= (step.odds || 1.25);
@@ -267,6 +277,7 @@
         const sk2 = me.stock, next = (a === 'chain' || a === 'combo') && sk2.chain > 0 && foe.sailR > 0.45 ? 'chain' : (a === 'grape' || a === 'combo' || boardMode) && sk2.grape > 0 && foe.exposed > 2 ? 'grape' : 'round';
         hug(me, foe, d, next);
         for (const s of me.sides) if (G.api.inArc(me, s, foe, 1) || foes.some((o) => o !== foe && G.api.inArc(me, s, o, 1))) G.api.fire(me, s);
+        if (!own) ai.wantBoard = boardMode;
         return;
       }
       if (step.anchor && !me.anchored && d < r * (step.anchorAt || 0.8) && me.speed < 6) { me.anchored = true; me.weighT = 0; }
@@ -277,7 +288,8 @@
       if (step.anchor && !me.anchored && d < r * (step.anchorAt || 0.8)) me.sailLevel = Math.min(sail, 1);
       if (move === 'close') ai.wantBoard = true;
       for (const s of me.sides) if (foes.some((o) => o !== foe && G.api.inArc(me, s, o, 1))) G.api.fire(me, s);
-      if (boardMode && G.canBoard) G.api.startBoarding('player', foe);
+      if (!own) ai.wantBoard = boardMode;
+      else if (boardMode && G.canBoard) G.api.startBoarding('player', foe);
     };
   }
 
@@ -374,16 +386,21 @@
       H.setupLeg({ mission: 'm0', leg: 0, hull: cfg.b, seed: cfg.seed, dials: cfg.dials });
       const specB = JSON.parse(JSON.stringify(G.player.spec));
       specB.stock = cfg.foeStock || { chain: 3, grape: 3, fire: 0 };
+      specB.noStrike = !cfg.strike; // she fights to the last, as you do: an enemy strikes her colours at 15% hull, which handed you a free 15%
       const steps = cfg.route;
       const r = H.leg({ ...cfg, mission: 'm0', leg: 0, hull: cfg.a, maxT: cfg.maxT || 480, route: (S) => {
         const old = S.by.pirate, [x, z, h] = [old.pos.x, old.pos.z, old.heading];
         G.api.clearShips();
+        // both in good hands: a full crew. (Home waters is the first mission, where your standing gives you 80 hands,
+        // which left a great ship or a xebec fighting short-handed on your side and fully manned on hers.)
+        if (!cfg.hands) G.player.crew = G.player.crewMax;
         if (cfg.flip) { // trade places: she starts where you would have, you where she would have
           const P = G.player, [px, pz, ph] = [P.pos.x, P.pos.z, P.heading];
           P.pos.x = x; P.pos.z = z; P.heading = h;
           S.by.pirate = G.api.addShip(specB, 1, px, pz, ph, { id: 'pirate', speed: 6 });
         } else
         S.by.pirate = G.api.addShip(specB, 1, x, z, h, { id: 'pirate', speed: 6 });
+        if (cfg.foeRoute) S.by.pirate.bot = routeBot(cfg.foeRoute, false); // a scripted captain on her side too
         return steps;
       } });
       r.how = r.foes.includes('captured') ? 'board' : r.o === 'won' ? 'guns' : r.o;

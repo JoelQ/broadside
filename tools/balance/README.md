@@ -186,6 +186,45 @@ default (`--runs`), about 15,000 fights, a little over two minutes on 4 cores.
 - What the matrix does not say: anything about the campaign, where the wind, the coast, forts and enemy grades are
   part of each leg. That is `legs.mjs` and `rules.mjs`.
 
+## Counterplay: plan against plan
+
+The hull matrix puts the game's own AI on the defending side, a single plan that never answers anything. A tactic
+that beats it can look like a sure win when a captain who saw it coming would counter it: a sloop that gets under a
+great ship's stern, say, against a great ship that opens with chain before the sloop gets there. `counter.mjs` gives
+both sides a scripted captain and plays every plan against every plan:
+
+```bash
+node tools/balance/counter.mjs
+```
+
+```bash
+node tools/balance/counter.mjs --hulls sloop,flagship --runs 20
+```
+
+- **Game**: the row hull's chance of winning when both captains choose well, knowing the other may counter (the value
+  of the zero-sum game between their plans, mixed plans allowed). Her best mix and the other side's answer are in
+  the tooltips and the pair table.
+- **Against the AI**: her best plan against the other hull under the game's AI, which is what the matrix sees.
+- **Typical**: every plan against every plan, on average. A big gap to the game value is a matchup that rewards
+  choosing well.
+- **Hidden counters**: plans that beat the AI at least 60% of the time, and the answer that takes 30 points or more
+  off them.
+
+Both ships carry full shot lockers and the starts are traded for half the fights. The side with your helm still
+has an edge in a boarding (her grapples bite at once where an enemy's take a few seconds to catch, and her swivel is
+heavier), so a hull attacking herself wins well over half the time when boarding decides it: every pair is played
+both ways round, which cancels it, and the mirror check prints how big it is. The plans are `captains.mjs` (shared with the matrix), including plans in
+phases: a fight step with `until: { foeSails: 0.55 }` (or `t`, `foeCrew`, `foeHull`, `hull`, `crew`) gives way to the
+next step as soon as it is met, so `chainOpen` fires chain until her sails are down to 55% and then fights with round
+shot. A duel cell with `foeRoute` puts a scripted captain on the defender (through the game's `ship.bot` hook).
+About 110,000 fights, 22 minutes on 4 cores, at the default 10 per plan against plan; the max and min over many noisy
+plans lean a little optimistic and pessimistic, so confirm a surprising pair with `--hulls` and more `--runs`.
+
+Duels (`H.duel`, both tools) man both ships fully, where Home waters, the first mission, would give your ship only
+your 80 hands, and the defender fights to the last instead of striking at 15% hull. Duel results from before 27 November 2026
+had both wrong: a great ship or a xebec attacked short-handed (80 of 220 or 135 men), and every defender gave 15% of
+her hull away. Don't compare them with newer ones.
+
 ## Design rules as checks
 
 `rules.mjs` checks the design rules in `docs/campaign.md` against a legs run, leg by leg, and with a second run on

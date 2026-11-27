@@ -587,6 +587,7 @@ function runAI(dt) {
   const p = G.player;
   for (const s of G.ships) {
     if (s === p || !s.ai || !s.active) continue;
+    if (s.bot) { s.bot(s, p, dt); continue; } // test hook: a scripted captain on her side (tools/balance)
     if (s.ai.hold) { // under false colours she takes you for a friend, until you show otherwise
       if (G.fired || sep(p, s) < s.spec.L * 1.1 || s.hull < s.hullMax) { s.ai.hold = false; if (!G.fast) toast(`${s.name} knows you now!`, 'bad'); } else { s.input.turn = 0; s.sailLevel = 1; continue; }
     }
