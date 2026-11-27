@@ -39,15 +39,16 @@ G.tick(0.05, 20);                       // a second of the rules
 
 ## Speed
 
-On 4 cores, the parity set (506 campaign legs with traces and fight stories, 120 skirmish fights, 48 whole
-cruises, all on one seed):
+Every campaign leg once (506 legs, seed 1000, fight summaries: what `checks.yml` plays), on 4 cores:
 
-| | wall time | |
+| | wall time | legs a second |
 |-|-|-|
-| built page in headless Chromium, 4 browsers | 292 s | 2.3 cells/s |
-| plain Node, 4 worker threads | 70 s | 9.6 cells/s |
+| built page in headless Chromium, 4 browsers | 236 s | 2.1 |
+| plain Node, 1 worker thread | 171 s | 3.0 |
+| plain Node, 4 worker threads | 54 s | 9.4 |
 
-The handling tool's full run (567 simulations) takes 3.4 s in Node, against 22 s in Chromium.
+All three win the same 279 legs. A skirmish fight takes about a tenth of a second of one core. The handling tool's
+full run (567 simulations) takes 3.4 s in Node, against 22 s in Chromium, with identical numbers.
 
 ## Node and the browser
 

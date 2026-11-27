@@ -3,25 +3,27 @@
 Shows how every hull sails, side by side, so a change to the sailing rules can be seen before it is played.
 
 ```
-npm run build
 node tools/handling/run.mjs                       # everything, every hull, light air, breeze and gale
 node tools/handling/run.mjs tack,irons --png      # just these manoeuvres, with PNGs and a contact sheet
 node tools/handling/run.mjs --hulls sloop,brig --winds breeze --no-chase
 ```
 
-To compare a rules change, keep a copy of the build from before it and pass it as `GHOST`:
+It runs this checkout's `src/` in plain Node (`tools/sim/`), with no build and no browser. To compare a rules
+change, pass the version from before it as `GHOST`: another checkout (a `git worktree` of main, say), or a built page:
 
 ```
-cp dist/index.html /tmp/before.html
-# ... change src/ship.js or src/fleet.js, npm run build ...
-GHOST=/tmp/before.html node tools/handling/run.mjs --png
+git worktree add /tmp/before main
+# ... change src/ship.js or src/fleet.js ...
+GHOST=/tmp/before node tools/handling/run.mjs --png
 ```
 
-The ghost's tracks are drawn dashed under this build's, and its numbers follow in brackets: green where this build
-does better, red where worse. `DIST=<html>` runs some other build in place of `dist/index.html`.
+The ghost's tracks are drawn dashed under this version's, and its numbers follow in brackets: green where this
+version does better, red where worse. `DIST=<checkout or html>` runs some other version in place of this one.
+A built page (`.html`) is run in headless Chromium, which needs Playwright; a version from before `tools/sim/`
+can only be run that way.
 
-A full run takes about 20 seconds on 4 cores (40 with `GHOST`); the simulations are shared out among several
-headless browsers, `JOBS=<n>` per build. `--no-chase` skips the slowest part.
+A full run takes about 3.5 seconds on 4 cores in Node (about 20 for a build in Chromium); the simulations are shared
+out among worker threads, `JOBS=<n>` per version. `--no-chase` skips the slowest part.
 
 Everything goes to `out/handling/` (`--out` to change): `index.html` has every picture and the chase tables on one
 page; `data.json` has the raw tracks and numbers; the tables are also printed.
@@ -53,8 +55,8 @@ after 4 minutes.
 
 ## How it works
 
-`sim.js` is injected into the built game after `tools/balance/harness.js`, sets up an empty sea with
+`sim.js` runs on top of the game after `tools/balance/harness.js`, sets up an empty sea with
 `H.setupLeg`, and drives the player's ship with `G.bot`, ticking the real rules (`G.tick`) so what it measures is
-what the game does. `run.mjs` runs it in headless Chromium (several browsers per build, every build at once) and draws the SVGs. The
-game's own frame loop is stopped, since drawing frames in software costs far more than the rules.
+what the game does. `run.mjs` runs it in worker threads (or headless Chromium for a built page), every version at once, and draws the
+SVGs. In a page the game's own frame loop is stopped, since drawing frames in software costs far more than the rules.
 To add a manoeuvre, add it to `MANOEUVRES` and `metrics` in `sim.js` and to `ABOUT` in `run.mjs`.

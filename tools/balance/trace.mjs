@@ -1,21 +1,12 @@
 // Plays one cell of legs.mjs and prints where everything was every few seconds.
 //   LEGS='m1V The patrol' HULLS=sloop ROUTES=shoals [SEED=n] node tools/balance/trace.mjs [seconds-between-lines]
-import { createRequire } from 'module';
-import { readFileSync } from 'fs';
-import { pathToFileURL, fileURLToPath } from 'url';
-import path from 'path';
-const { chromium } = createRequire(import.meta.url)('playwright');
-const here = path.dirname(fileURLToPath(import.meta.url));
-const cells = (await import('./legs.mjs')).default, every = +process.argv[2] || 10;
-const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
-const page = await browser.newPage({ viewport: { width: 320, height: 200 } });
-page.on('pageerror', (e) => console.error('PAGE ERROR', e.message, e.stack));
-await page.goto(pathToFileURL(process.env.DIST ? path.resolve(process.env.DIST) : path.join(here, '../../dist/index.html')).href); // DIST=<html> plays another build
-await page.waitForTimeout(600);
-await page.addScriptTag({ content: readFileSync(path.join(here, 'harness.js'), 'utf8') });
-for (const c of cells.slice(0, 3)) {
-  const r = await page.evaluate((cfg) => H.leg(cfg), JSON.parse(JSON.stringify({ ...c, trace: every, seed: process.env.SEED != null ? +process.env.SEED : undefined })));
+// Plays in plain Node from src/ (see tools/sim); DIST=<html> plays a built page in the browser instead.
+import { play } from './play.mjs';
+const cells = (await import('./legs.mjs')).default.slice(0, 3), every = +process.argv[2] || 10;
+const seed = process.env.SEED != null ? +process.env.SEED : undefined;
+const res = await play(cells.map((c) => ({ ...c, trace: every, seed })), 1, { workers: 1, dist: process.env.DIST });
+for (const [i, c] of cells.entries()) {
+  const r = res[i][0];
   console.log(`== ${c.label}: ${r.o} at ${r.t}s (seed ${r.seed})`);
   console.log(r.trace.join('\n'));
 }
-await browser.close();
