@@ -144,7 +144,7 @@ function recStart() {
 function recEnd(outcome) {
   if (!rec) return;
   const p = G.player;
-  Object.assign(rec, { outcome, frames: rec.dt.length, t: Math.round(G.battleT), hull: +(p.hull / p.hullMax).toFixed(3), crew: Math.round(p.crew) });
+  Object.assign(rec, { outcome, frames: rec.dt.length, t: Math.round(G.battleT), hullLeft: +(p.hull / p.hullMax).toFixed(3), crew: Math.round(p.crew) });
   const all = [rec, ...recordings()].slice(0, 6);
   try { localStorage.setItem('broadside.recordings', JSON.stringify(all)); } catch { /* full, or no storage: it stays in memory */ }
   G.recordings = all; rec = null;

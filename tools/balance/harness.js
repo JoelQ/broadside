@@ -392,7 +392,7 @@
       }
       G.paused = true;
       const o = G.state === 'battle' || G.state === 'boarding' ? 'unfinished' : G.outcome;
-      const res = { seed: r.seed, o, win: o === 'won', recorded: r.outcome, same: o === r.outcome, drift, frames: i, t: Math.round(G.battleT), hull: +(Math.max(0, P.hull) / P.hullMax).toFixed(3), recHull: r.hull, crew: +(P.crew / P.crewMax).toFixed(2), boarded, aground: Math.round(aground),
+      const res = { seed: r.seed, o, win: o === 'won', recorded: r.outcome, same: o === r.outcome, drift, frames: i, t: Math.round(G.battleT), hull: +(Math.max(0, P.hull) / P.hullMax).toFixed(3), recHull: r.hullLeft, crew: +(P.crew / P.crewMax).toFixed(2), boarded, aground: Math.round(aground),
         foes: G.ships.filter((s) => s.side !== P.side).map((s) => s.out || 'up').join(','), pos: [Math.round(P.pos.x), Math.round(P.pos.z)] };
       if (rec) res.story = rec.finish(o, boarded);
       if (G.state === 'boarding') G.api.cutGrapples();

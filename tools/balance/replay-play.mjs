@@ -31,7 +31,7 @@ for (const f of files) {
     console.log(`== ${label}`);
     if (res.o === 'mismatch') { console.log(`  can't replay: ${res.why}`); continue; }
     const done = rec.outcome != null, tamper = rec.tampered ? ' (playtest controls were used: expect it to differ)' : '';
-    console.log(`  recorded: ${done ? `${rec.outcome} at ${rec.t}s, hull ${Math.round(rec.hull * 100)}%` : `still going when it was copied, ${rec.dt.length} frames in`}${tamper}`);
+    console.log(`  recorded: ${done ? `${rec.outcome} at ${rec.t}s, hull ${Math.round(rec.hullLeft * 100)}%` : `still going when it was copied, ${rec.dt.length} frames in`}${tamper}`);
     const drift = res.drift ? `left the recorded track at ${res.drift.t}s (${res.drift.yards} yd off${res.drift.hull ? `, hull ${res.drift.hull > 0 ? "+" : ""}${res.drift.hull} points` : ''})` : 'kept to the recorded track';
     console.log(`  replayed: ${res.o === 'unfinished' ? 'still going' : res.o} at ${res.t}s, hull ${Math.round(res.hull * 100)}%${done ? ` · ${res.same ? 'same outcome' : 'DIFFERENT OUTCOME'}` : ''} · ${drift}`);
     if (res.story) console.log(`  ${res.story.cause}`);
