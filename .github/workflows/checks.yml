@@ -72,8 +72,8 @@ jobs:
       # both builds play the same jobs on the same seeds, so a fight that changed outcome changed because of the rules
       - name: Play every campaign leg on both builds
         run: |
-          node tools/balance/run.mjs tools/balance/legs.mjs "$RUNS" after.json > after.txt
-          DIST=../base/dist/index.html node tools/balance/run.mjs tools/balance/legs.mjs "$RUNS" before.json > before.txt || echo 'the base build could not be played' > before.txt
+          STORY=lite node tools/balance/run.mjs tools/balance/legs.mjs "$RUNS" after.json > after.txt
+          STORY=lite DIST=../base/dist/index.html node tools/balance/run.mjs tools/balance/legs.mjs "$RUNS" before.json > before.txt || echo 'the base build could not be played' > before.txt
       - name: Report
         if: always()
         run: |
@@ -82,7 +82,9 @@ jobs:
             echo '```'
             if [ -s before.json ]; then node tools/balance/compare.mjs before.json after.json 1; else cat before.txt; fi
             echo '```'
-            echo '#### The three-ways rule on this branch'
+            echo '#### Design rules on this branch'
+            if [ -s before.json ]; then node tools/balance/rules.mjs after.json before.json --md; else node tools/balance/rules.mjs after.json --md; fi
+            echo '#### Every leg, every hull, every route'
             echo '```'
             node tools/balance/legreport.mjs after.json
             echo '```'

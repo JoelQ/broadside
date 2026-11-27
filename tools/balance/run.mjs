@@ -14,8 +14,8 @@ const cells = (await import(pathToFileURL(path.resolve(jobsFile)))).default, run
 const DIALS = process.env.DIALS ? JSON.parse(process.env.DIALS) : null;
 if (DIALS) for (const c of cells) c.dials = { ...DIALS, ...(c.dials || {}) };
 const t0 = Date.now();
-// STORY=1 keeps a record of every fight in the out file, for story.mjs
-const results = await play(cells, runs, { seed: process.env.SEED, dist: process.env.DIST, story: !!process.env.STORY }); // DIST=<html> plays another build
+// STORY=1 keeps a record of every fight in the out file, for story.mjs; STORY=lite only its summary (rules.mjs)
+const results = await play(cells, runs, { seed: process.env.SEED, dist: process.env.DIST, story: process.env.STORY === 'lite' ? 'lite' : !!process.env.STORY }); // DIST=<html> plays another build
 const avg = (a, f) => (a.length ? a.reduce((s, x) => s + f(x), 0) / a.length : 0);
 const rows = cells.map((c, i) => {
   const r = results[i], w = r.filter((x) => x.win);
