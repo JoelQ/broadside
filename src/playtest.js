@@ -60,7 +60,8 @@ function render() {
     </div>
     <div class="rowc"><button class="btn big" data-act="pt:fight">Jump into the fight</button><button class="btn" data-act="pt:brief">To the briefing</button><button class="btn" data-act="pt:port">To port</button></div>
     <p class="note">Playtest progress saves apart from a real campaign. In a fight, pause (P) for win, lose, heal and time controls.</p>
-    <div class="pt-grid"><span>Recorded fights</span><div>${recRows()}<small>Copy one and hand it over: the balance tools can play it again exactly.</small></div></div>
+    <div class="pt-grid"><span>Recording</span><div><button class="btn sm" data-act="pt:rec">${recOn() ? 'On: turn off' : 'Off: turn on'}</button><small>${recOn() ? 'Every campaign fight is recorded from the moment you engage, with a REC chip at the top while it is.' : 'Nothing you play is recorded. Turn it on to record your campaign fights for the balance tools.'}</small></div>
+      <span>Recorded fights</span><div>${recRows()}<small>Copy one and hand it over: the balance tools can play it again exactly.</small></div></div>
     <div class="rowc" style="margin-top:0"><button class="btn sm" data-act="pt:close">Back</button></div></div>`, 'dim');
 }
 
@@ -108,12 +109,18 @@ function start(to) {
 }
 
 // ---------- fight recorder ----------
-// Every campaign fight in the playtest build is recorded: the seed the rules run on from the moment you engage, the
-// state of every ship then, and then every frame's time step, your rudder, and every key you pressed (clicks on the
+// Nothing is recorded until the player turns it on (playtest panel or pause menu; off by default, and the choice is
+// kept), and a REC chip beside the PLAYTEST badge shows whenever a fight is being recorded. A recording holds the
+// seed the rules run on from the moment you engage, the state of every ship then, and then every frame's time step, your rudder, and every key you pressed (clicks on the
 // HUD's buttons are recorded as their keys). tools/balance/replay-play.mjs plays a recording again with nothing
 // drawn, exactly, so a fight a person played can be measured like the harness's own (fight story, dials, a
 // different build). Copy one from the pause menu or the playtest panel.
-let rec = null;
+let rec = null, recShown = false;
+const recOn = () => { try { return localStorage.getItem('broadside.record') === '1'; } catch { return false; } };
+function setRecOn(on) {
+  try { localStorage.setItem('broadside.record', on ? '1' : '0'); } catch { /* no storage: it stays off */ }
+  if (!on) rec = null; // turning it off mid-fight throws away what was taken down so far
+}
 const SKIP = new Set(['spec', 'model', 'group', 'figs', 'arcs', 'pip', 'target', 'bat', 'main', 'cal', 'sides', 'isPlayer', 'name']);
 const flat = (o) => Object.fromEntries(Object.entries(o || {}).filter(([, v]) => v === null || ['number', 'boolean', 'string'].includes(typeof v) || (Array.isArray(v) && v.every((x) => typeof x === 'number'))));
 function shipState(s) {
@@ -129,7 +136,7 @@ function shipState(s) {
 }
 function recStart() {
   rec = null;
-  if (G.mode !== 'campaign' || !CAMP.run) return;
+  if (!recOn() || G.mode !== 'campaign' || !CAMP.run) return;
   const st = CAMP.st, run = CAMP.run, legDef = run.legs[run.i], pool = Object.keys(LEG_POOL).find((k) => LEG_POOL[k] === legDef);
   const seed = (Math.random() * 2 ** 31) >>> 0;
   G.seedRng(seed); // from here on the rules' dice come from this seed (the waves' clock starts again too)
@@ -155,7 +162,7 @@ function copyRecording(i) {
   if (!r) return E.toast('No fight recorded yet', 'bad', 1500);
   navigator.clipboard.writeText(JSON.stringify(r)).then(() => E.toast(`Copied: ${r.title}, ${r.frames ?? r.dt.length} frames`, 'good', 2000), () => E.toast('The browser would not copy', 'bad', 2000));
 }
-const recRows = () => recordings().map((r, i) => `<div>${r.title} · ${r.hull} · ${r.outcome} at ${r.t}s${r.tampered ? ' (playtest controls used)' : ''} <button class="btn sm" data-act="pt:copy:${i}">Copy</button></div>`).join('') || '<small>None yet: every campaign fight is recorded from the moment you engage.</small>';
+const recRows = () => recordings().map((r, i) => `<div>${r.title} · ${r.hull} · ${r.outcome} at ${r.t}s${r.tampered ? ' (playtest controls used)' : ''} <button class="btn sm" data-act="pt:copy:${i}">Copy</button></div>`).join('') || '<small>None yet.</small>';
 
 const inFight = () => G.state === 'battle' || G.state === 'boarding';
 function heal() { const p = G.player; p.hull = p.hullMax; p.sails = p.sailsMax; p.crew = p.crewMax; p.fire = 0; p.stamina = 1; for (const k of ['chain', 'grape', 'fire']) p.stock[k] = Math.max(p.stock[k], 8); }
@@ -173,13 +180,23 @@ export const PT = {
       .pt-grid>span{color:var(--brass);padding-top:3px} .pt-grid small{display:block;opacity:.7;font-size:12.5px;margin-top:3px}
       .pt-chk{display:inline-block;margin:0 14px 4px 0;white-space:nowrap;cursor:pointer} .pt select,.pt input[type=number]{font:15px var(--body);background:rgba(9,18,30,.85);color:var(--cream);border:1px solid var(--line);border-radius:4px;padding:3px 6px}
       .pt input[type=number]{width:70px;margin-right:10px} .pt select{max-width:100%}
-      #ptBadge{position:fixed;left:272px;top:10px;z-index:50;font:12px var(--body);letter-spacing:1px;padding:3px 8px;border-radius:4px;background:rgba(184,55,43,.85);color:#fff;pointer-events:auto;cursor:pointer;border:0}
+      #ptChips{position:fixed;left:272px;top:10px;z-index:50;display:flex;flex-direction:column;gap:5px;align-items:flex-start;pointer-events:none}
+      #ptBadge,#ptRec{font:12px var(--body);letter-spacing:1px;padding:3px 8px;border-radius:4px;border:0;pointer-events:auto}
+      #ptBadge{background:rgba(184,55,43,.85);color:#fff;cursor:pointer}
+      #ptRec{display:none;align-items:center;gap:6px;background:rgba(9,18,30,.85);color:#fff;box-shadow:inset 0 0 0 1.5px #e24032;font-weight:bold;cursor:default}
+      #ptRec.on{display:inline-flex} #ptRec i{width:8px;height:8px;border-radius:50%;background:#e24032;animation:ptrec 1.2s ease-in-out infinite}
+      @keyframes ptrec{50%{opacity:.25}}
       @media (max-width:700px){.pt-grid{grid-template-columns:1fr}}`;
     document.head.appendChild(st);
     // a badge in the corner so no one mistakes this build for the real one; in port it opens the panel
     const b = document.createElement('button');
     b.id = 'ptBadge'; b.dataset.act = 'pt:badge'; b.textContent = 'PLAYTEST'; b.title = 'Playtest panel (from the title, port or a story page; in a fight, pause with P)';
-    document.body.appendChild(b);
+    // and beside it, a REC chip whenever the fight recorder is taking down your play
+    const r = document.createElement('span');
+    r.id = 'ptRec'; r.innerHTML = '<i></i>REC'; r.title = 'Recording this fight: copy it from the pause menu (P) or the playtest panel';
+    const box = document.createElement('div');
+    box.id = 'ptChips'; box.append(b, r);
+    document.body.appendChild(box);
     window.PT = PT;
   },
   titleButton: () => '<button class="btn" data-act="pt:open">Playtest</button>',
@@ -189,7 +206,7 @@ export const PT = {
       <button class="btn sm" data-act="pt:win">Win this fight</button><button class="btn sm" data-act="pt:lose">Lose this fight</button>
       <button class="btn sm" data-act="pt:take" ${G.enemy && !G.enemy.out && !G.enemy.spec.fixed ? '' : 'disabled'}>Take ${G.enemy ? G.enemy.name : 'target'} as a prize</button>
       <button class="btn sm" data-act="pt:heal">Repair, man and re-arm</button><button class="btn sm" data-act="pt:god">Unsinkable: ${G.ptGod ? 'on' : 'off'}</button>
-      <button class="btn sm" data-act="pt:speed">Time ×${sp} → ×${sp >= 8 ? 1 : sp * 2}</button><button class="btn sm" data-act="pt:open">Playtest panel</button><button class="btn sm" data-act="pt:copy:now">Copy this fight so far</button></div>`;
+      <button class="btn sm" data-act="pt:speed">Time ×${sp} → ×${sp >= 8 ? 1 : sp * 2}</button><button class="btn sm" data-act="pt:open">Playtest panel</button><button class="btn sm" data-act="pt:rec">Record fights: ${recOn() ? 'on' : 'off'}</button><button class="btn sm" data-act="pt:copy:now" ${rec ? '' : 'disabled'}>Copy this fight so far</button></div>`;
   },
   // recorder hooks, called by the game: when a fight begins and ends, every frame's time step, every key
   battleStart: () => recStart(),
@@ -207,7 +224,11 @@ export const PT = {
   },
   input(k) { if (rec && !G.paused && (G.state === 'battle' || G.state === 'boarding')) rec.keys.push([rec.dt.length, k]); },
   // called every frame by the game loop
-  tick() { if (G.ptGod && G.player && inFight()) { const p = G.player; p.hull = Math.max(p.hull, p.hullMax * 0.5); p.sails = Math.max(p.sails, p.sailsMax * 0.5); p.crew = Math.max(p.crew, p.crewMax * 0.5); p.sinking = 0; } },
+  tick() {
+    const on = !!rec && inFight();
+    if (on !== recShown) { recShown = on; $('ptRec').classList.toggle('on', on); }
+    if (G.ptGod && G.player && inFight()) { const p = G.player; p.hull = Math.max(p.hull, p.hullMax * 0.5); p.sails = Math.max(p.sails, p.sailsMax * 0.5); p.crew = Math.max(p.crew, p.crewMax * 0.5); p.sinking = 0; }
+  },
   act(a) {
     if (a === 'open' || (a === 'badge' && (G.state === 'title' || G.state === 'port' || G.state === 'story'))) { G.paused = false; form = form || defaults(); return render(); }
     if (a === 'badge') return;
@@ -217,6 +238,12 @@ export const PT = {
     if (a === 'speed') { G.ptSpeed = (G.ptSpeed || 1) >= 8 ? 1 : (G.ptSpeed || 1) * 2; return E.act('resume'); }
     if (a === 'god') { G.ptGod = !G.ptGod; if (rec) rec.tampered = true; return E.act('resume'); }
     if (a === 'heal') { if (rec) rec.tampered = true; return resumeThen(heal); }
+    if (a === 'rec') {
+      const on = !recOn(); setRecOn(on);
+      if (form) return render(); // from the panel: show it again with the new setting
+      E.toast(on ? (inFight() ? 'Recording from the next fight' : 'Recording fights') : 'Recording off: this fight is not kept', on ? 'good' : 'bad', 2200);
+      return E.act('resume');
+    }
     if (a.startsWith('copy:')) return copyRecording(a.slice(5));
     if (!inFight()) return;
     if (rec) rec.tampered = true;

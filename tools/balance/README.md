@@ -219,7 +219,9 @@ matrix's `bow` captain.
 
 ## Fights a person played: recorded playtests
 
-The playtest build (`npm run build:playtest`) records every campaign fight from the moment you engage: the seed the
+The playtest build (`npm run build:playtest`) can record campaign fights. It is off until you turn it on ("Recording"
+in the playtest panel, or "Record fights" in the pause menu), and a REC chip shows at the top while a fight is being
+recorded. Each recording holds the fight from the moment you engage: the seed the
 rules run on from then, every ship's state at that moment, then each frame's time step, the rudder and every key
 (HUD clicks are recorded as the keys that do the same). Copy one from the pause menu ("Copy this fight so far") or
 from the playtest panel's Recorded fights (the last six are kept), save it to a file, and play it again headless:
