@@ -1,30 +1,14 @@
 import * as THREE from 'three';
 import { Batch, SOLID, GLOW, shade, clamp } from './geo.js';
+import { halfWidth, deckTop, deckAt, raisedDecks, liftAt, deckLevel } from './hull.js';
+
+export { halfWidth, deckAt, raisedDecks, deckLevel };
 
 // The procedural ship model: every ship in the game is built here from its spec.
 const WOOD = 0x5b4027, SPAR = 0x74522f, IRON = 0x1c1c1e, DECK = 0x9a7a50, BOTTOM = 0x3a2a22, LAMP = 0xffd98a, CAP = 0x46301d, GOLD = 0xd9b25f;
 const css = (c) => (typeof c === 'string' ? c : '#' + c.toString(16).padStart(6, '0'));
 
 // ---------- hull shape ----------
-export function halfWidth(spec, t) {
-  const b = spec.B / 2;
-  const stern = Math.min(1, 0.7 + t * 1.7);
-  const bow = t > 0.6 ? Math.pow(Math.cos(((t - 0.6) / 0.4) * Math.PI * 0.5), 0.75) : 1;
-  return Math.max(0.06, b * stern * bow);
-}
-const deckTop = (spec, t) => spec.D + 0.9 * (2 * t - 1) ** 2 * (t < 0.5 ? 1.5 : 1.1); // top of the rail
-export const deckAt = (spec, t) => deckTop(spec, t) - 0.9; // the main deck
-// Raised decks: a quarterdeck (and on a galleon a poop above it) aft, a forecastle forward.
-// `lift` is the height of the deck above the main deck, `base` the height its walls start from.
-export function raisedDecks(spec) {
-  const lv = +spec.castle || 0, h = 2.4 + spec.L * 0.012, out = [];
-  for (let k = 0; k < lv; k++) out.push({ t0: 0, t1: 0.245 - k * 0.07, lift: h * (k + 1), base: k ? h * k + 0.9 : 0.9, k });
-  if (spec.fore) out.push({ t0: 0.79, t1: 0.93, lift: 2.2, base: 0.9, k: 0 });
-  return out;
-}
-const liftAt = (decks, t) => decks.reduce((m, r) => (t >= r.t0 && t <= r.t1 ? Math.max(m, r.lift) : m), 0);
-// the deck a man stands on at t, raised decks included
-export const deckLevel = (spec, t, decks = raisedDecks(spec)) => deckAt(spec, t) + liftAt(decks, t);
 
 // ---------- textures ----------
 function sailTexture(spec, emblem, tier) {

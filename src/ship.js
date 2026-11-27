@@ -1,8 +1,6 @@
-import * as THREE from 'three';
-import { wrap, clamp } from './geo.js';
-import { buildShipModel } from './model.js';
-import { buildFortModel } from './fort.js';
-import { CrewFigures } from './crew.js';
+import { wrap, clamp } from './util.js';
+import { Vec3 } from './vec.js';
+import { gunsOf } from './hull.js';
 
 export { wrap, clamp };
 
@@ -82,9 +80,9 @@ export const BELOW = 0.3; // share of a crew below decks, out of reach of gunfir
 export class Ship {
   constructor(spec, isPlayer) {
     this.spec = spec; this.isPlayer = isPlayer;
-    this.model = spec.fixed ? buildFortModel(spec) : buildShipModel(spec);
-    this.group = this.model.group;
-    this.pos = new THREE.Vector3(); this.heading = 0; this.speed = 0; this.rudder = 0;
+    const guns = gunsOf(spec);
+    this.muzzles = guns.muzzles; this.mastH = guns.mastH; // where her guns are, and how tall her rig: see hull.js
+    this.pos = new Vec3(); this.y = 0; this.heading = 0; this.speed = 0; this.rudder = 0;
     this.input = { turn: 0 };
     this.sailLevel = TOP;
     this.hullMax = this.hull = spec.hull; this.sailsMax = this.sails = spec.sails; this.crewMax = this.crew = spec.crew;
@@ -105,9 +103,8 @@ export class Ship {
     this.cal = this.main.cal; this.arc = this.main.arc; this.mass = massOf(spec); this.yaw = 0;
     this.dmgMult = spec.dmg || 1; this.disp = spec.disp || 0.022; this.reloadMult = 1; this.melee = spec.melee || 1;
     this.sinking = 0; this.dead = false; this.struck = false;
-    this.ramCd = 0; this.sailTier = 0; this.roll = 0; this.fxT = 0;
+    this.ramCd = 0; this.fxT = 0;
     this.target = null; this.rigT = 0;
-    this.figs = spec.fixed ? null : new CrewFigures(this);
   }
   get fwdX() { return Math.sin(this.heading); }
   get fwdZ() { return Math.cos(this.heading); }
@@ -136,13 +133,13 @@ export class Ship {
     const fresh = 0.75 + 0.25 * clamp(this.stamina / 0.4, 0, 1); // a tiring crew pulls a slower stroke
     return this.spec.oars * (this.oar === 2 ? 1 : 0.62) * fresh * (0.3 + 0.7 * this.crewR) * ((world.wind.str ?? 1) > 1.3 ? 0.5 : 1);
   }
-  toWorld(local, out = new THREE.Vector3()) {
+  toWorld(local, out = new Vec3()) {
     const s = Math.sin(this.heading), c = Math.cos(this.heading);
-    return out.set(this.pos.x + local.x * c + local.z * s, this.group.position.y + local.y, this.pos.z - local.x * s + local.z * c);
+    return out.set(this.pos.x + local.x * c + local.z * s, this.y + local.y, this.pos.z - local.x * s + local.z * c);
   }
-  toLocal(p, out = new THREE.Vector3()) {
+  toLocal(p, out = new Vec3()) {
     const s = Math.sin(this.heading), c = Math.cos(this.heading), dx = p.x - this.pos.x, dz = p.z - this.pos.z;
-    return out.set(dx * c - dz * s, p.y - this.group.position.y, dx * s + dz * c);
+    return out.set(dx * c - dz * s, p.y - this.y, dx * s + dz * c);
   }
   maxSpeedNow(world) {
     const off = wrap(this.heading - world.wind.dir);
@@ -207,68 +204,18 @@ export class Ship {
     // a crew left alone for a few seconds jury-rigs torn canvas back to about a third
     this.rigT += dt;
     if (this.rigT > 4 && this.sinking <= 0 && this.sails < this.sailsMax * JURY) this.sails = Math.min(this.sailsMax * JURY, this.sails + 1.4 * dt);
-    this.syncVisual(dt, world);
+    this.float(world);
   }
 
-  syncVisual(dt, world) {
-    const g = this.group, L = this.spec.L, fx = this.fwdX, fz = this.fwdZ;
+  // how high she rides on the waves (and how low, sinking): shot meets her hull where it is
+  float(world) {
+    if (this.spec.fixed) { this.y = 0; return; }
+    const L = this.spec.L, fx = this.fwdX, fz = this.fwdZ;
     const hb = world.height(this.pos.x + fx * L * 0.35, this.pos.z + fz * L * 0.35);
     const hs = world.height(this.pos.x - fx * L * 0.35, this.pos.z - fz * L * 0.35);
-    const hp = world.height(this.pos.x + fz * 4, this.pos.z - fx * 4), hq = world.height(this.pos.x - fz * 4, this.pos.z + fx * 4);
-    const relWind = wrap(world.wind.dir - this.heading);
-    const set = SAILS[this.sailLevel].spd;
-    let roll = (hp - hq) / 8 * 0.6 - this.rudder * clamp(this.speed / 12, 0, 1) * 0.07 + Math.sin(relWind) * 0.05 * set;
-    let y = (hb + hs) * 0.5 * 0.85, pitch = -Math.atan2(hb - hs, L * 0.7) * 0.8;
-    if (this.aground > 0 && !this.spec.fixed) { roll += 0.13 * (this.spec.seedSign || 1); pitch -= 0.05; y += 0.4; }
-    if (this.sinking > 0) {
-      const k = this.sinking;
-      y -= k * k * 0.22; roll += Math.min(0.6, k * 0.09) * (this.spec.seedSign || 1); pitch += Math.min(0.35, k * 0.04);
-    }
-    if (this.spec.fixed) { g.position.set(this.pos.x, 0, this.pos.z); g.rotation.set(0, this.heading, 0); if (!world.fast) this.model.flag.visible = !this.struck; return; }
-    this.roll += (roll - this.roll) * Math.min(1, dt * 3);
-    g.position.set(this.pos.x, y, this.pos.z);
-    g.rotation.set(pitch, this.heading, this.roll, 'YXZ');
-    if (world.fast) return;
-
-    // rig: brace yards to the wind, furl by sail level, tatter by damage
-    const brace = clamp(Math.sin(relWind) * 0.85, -0.8, 0.8) * (Math.cos(relWind) > -0.5 ? 1 : 0.5);
-    for (const yd of this.model.yards) yd.rotation.y += (brace - yd.rotation.y) * Math.min(1, dt * 1.5);
-    const swing = clamp(-Math.sin(relWind) * 0.5, -0.45, 0.45) * (0.4 + 0.6 * set);
-    for (const bm of this.model.booms) bm.rotation.y += (swing - bm.rotation.y) * Math.min(1, dt * 1.5);
-    const fill = 0.35 + 0.65 * polar(wrap(this.heading - world.wind.dir)) + Math.sin(world.time * 3 + this.pos.x) * 0.04;
-    const tier = this.sailR > 0.66 ? 0 : this.sailR > 0.3 ? 1 : 2;
-    const gone = this.sailR <= 0.02;
-    const lee = clamp(Math.sin(relWind) * 5, -1, 1), draw = 0.3 + 0.7 * fill;
-    this.model.sails.forEach((s, i) => {
-      const u = s.userData, lv = this.sailLevel;
-      const want = u.fa ? (lv >= 2 ? 1 : lv === 1 ? 0.5 : 0.08) : lv === 3 ? 1 : lv === 2 ? (u.course ? 0.1 : 1) : lv === 1 ? (u.course ? 0.1 : 0.5) : 0.1;
-      u.furl += (want - u.furl) * Math.min(1, dt * 1.6);
-      u.lee = (u.lee || 0) + (lee - (u.lee || 0)) * Math.min(1, dt * 2); // fore-and-aft canvas bellies to leeward
-      if (u.jib) { s.scale.x = u.lee * draw; s.visible = lv > 1 && !gone; }
-      else if (u.fa) { s.scale.set(u.lee * draw, u.furl, 1); s.visible = !gone; }
-      else { s.scale.set(1, u.furl, (0.25 + 0.75 * fill) * (0.12 + 0.88 * u.furl)); s.visible = !(gone && i % 2 === 0); }
-      if (tier !== this.sailTier) s.material = this.model.mats[tier][u.emblem];
-    });
-    this.sailTier = tier;
-    const fl = this.model.flag;
-    fl.visible = !this.struck;
-    fl.rotation.y = relWind - Math.PI / 2;
-    const fp = fl.geometry.attributes.position;
-    for (let i = 0; i < fp.count; i++) { const x = fp.getX(i); fp.setZ(i, Math.sin(x * 2.2 - world.time * 9) * 0.12 * x); }
-    fp.needsUpdate = true;
-    this.figs.update(dt, world.time, this.boardView || null);
-    // at anchor: the cable runs from the bow down into the water, with the spring led aft
-    if (this.anchored && !this.cable) {
-      const L = this.spec.L, g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 2.5, L * 0.48), new THREE.Vector3(0, -4, L * 0.48 + 16), new THREE.Vector3(this.spec.B * 0.4, 2.2, -L * 0.3)]);
-      this.cable = new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0x2a1e12 })); this.group.add(this.cable);
-    }
-    if (this.cable) this.cable.visible = this.anchored;
-    if (this.model.oars) {
-      // the oars: a long pull and a quick recovery when rowing, shipped level when resting
-      const on = this.oar && !this.spent && !this.anchored && this.aground <= 0 && this.sinking <= 0 && !this.struck;
-      this.oarPh = (this.oarPh || 0) + dt * (on ? (this.oar === 2 ? 5.2 : 3.2) * (0.6 + 0.4 * clamp(this.stamina / 0.4, 0, 1)) : 0);
-      const sw = on ? Math.sin(this.oarPh) * 0.42 : 0, lift = on ? Math.max(0, Math.cos(this.oarPh)) * 0.16 : 0.2;
-      for (const o of this.model.oars) { const e = o.matrix.elements, sx = o.userData.sx; e[2] = sw * sx; e[1] = lift * sx; }
-    }
+    let y = (hb + hs) * 0.5 * 0.85;
+    if (this.aground > 0) y += 0.4;
+    if (this.sinking > 0) { const k = this.sinking; y -= k * k * 0.22; }
+    this.y = y;
   }
 }

@@ -5,7 +5,7 @@ import { MISSIONS, LEG_POOL } from '../../src/missions.js';
 import { NAMES } from '../../src/story.js';
 import { HULLS, shipSpec } from '../../src/fleet.js';
 import { mulberry, scatterIslands } from '../../src/geo.js';
-import { Shape, roughen, segDist, makeShoal } from '../../src/coast.js';
+import { Shape, roughen, segDist, makeShoal } from '../../src/shore.js';
 import { LEGS, HULLS as PLAYER_HULLS } from '../balance/legs.mjs';
 
 export { PLAYER_HULLS };

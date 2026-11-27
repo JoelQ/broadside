@@ -1,10 +1,6 @@
 import { shipSpec } from './fleet.js';
-import { buildFortModel } from './fort.js';
-import { works, wall, tower, town, minaret, dome, campanile, mole, lantern, arsenal, yard, lighters, bastion, smoke, blaze, palazzo, basilica, careened, tents } from './works.js';
-import { rowboat, barrel, crate } from './harbor.js';
-import { mulberry } from './geo.js';
-import { smoothPath, ribbon } from './coast.js';
-import { shade } from './geo.js';
+import { mulberry } from './util.js';
+import { smoothPath, ribbon } from './shore.js';
 
 // Places: the land, water and works a mission's fights are set in, as data a scenario spreads into
 // itself (coasts, moles, shoals, current, works). A place is drawn the same in every leg set in it;
@@ -76,7 +72,8 @@ const strait = (opts = {}) => ({
     { outline: ribbon([[-322, 94, 11], [-302, 114, 22], [-286, 134, 10]]), depth: 2.8 }, // the bar at the mouth of the bay where the flagship lies
     ...(opts.shoals || []),
   ],
-  works: (world) => works((B, G) => {
+  works: (world, K) => K.works((B, G) => {
+    const { works, wall, tower, town, minaret, dome, campanile, mole, lantern, arsenal, yard, lighters, bastion, smoke, blaze, palazzo, basilica, careened, tents, rowboat, barrel, crate, buildFortModel, shade } = K; // the builders, from the view (see scenery.js)
     const g = (x, z) => world.ground(x, z);
     // Kilitbahir: a three-lobed keep inside a heart-shaped wall, on the European point
     const [kx, kz] = narrowsCastles.west;
@@ -153,7 +150,8 @@ const candia = (opts = {}) => ({
     { outline: [[324, 396], [322, 300], [342, 266], [378, 262], [404, 300], [420, 352], [400, 392]], depth: 2.6 },
     ...(opts.shoals || []),
   ],
-  works: (world) => {
+  works: (world, K) => {
+      const { works, wall, tower, town, minaret, dome, campanile, mole, lantern, arsenal, yard, lighters, bastion, smoke, blaze, palazzo, basilica, careened, tents, rowboat, barrel, crate, buildFortModel, shade } = K; // the builders, from the view (see scenery.js)
     const group = works((B, G) => {
       const g = (x, z) => world.ground(x, z), glass = 0xffd98a, rnd = mulberry(1669), WALL = 0xcdb894;
       MOLES.forEach((m, i) => mole(B, G, m, { seed: 40 + i }));
@@ -215,7 +213,8 @@ const anchorage = (opts = {}) => ({
     { outline: ribbon([[5, 410, 12], [45, 410, 30], [95, 410, 32], [145, 402, 18], [172, 390, 8]]), depth: 2.2 }, // the shallows off the beach
     ...(opts.shoals || []),
   ],
-  works: (world) => works((B, G) => {
+  works: (world, K) => K.works((B, G) => {
+    const { works, wall, tower, town, minaret, dome, campanile, mole, lantern, arsenal, yard, lighters, bastion, smoke, blaze, palazzo, basilica, careened, tents, rowboat, barrel, crate, buildFortModel, shade } = K; // the builders, from the view (see scenery.js)
     const g = (x, z) => world.ground(x, z);
     // the battery's gorge wall and a watch tower on the ridge above it
     wall(B, g, [[-122, 222], [-118, 244], [-92, 252], [-70, 240]], { h: 3.2, w: 2.2, towers: false });
@@ -246,7 +245,8 @@ const careenage = (opts = {}) => ({
     { outline: ribbon([[18, 400, 13], [48, 393, 30], [80, 397, 13]]), depth: 2.2 }, // the shelving beach
     ...(opts.shoals || []),
   ],
-  works: (world) => {
+  works: (world, K) => {
+      const { works, wall, tower, town, minaret, dome, campanile, mole, lantern, arsenal, yard, lighters, bastion, smoke, blaze, palazzo, basilica, careened, tents, rowboat, barrel, crate, buildFortModel, shade } = K; // the builders, from the view (see scenery.js)
     const group = works((B, G) => {
       const g = (x, z) => world.ground(x, z), rnd = mulberry(91);
       careened(B, 24, 420, 1.35, 0.55);
@@ -276,7 +276,8 @@ const leeShore = () => ({
     { outline: ribbon([[345, -40, 22], [335, 30, 55], [345, 95, 24]]), depth: 3.2 },
     { outline: ribbon([[325, 200, 22], [300, 260, 48], [278, 318, 20]]), depth: 3.2 },
   ],
-  works: (world) => works((B) => {
+  works: (world, K) => K.works((B) => {
+    const { works, wall, tower, town, minaret, dome, campanile, mole, lantern, arsenal, yard, lighters, bastion, smoke, blaze, palazzo, basilica, careened, tents, rowboat, barrel, crate, buildFortModel, shade } = K; // the builders, from the view (see scenery.js)
     const g = (x, z) => world.ground(x, z);
     tower(B, g, 262, 492, 4, 9, 0x9a8f7a); B.box(5, 3, 2, 0x9a8f7a, 270, g(270, 498) + 1, 498, 0, 0.4); // the ruined tower
   }),
@@ -294,7 +295,8 @@ const landing = () => ({
     { outline: ribbon([[-298, 170, 10], [-300, 140, 17], [-306, 110, 9]]), depth: 1.4 },
     { outline: ribbon([[336, 185, 9], [340, 160, 16], [346, 132, 8]]), depth: 1.4 },
   ],
-  works: (world) => {
+  works: (world, K) => {
+      const { works, wall, tower, town, minaret, dome, campanile, mole, lantern, arsenal, yard, lighters, bastion, smoke, blaze, palazzo, basilica, careened, tents, rowboat, barrel, crate, buildFortModel, shade } = K; // the builders, from the view (see scenery.js)
     const group = works((B, G) => {
       const g = (x, z) => world.ground(x, z), rnd = mulberry(61);
       town(B, G, g, { seed: 62, n: 34, x: 30, z: 385, w: 230, d: 90, glass: 0xffd98a });

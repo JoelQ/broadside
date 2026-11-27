@@ -4,6 +4,7 @@ import { makeIsland, palm, tree } from './land.js';
 import { Figures } from './crew.js';
 import { flagTexture } from './model.js';
 import { LIVERY } from './fleet.js';
+import { BERTH, MOORINGS } from './quay.js';
 
 // The home harbour: a quay with the shops, a pier where your ship lies, and the town around it. The quay and
 // everything you use there are the same in every port; what stands around them is the port's own:
@@ -246,8 +247,7 @@ export function buildHarbor(place = 'island', setting = null) {
 
   return {
     group: g, spots, update,
-    berth: { x: 8.2, z: -6, heading: 0 },
-    moorings: [[-34, 30, 1.9], [38, 62, -2.2], [-78, 58, 2.3], [-125, 40, 2.0], [120, 50, -2.0], [-165, 75, 1.6], [165, 85, -1.7], [-18, 98, 0.7]], // nearest the quay first; small ships take these
+    berth: BERTH, moorings: MOORINGS, // see quay.js
     focus: new THREE.Vector3(0, 7, -26),
   };
 }

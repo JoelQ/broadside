@@ -1,7 +1,7 @@
 import { shipSpec } from './fleet.js';
 import { STORY } from './story.js';
 import { PLACES, narrowsCastles, KOULES, MOLE_HEAD, MOUTH, BASIN } from './maps.js';
-import { ribbon } from './coast.js';
+import { ribbon } from './shore.js';
 
 // Every campaign mission, as data the engine can build. Most missions are one scene that changes as it
 // goes (events on a clock, ships that wake, arrive or run); the pirate hunt and the finale are cruises of

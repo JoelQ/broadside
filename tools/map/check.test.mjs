@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { check } from './check.mjs';
 import { scenes } from './scenes.mjs';
-import { Shape, makeShoal, oval } from '../../src/coast.js';
+import { Shape, makeShoal, oval } from '../../src/shore.js';
 
 const ship = (id, x, z, o = {}) => ({ id, name: id, cls: 'Brig', hull: 'brig', side: 1, x, z, h: 0, L: 30, B: 8, D: 3, fixed: false, o, t: 0 });
 const base = (over = {}) => ({
