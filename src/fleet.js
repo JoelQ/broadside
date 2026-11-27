@@ -7,7 +7,7 @@
 export const HULLS = {
   sloop: {
     cls: 'Sloop', kit: 'runner', value: 260, L: 20, B: 5.8, D: 2.2, masts: 1, sailsPerMast: 2, castle: false, rigScale: 1.25, rig: 'gaff',
-    hull: 165, sails: 80, crew: 38, guns: 5, speed: 15.6, turn: 0.78, reload: 6.4, cal: 0, arc: 0.7, point: 0.26, windage: 0.8, grip: 1.3,
+    hull: 198, sails: 80, crew: 38, guns: 5, speed: 15.6, turn: 0.78, reload: 6.4, cal: 0, arc: 0.7, point: 0.26, windage: 0.8, grip: 1.3,
     role: 'Darts and turns on a coin, sails closer to the wind than anything afloat, and floats over most shoals. Light guns with a wide sweep; a thin hull.',
     ai: { range: 110, plan: 'round', boarder: false, battleSail: false },
   },
@@ -37,7 +37,7 @@ export const HULLS = {
   },
   galley: {
     cls: 'Galley', kit: 'galley', value: 620, L: 42, B: 6.6, D: 1.8, masts: 2, sailsPerMast: 2, castle: false, rigScale: 0.66, rig: 'lateen',
-    hull: 230, sails: 80, crew: 170, melee: 0.75, guns: 3, speed: 10.5, turn: 0.5, reload: 7.5, cal: 0, arc: 0.5, point: 0.15, windage: 0.7, grip: 0.65,
+    hull: 276, sails: 80, crew: 170, melee: 0.75, guns: 3, speed: 10.5, turn: 0.5, reload: 7.5, cal: 0, arc: 0.5, point: 0.15, windage: 0.7, grip: 0.65,
     bow: { n: 3, cal: 2, arc: 0.22, main: true }, oars: 10.5, rowers: 100,
     role: 'Heavy guns that fire ahead, weak sides, a great crew. Under oars she owes the wind nothing, until the oarsmen tire. Only a gale troubles her.',
     ai: { range: 150, plan: 'round', boarder: true, boardAt: 1.5, battleSail: false, bowOn: true },
