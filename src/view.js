@@ -455,7 +455,7 @@ function updateMelee() {
   // where each side breaks: the notch on its half of the bar
   $('mState').textContent = b.t < 2.4 ? 'Grapples fast…' : r > 0.57 ? 'Your men are driving them back' : r < 0.43 ? 'They are driving your men back' : 'Evenly matched — every man counts';
   $('mState').className = r > 0.57 ? 'good' : r < 0.43 ? 'bad' : '';
-  $('mPL').textContent = `breaks at ${Math.ceil(b.p0 * 0.3)}`; $('mEL').textContent = `breaks at ${Math.ceil(b.e0 * 0.3)}`;
+  $('mPL').textContent = `breaks at ${Math.ceil(b.p0 * A.boardState().BOARD_BREAKS)}`; $('mEL').textContent = `breaks at ${Math.ceil(b.e0 * A.boardState().BOARD_BREAKS)}`;
   const sw = $('mSwivel');
   sw.disabled = p.stock.grape <= 0 || b.cd > 0;
   sw.querySelector('span').textContent = p.stock.grape <= 0 ? '(no grape)' : b.cd > 0 ? `${Math.ceil(b.cd)}s` : `×${p.stock.grape}`;

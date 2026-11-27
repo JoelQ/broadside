@@ -23,7 +23,16 @@ const vrand = (a, b) => a + Math.random() * (b - a);
 const gauss = () => (rng() + rng() + rng() - 1.5) * 2; // ~unit std
 const GRAV = 22;
 let BOARD_SPEED = 6.5;
-const BOARD_SLOW = 7; // grapples only hold a ship making less than this (about 6 knots): slow her first
+// The boarding numbers, in one place so the balance harness can dial them (tools/balance/README.md).
+const BOARD = {
+  slow: 7, // grapples only hold a ship making less than this (about 6 knots): slow her first
+  hullReady: 0.5, // share of a crew's fighting strength that depends on her hull: a sinking ship fights at 1 - this
+  fireReady: 0.75, // a crew fighting a fire fights at this
+  pace: 0.028, paceRise: 0.0035, // how fast the deck fight kills, and how fast that climbs so no fight drags
+  rush: 1.15, // the side that boards fights this much harder for the first seconds
+  breaks: 0.3, // a crew gives up the deck when it is down to this share of the men it brought
+  rail: { grape: 2.6, round: 0.9, fire: 0.7, chain: 0.3 }, // men killed per gun in the volley at the rail
+};
 let BOARD_RANGE = 33; // set from the two ships' beams whenever the target changes
 
 // ---------- the view ----------
@@ -55,7 +64,7 @@ const G = {
 // world clock, so that starts again too.
 G.seedRng = (seed) => { seedRng(seed); sea.time = 0; }; G.rngSeed = rngSeed;
 // The tuning tables, so the balance harness can try other numbers in a fight without a rebuild (tools/balance/README.md).
-G.dials = { HANDLING, AMMO, CAL, SAILS, HULLS, GRADE, OFFICERS, PLAYER_SPEC, ENEMIES, KITS };
+G.dials = { BOARD, HANDLING, AMMO, CAL, SAILS, HULLS, GRADE, OFFICERS, PLAYER_SPEC, ENEMIES, KITS };
 
 // Any ship you have boarded and taken is yours to command. In your hands she keeps her hull
 // and her handling, under your colours and with your gunners.
@@ -275,14 +284,14 @@ function hullHit(b, ship) {
   if (Math.abs(d) > 0.78 && !ship.spec.fixed) { rake = (d > 0 ? 1.8 : 1.5) * clamp(ship.spec.L / 30, 0.8, 1.5); m *= rake; }
   // masonry shrugs off light shot: a battery is battered down by weight of metal
   if (ship.spec.fixed) m *= [0.35, 0.7, 1.1][['light', 'medium', 'heavy'].indexOf(b.cal.name)];
-  const hd = A.hull * m, sd = b.ammo !== 'chain' ? Math.min(ship.sails, A.sail * 0.4) : 0;
+  const hd = A.hull * m, sd = b.ammo !== 'chain' ? Math.min(ship.sails, A.sail * 0.4 * ship.rigCover) : 0;
   ship.hull -= hd; ship.sails -= sd;
   let kills = 0;
-  if (A.kills) kills = Math.round(rand(A.kills[0], A.kills[1]) * (rake ? 1.6 : 1) * b.dmg);
-  else if (rng() < A.crew * (rake ? 2.4 : 1)) kills = 1 + (rake && rng() < 0.5 ? 1 : 0);
-  kills = Math.min(kills, Math.floor(ship.exposed)); // the men below decks are out of reach
+  // the thinner her crew, the fewer on deck to hit (HANDLING.cover)
+  if (A.kills) kills = Math.floor(rand(A.kills[0], A.kills[1]) * (rake ? 1.6 : 1) * b.dmg * ship.cover + rng()); // rounded at random, so a thin crew still loses a man now and then
+  else if (rng() < A.crew * (rake ? 2.4 : 1) * ship.cover) kills = 1 + (rake && rng() < 0.5 ? 1 : 0);
+  kills = Math.min(kills, Math.max(0, Math.floor(ship.crew) - 1));
   ship.crew -= kills;
-  if (sd > 0) ship.rigT = 0;
   // one fire per volley at most, so a single broadside can't set three at once
   if (A.ignite && ship.litBy !== b.volley && rng() < A.ignite) {
     ship.litBy = b.volley;
@@ -300,8 +309,8 @@ function hullHit(b, ship) {
   if (ship.isPlayer) G.shake = Math.max(G.shake, 0.7);
 }
 function rigHit(b, ship, amt) {
-  const d = Math.min(ship.sails, amt * b.dmg * SAILS[ship.sailLevel].dmg);
-  ship.sails -= d; ship.rigT = 0;
+  const d = Math.min(ship.sails, amt * b.dmg * SAILS[ship.sailLevel].dmg * ship.rigCover); // rags are harder to hit than full canvas
+  ship.sails -= d;
   fx.canvas(b.pos, ship.spec.sailCol);
   sfx.rip(0.2 + 0.8 * camVol(b.pos));
   tally(ship, 0, d, 0, false, b.pos);
@@ -418,7 +427,7 @@ function shipEffects(s, dt) {
   if (s.fire > 0 && s.sinking <= 0) {
     s.hull -= 0.0042 * s.hullMax * s.fire * dt; // the more timber, the more there is to burn
     s.sails = Math.max(0, s.sails - 0.5 * s.fire * dt);
-    if (s.exposed >= 1 && rng() < 0.13 * s.fire * dt) s.crew -= 1;
+    if (s.crew > 1 && rng() < 0.13 * s.fire * s.cover * dt) s.crew -= 1;
     s.fireT -= dt * (0.5 + 0.9 * s.crewR);
     if (s.fireT <= 0) { s.fire--; s.fireT = 11; if (s.fire === 0 && s.isPlayer) toast('Fires are out', 'good'); }
   }
@@ -603,14 +612,14 @@ function battleUpdate(dt) {
   for (const s of G.ships) {
     if (s.side === p.side || !s.active || !s.ai || s.spec.fixed) continue;
     const range = Math.round(20 + (p.spec.B + s.spec.B) * 0.8);
-    const can = sep(p, s) < range && relSpeed(p, s) < 6.5 && G.boardCd <= 0 && p.speed < BOARD_SLOW; // she can grapple you only if you are slow
+    const can = sep(p, s) < range && relSpeed(p, s) < 6.5 && G.boardCd <= 0 && p.speed < BOARD.slow; // she can grapple you only if you are slow
     s.grapple = clamp(s.grapple + (can && s.ai.wantBoard && s.target === p ? dt / 2.4 : -dt * 0.7), 0, 1);
     if (s.grapple > 0.02 && s.ai.wantBoard && (!G.grappler || s.grapple > G.grappler.grapple)) G.grappler = s;
     if (s.grapple >= 1) return startBoarding('enemy', s);
   }
   G.aiGrapple = G.grappler ? G.grappler.grapple : 0;
   const alongside = e && e.side !== p.side && !e.sinking && e.out !== 'captured' && e.out !== 'blown' && sep(p, e) < BOARD_RANGE && relSpeed(p, e) < BOARD_SPEED && G.boardCd <= 0;
-  G.canBoard = alongside && e.speed < BOARD_SLOW * p.spec.mods.boardSpeed && (e.active || G.sc.boardWrecks);
+  G.canBoard = alongside && e.speed < BOARD.slow * p.spec.mods.boardSpeed && (e.active || G.sc.boardWrecks);
   if (p.sailLevel > 0 && p.speed < 2.5 && world.wind.str > 0.3 && !p.anchored && p.aground <= 0 && !p.oarSpeed(world) && Math.abs(wrap(p.heading - world.wind.dir)) > Math.PI - noGoHalf(p.spec) + 0.05) toastOnce('irons', 10, 'In irons — turn away from the wind’s eye!', 'bad', 3000);
   if (world.wind.str > 1.3 && p.sailLevel === TOP) toastOnce('gale', 12, 'Full sail in a gale is tearing the canvas — shorten sail!', 'bad', 3000);
   if (world.wind.next != null && !G.windCalled && G.mode === 'campaign' && CAMP.has('pilot') && Math.abs(world.wind.next) > 0.25) { G.windCalled = true; toast(`Pilot: “Wind’s about to shift, ${world.wind.next > 0 ? 'veering' : 'backing'}.”`, '', 3500); }
@@ -643,15 +652,16 @@ function battleUpdate(dt) {
 // Both sides see the odds beforehand. During it you choose when to spend grapeshot in the swivel
 // gun, and whether to cut loose before it is lost.
 // A crew fights worse when its ship is in trouble: hands are at the pumps, or fighting a fire.
-const readiness = (s) => (0.5 + 0.5 * s.hullR) * (s.fire > 0 ? 0.75 : 1);
+const readiness = (s) => (1 - BOARD.hullReady + BOARD.hullReady * s.hullR) * (s.fire > 0 ? BOARD.fireReady : 1);
 const strength = (s) => s.crew * s.melee * readiness(s);
 function pointBlank(from, to, side, name) {
   // a loaded battery facing the other ship goes off at the rail as the hulls touch
   if (!from.bat[side] || from.reload[side] > 0) return;
-  const guns = from.muzzles[side].length, a = from.ammo;
+  const guns = Math.round(from.muzzles[side].length * from.crewR), a = from.ammo; // only the guns she still has men to work
+  if (!guns) return;
   if (a !== 'round') { if (from.stock[a] <= 0) return; from.stock[a]--; }
   const dm = from.dmgOf(side);
-  const kills = Math.max(0, Math.min(to.crew - 1, Math.round(guns * (a === 'grape' ? 2.6 : a === 'round' ? 0.9 : a === 'fire' ? 0.7 : 0.3) * dm * (from.spec.mods ? from.spec.mods.swivel : 1))));
+  const kills = Math.max(0, Math.min(to.crew - 1, Math.round(guns * BOARD.rail[a] * dm * (from.spec.mods ? from.spec.mods.swivel : 1))));
   const hull = guns * (a === 'round' ? 4.5 : a === 'fire' ? 3.2 : 0.6) * dm;
   to.crew -= kills; to.hull = Math.max(1, to.hull - hull);
   from.startReload(side);
@@ -706,7 +716,7 @@ function boardingUpdate(dt) {
   if (b.t < 2.4) return; // a beat to take in the opening volley before blades meet
   // each side cuts the other down in proportion to its own strength, so the bigger crew pulls
   // ahead faster and faster; the pace climbs so no fight drags
-  const rush = b.t < 6 ? (b.by === 'player' ? 1.15 : 1 / 1.15) : 1, pace = 0.028 + 0.0035 * b.t;
+  const rush = b.t < 6 ? (b.by === 'player' ? BOARD.rush : 1 / BOARD.rush) : 1, pace = BOARD.pace + BOARD.paceRise * b.t;
   const sp = strength(p) * rush, se = strength(e) / rush;
   p.crew = Math.max(0, p.crew - pace * se * dt); e.crew = Math.max(0, e.crew - pace * sp * dt);
   if (e.spec.ai && e.spec.ai.boarder && e.stock.grape > 0 && b.eCd <= 0) { e.stock.grape--; b.eCd = 7; swivel(p, e, 6); }
@@ -716,7 +726,7 @@ function boardingUpdate(dt) {
     if (Math.random() < 0.4) { fx.musket(q.x, q.y, q.z); sfx.musket(); } else if (Math.random() < 0.5) sfx.clang();
   }
   // a crew that has lost seven in ten of the men it brought to the rail gives up the deck
-  if (e.crew <= Math.max(1, b.e0 * 0.3)) {
+  if (e.crew <= Math.max(1, b.e0 * BOARD.breaks)) {
     syncBoardView(true, false);
     if (G.mode === 'skirmish') G.prize = prize(e);
     shipOut(e, e.spec.fixed ? 'silenced' : 'captured');
@@ -728,7 +738,7 @@ function boardingUpdate(dt) {
     V.mode('battle'); retarget(true);
     return;
   }
-  if (p.crew <= Math.max(1, b.p0 * 0.3)) { syncBoardView(false, true); return endBattle('overrun'); }
+  if (p.crew <= Math.max(1, b.p0 * BOARD.breaks)) { syncBoardView(false, true); return endBattle('overrun'); }
   if (!b.warned && p.crew < b.p0 * 0.55 && sp < se) { b.warned = true; toast('We are losing the deck — cut the grapples!', 'bad', 3000); }
 }
 function swivel(target, by, n) {
@@ -766,7 +776,7 @@ function tryBoard() {
   const d = sep(p, e);
   if (G.boardCd > 0 && d < BOARD_RANGE) toast('The crew needs a moment before another attempt', '', 1400);
   else if (d >= BOARD_RANGE) toast(`Too far to board: ${Math.round(d)} yds, need under ${BOARD_RANGE - 3}`, '', 1600);
-  else if (e.speed >= BOARD_SLOW * p.spec.mods.boardSpeed) toast('She is moving too fast for grapples to hold — cut up her sails first', '', 2200);
+  else if (e.speed >= BOARD.slow * p.spec.mods.boardSpeed) toast('She is moving too fast for grapples to hold — cut up her sails first', '', 2200);
   else toast('Match her speed first — you are passing too fast', '', 1600);
 }
 
@@ -1058,7 +1068,7 @@ G.newAI = newAI;
 G.tick = (dt, n = 1) => { for (let i = 0; i < n; i++) update(dt); };
 G.world = world;
 G.api = { faces, showEnvoys, offersCard, endOffersCard, aiApi, nearest, startScenario, showLegCard: (h) => V.legCard(h), showTitle: () => showTitle(), clearShips, world, strengthOf: (x) => strength(x), restartSkirmish: () => restart(true), addShip, beginScenario, beginBattle, shipOut, setTarget, foesOf, sep, relSpeed, hideScreen: () => V.hideScreen(), showScreen: (h, c) => V.screen(h, c), setMode: (m) => V.mode(m), enterHarbor, snapCamera: () => V.snapCamera(), buildPlayer, moor, playerSpec, renderPort: () => V.renderPort(), get sfx() { return sfx; }, get fx() { return fx; }, floater, get store() { return store; }, cutGrapples, hullSpec, updateAI, reach, inArc, hasGauge, strength: (s) => strength(s), rebuild: () => { V.dropShip(G.player); G.player = null; buildPlayer(true); }, fire, act, tap, keys, startBoarding, boardSwivel, endBattle, toast, showPort: () => showPort(), prize,
-  dropShip: (s) => V.dropShip(s), selectAmmo, tryBoard, cycleTarget, kitOf, fitOf, roleOf, sid, update, readiness, boardState: () => ({ BOARD_RANGE, BOARD_SPEED, BOARD_SLOW }) };
+  dropShip: (s) => V.dropShip(s), selectAmmo, tryBoard, cycleTarget, kitOf, fitOf, roleOf, sid, update, readiness, boardState: () => ({ BOARD_RANGE, BOARD_SPEED, BOARD_SLOW: BOARD.slow, BOARD_BREAKS: BOARD.breaks }) };
 
 // Set the game going with a view (view.js in the browser) or none (a headless run). Call once.
 export function start(view = NO_VIEW) {

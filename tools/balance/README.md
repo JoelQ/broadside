@@ -256,6 +256,8 @@ node tools/balance/legreport.mjs /tmp/legs.json
   `HULLS=sloop,brig`, `ROUTES=<regex>`; `FIT=1` fits every ship out fully.
 - `legreport.mjs` prints a table per leg and flags any leg that fewer than three kinds of ship, or
   fewer than three routes, can win; it also flags a route that always works.
+- `boarding.mjs [runs] [hulls]` puts every hull against every other, one on one in open water, and tries to
+  capture her: what share of fights end in a capture, a win by guns instead, or the attacker overrun.
 - How each hull sails on her own (tacks, turning circles, irons, leeway, chases) is `tools/handling/`, drawn as
   pictures with every hull's track laid over each other. The dials are `HANDLING` in `src/ship.js`.
 - `drive.mjs` runs a script against the built page with screenshots, for checking flow and looks.
