@@ -150,7 +150,7 @@ the pirate swapped for the defender, in good hands under the game's AI), with ei
 `burn`, `prep` (chain and grape, board at 1.25 to 1), `hugBoard`, `rush`, and for galleys `bow` (bow guns at close range).
 
 ```bash
-node tools/balance/matrix.mjs --runs 4
+node tools/balance/matrix.mjs
 ```
 
 ```bash
@@ -163,14 +163,19 @@ node tools/balance/matrix.mjs --hulls sloop,brig,xebec --captains guns,hug,prep
   in the attempt. This is the "can a small ship board a big one?" table.
 - **Dominance**: a hull that does no better against anyone than another hull and is no harder to beat. One that is
   dominated has no reason to be sailed.
-- A duel cell with `flip: true` trades the two ships' starting places, so the attacker starts upwind instead of the
-  defender. The start decides a lot: on the stock captains the great ship is beaten 29% of the time from the
-  defender's usual (upwind) start and 59% from the other.
+- **Starts**: half of each pair's fights (20 by default, `--runs`) start the usual way, with the defender upwind, and half
+  with the starts traded (a duel cell with `flip: true`); `--start usual` or `--start flipped` keeps to one. The start
+  decides a lot, since nobody wins the wind back once the fight is on: on the stock captains the great ship is beaten
+  29% of the time from the usual start and 59% from the other.
+- **Fair score**: each pair played both ways round, (her win as attacker + her survival as defender) / 2, averaged over
+  the other hulls. The attacker always has the best of the scripted captains and the defender the game's AI, which
+  sails some hulls (the great ship) far better than others, so rank hulls by this, not by either column alone.
 - `out/matrix/index.html` draws both as heatmaps (hover a cell for every captain's figure); `data.json` keeps every
   fight's seed. `DIALS`, `STORY` and `SEED` work as with `run.mjs`.
 
 The attacker has a scripted captain and the defender the game's AI, so the diagonal (a hull against itself) shows the
-script's edge over the AI rather than 50%. Compare rows and columns, not single cells against 50%.
+script's edge over the AI rather than 50%. Compare rows and columns, or the fair score, not single cells against 50%:
+at 4 to 6 fights a single cell can read 100% and replay at 40%.
 
 ## Design rules as checks
 
