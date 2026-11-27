@@ -60,6 +60,7 @@ function render() {
     </div>
     <div class="rowc"><button class="btn big" data-act="pt:fight">Jump into the fight</button><button class="btn" data-act="pt:brief">To the briefing</button><button class="btn" data-act="pt:port">To port</button></div>
     <p class="note">Playtest progress saves apart from a real campaign. In a fight, pause (P) for win, lose, heal and time controls.</p>
+    <div class="pt-grid"><span>Recorded fights</span><div>${recRows()}<small>Copy one and hand it over: the balance tools can play it again exactly.</small></div></div>
     <div class="rowc" style="margin-top:0"><button class="btn sm" data-act="pt:close">Back</button></div></div>`, 'dim');
 }
 
@@ -106,6 +107,56 @@ function start(to) {
   else if (+leg > 0) { run.i = +leg; CAMP.startLeg(); }
 }
 
+// ---------- fight recorder ----------
+// Every campaign fight in the playtest build is recorded: the seed the rules run on from the moment you engage, the
+// state of every ship then, and then every frame's time step, your rudder, and every key you pressed (clicks on the
+// HUD's buttons are recorded as their keys). tools/balance/replay-play.mjs plays a recording again with nothing
+// drawn, exactly, so a fight a person played can be measured like the harness's own (fight story, dials, a
+// different build). Copy one from the pause menu or the playtest panel.
+let rec = null;
+const SKIP = new Set(['spec', 'model', 'group', 'figs', 'arcs', 'pip', 'target', 'bat', 'main', 'cal', 'sides', 'isPlayer', 'name']);
+const flat = (o) => Object.fromEntries(Object.entries(o || {}).filter(([, v]) => v === null || ['number', 'boolean', 'string'].includes(typeof v) || (Array.isArray(v) && v.every((x) => typeof x === 'number'))));
+function shipState(s) {
+  const o = { id: s.id || null, cls: s.spec.cls, seedSign: s.spec.seedSign ?? null };
+  for (const [k, v] of Object.entries(s)) {
+    if (SKIP.has(k) || typeof v === 'function') continue;
+    if (v === null || ['number', 'boolean', 'string'].includes(typeof v)) o[k] = v;
+    else if (v && typeof v.x === 'number' && typeof v.z === 'number') o[k] = { x: v.x, y: v.y, z: v.z };
+    else if (k === 'ai' || k === 'input' || k === 'reload' || k === 'reloadMax' || k === 'stock') o[k] = flat(v);
+  }
+  o.target = s.target ? G.ships.indexOf(s.target) : -1;
+  return o;
+}
+function recStart() {
+  rec = null;
+  if (G.mode !== 'campaign' || !CAMP.run) return;
+  const st = CAMP.st, run = CAMP.run, legDef = run.legs[run.i], pool = Object.keys(LEG_POOL).find((k) => LEG_POOL[k] === legDef);
+  const seed = (Math.random() * 2 ** 31) >>> 0;
+  G.seedRng(seed); // from here on the rules' dice come from this seed (the waves' clock starts again too)
+  const entry = CAMP.entry(G.ship);
+  rec = {
+    v: 1, when: new Date().toISOString(), seed, side: st.side, mission: run.key, leg: pool || run.i, title: legDef.title,
+    hull: entry ? entry.hull : null, fit: (G.fit && G.fit[G.ship]) || {}, officers: [...st.officers], carry: JSON.parse(JSON.stringify(run.carry || {})),
+    start: { ships: G.ships.map(shipState), wind: flat(E.world.wind), g: { battleT: G.battleT, boardCd: G.boardCd, aiGrapple: G.aiGrapple, volley: G.volley } },
+    dt: [], turn: [], keys: [], checks: [], tampered: false,
+  };
+}
+function recEnd(outcome) {
+  if (!rec) return;
+  const p = G.player;
+  Object.assign(rec, { outcome, frames: rec.dt.length, t: Math.round(G.battleT), hull: +(p.hull / p.hullMax).toFixed(3), crew: Math.round(p.crew) });
+  const all = [rec, ...recordings()].slice(0, 6);
+  try { localStorage.setItem('broadside.recordings', JSON.stringify(all)); } catch { /* full, or no storage: it stays in memory */ }
+  G.recordings = all; rec = null;
+}
+const recordings = () => { if (G.recordings) return G.recordings; try { return (G.recordings = JSON.parse(localStorage.getItem('broadside.recordings') || '[]')); } catch { return (G.recordings = []); } };
+function copyRecording(i) {
+  const r = i === 'now' ? rec : recordings()[+i];
+  if (!r) return E.toast('No fight recorded yet', 'bad', 1500);
+  navigator.clipboard.writeText(JSON.stringify(r)).then(() => E.toast(`Copied: ${r.title}, ${r.frames ?? r.dt.length} frames`, 'good', 2000), () => E.toast('The browser would not copy', 'bad', 2000));
+}
+const recRows = () => recordings().map((r, i) => `<div>${r.title} · ${r.hull} · ${r.outcome} at ${r.t}s${r.tampered ? ' (playtest controls used)' : ''} <button class="btn sm" data-act="pt:copy:${i}">Copy</button></div>`).join('') || '<small>None yet: every campaign fight is recorded from the moment you engage.</small>';
+
 const inFight = () => G.state === 'battle' || G.state === 'boarding';
 function heal() { const p = G.player; p.hull = p.hullMax; p.sails = p.sailsMax; p.crew = p.crewMax; p.fire = 0; p.stamina = 1; for (const k of ['chain', 'grape', 'fire']) p.stock[k] = Math.max(p.stock[k], 8); }
 function resumeThen(fn) { G.paused = false; E.hideScreen(); fn(); }
@@ -138,8 +189,23 @@ export const PT = {
       <button class="btn sm" data-act="pt:win">Win this fight</button><button class="btn sm" data-act="pt:lose">Lose this fight</button>
       <button class="btn sm" data-act="pt:take" ${G.enemy && !G.enemy.out && !G.enemy.spec.fixed ? '' : 'disabled'}>Take ${G.enemy ? G.enemy.name : 'target'} as a prize</button>
       <button class="btn sm" data-act="pt:heal">Repair, man and re-arm</button><button class="btn sm" data-act="pt:god">Unsinkable: ${G.ptGod ? 'on' : 'off'}</button>
-      <button class="btn sm" data-act="pt:speed">Time ×${sp} → ×${sp >= 8 ? 1 : sp * 2}</button><button class="btn sm" data-act="pt:open">Playtest panel</button></div>`;
+      <button class="btn sm" data-act="pt:speed">Time ×${sp} → ×${sp >= 8 ? 1 : sp * 2}</button><button class="btn sm" data-act="pt:open">Playtest panel</button><button class="btn sm" data-act="pt:copy:now">Copy this fight so far</button></div>`;
   },
+  // recorder hooks, called by the game: when a fight begins and ends, every frame's time step, every key
+  battleStart: () => recStart(),
+  current: () => rec, // the fight being recorded, if any (tests read it)
+  battleEnd: (o) => recEnd(o),
+  frame(dt) {
+    dt = Math.round(dt * 10000) / 10000; // recorded steps are tenths of a millisecond, so a replay steps exactly the same
+    if (rec && (G.state === 'battle' || G.state === 'boarding')) {
+      const k = E.keys, turn = (k.a || k.arrowleft ? 1 : 0) - (k.d || k.arrowright ? 1 : 0), T = rec.turn, last = T[T.length - 1];
+      rec.dt.push(Math.round(dt * 10000));
+      if (last && last[0] === turn) last[1]++; else T.push([turn, 1]);
+      if (rec.dt.length % 60 === 1) { const p = G.player; rec.checks.push([rec.dt.length - 1, Math.round(p.pos.x * 100), Math.round(p.pos.z * 100), Math.round(p.hull * 100)]); }
+    }
+    return dt;
+  },
+  input(k) { if (rec && !G.paused && (G.state === 'battle' || G.state === 'boarding')) rec.keys.push([rec.dt.length, k]); },
   // called every frame by the game loop
   tick() { if (G.ptGod && G.player && inFight()) { const p = G.player; p.hull = Math.max(p.hull, p.hullMax * 0.5); p.sails = Math.max(p.sails, p.sailsMax * 0.5); p.crew = Math.max(p.crew, p.crewMax * 0.5); p.sinking = 0; } },
   act(a) {
@@ -149,9 +215,11 @@ export const PT = {
     if (a === 'offstage') { form.officers = OFF.slice(0, Math.max(0, ORDER.indexOf(form.at.split(':')[0]))); return render(); }
     if (a === 'fight' || a === 'brief' || a === 'port') return start(a);
     if (a === 'speed') { G.ptSpeed = (G.ptSpeed || 1) >= 8 ? 1 : (G.ptSpeed || 1) * 2; return E.act('resume'); }
-    if (a === 'god') { G.ptGod = !G.ptGod; return E.act('resume'); }
-    if (a === 'heal') return resumeThen(heal);
+    if (a === 'god') { G.ptGod = !G.ptGod; if (rec) rec.tampered = true; return E.act('resume'); }
+    if (a === 'heal') { if (rec) rec.tampered = true; return resumeThen(heal); }
+    if (a.startsWith('copy:')) return copyRecording(a.slice(5));
     if (!inFight()) return;
+    if (rec) rec.tampered = true;
     if (a === 'win') resumeThen(() => { if (G.state === 'boarding') E.cutGrapples(); E.endBattle('won'); });
     else if (a === 'lose') resumeThen(() => { if (G.state === 'boarding') E.cutGrapples(); E.endBattle('failed'); });
     else if (a === 'take') resumeThen(() => { const t = G.enemy; if (G.state === 'boarding') E.cutGrapples(); if (t && !t.out) E.shipOut(t, 'captured'); });

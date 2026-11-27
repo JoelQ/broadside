@@ -29,7 +29,7 @@ const rows = cells.map((c) => {
   const alone = {};
   for (const f of wins) { const sh = f.story.share.dealt[f.story.decisive] || {}; for (const [k, v] of Object.entries(sh)) if (v >= 0.8) alone[k] = (alone[k] || 0) + 1; }
   const arcs = Object.fromEntries(['mine', 'hers', 'both', 'neither', 'boarding'].map((k) => [k, mean(fs.map((f) => f.story.arcs[k] || 0))]));
-  return { label: c.label, n: fs.length, wins: wins.length, losses: losses.length, timeouts: fs.filter((f) => f.o === 'timeout').length, winMix: mix(wins), lossMix: mix(losses), alone, arcs, lull: mean(fs.map((f) => f.story.longestLull)), fights: fs };
+  return { label: c.label, n: fs.length, wins: wins.length, losses: losses.length, timeouts: fs.filter((f) => f.o === 'timeout' || f.o === 'unfinished').length, winMix: mix(wins), lossMix: mix(losses), alone, arcs, lull: mean(fs.map((f) => f.story.longestLull)), fights: fs };
 });
 
 const mixStr = (m) => Object.entries(m).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${pct(v)}`).join(', ') || '-';
