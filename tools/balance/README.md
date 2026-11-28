@@ -217,7 +217,7 @@ both ways round, which cancels it, and the mirror check prints how big it is. Th
 phases: a fight step with `until: { foeSails: 0.55 }` (or `t`, `foeCrew`, `foeHull`, `hull`, `crew`) gives way to the
 next step as soon as it is met, so `chainOpen` fires chain until her sails are down to 55% and then fights with round
 shot. A duel cell with `foeRoute` puts a scripted captain on the defender (through the game's `ship.bot` hook).
-About 110,000 fights, 22 minutes on 4 cores, at the default 10 per plan against plan; the max and min over many noisy
+About 140,000 fights, 30 minutes on 4 cores, at the default 10 per plan against plan; the max and min over many noisy
 plans lean a little optimistic and pessimistic, so confirm a surprising pair with `--hulls` and more `--runs`.
 
 Duels (`H.duel`, both tools) man both ships fully, where Home waters, the first mission, would give your ship only
@@ -312,6 +312,10 @@ node tools/balance/run.mjs tools/balance/legs.mjs 4 /tmp/legs.json
 node tools/balance/legreport.mjs /tmp/legs.json
 ```
 
+- `move: 'shadow'` sails as a person sails a small ship against a big one: it never crosses one of her loaded broadsides
+  in reach (it darts across a battery that is still reloading) and works round to her stern. The plain `hug` sails
+  straight for the stern and takes a broadside on the way, which had the sloop losing every fight to the great ship
+  that a careful person wins. Captains `shadow` and `shadowFire`.
 - A fight step can also take `keepOff: true` (bear away from a stronger boarder inside 75 yd rather than be grappled)
   and `windward: true` (beat up to a station upwind of her before fighting, whenever she holds the weather gauge).
 - `legs.mjs` is the grid: every leg x six hulls x that leg's routes. Filter with `LEGS=<regex>`,

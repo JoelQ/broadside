@@ -16,7 +16,7 @@ import { CAPTAINS, OARED } from './captains.mjs';
 
 const args = process.argv.slice(2), flags = {};
 for (let i = 0; i < args.length; i++) if (args[i].startsWith('--')) flags[args[i].slice(2)] = args[++i];
-const POOL = 'guns,wary,weather,kite,hug,hugWary,burn,chainOpen,chainHug,prep,prepWary,hugBoard,grapeBoard,rush,bow,bowWeather';
+const POOL = 'guns,wary,weather,kite,hug,hugWary,shadow,shadowFire,burn,chainOpen,chainHug,prep,prepWary,hugBoard,grapeBoard,rush,bow,bowWeather';
 const caps = (flags.captains || POOL).split(',');
 for (const c of caps) if (!CAPTAINS[c]) throw new Error(`no captain ${c}: ${Object.keys(CAPTAINS).join(', ')}`);
 const HULLS = (flags.hulls || 'galliot,sloop,galley,xebec,brig,merchantman,flagship').split(',');

@@ -152,6 +152,39 @@
     me.input.turn = clamp(wrap(hd - me.heading) * 2.5, -1, 1);
   }
 
+  // stay out of her arcs: how a person sails a small ship against a big one. Every tick she tries 32 headings, looks a few
+  // seconds ahead (both ships held on course, her arcs widened for the turn she may make), and takes the one that
+  // brings her nearest a station off her stern without sailing into a loaded broadside in reach. A battery still
+  // reloading is no threat for as long as it has to go, so she can dart across it.
+  function shadow(me, foe, shot = 'round', dt = 0.05, mem = {}) {
+    const look = 3.5, v = Math.max(me.speed, 7), stand = Math.min(55, me.range(shot) * 0.7), back = foe.spec.L * 0.5 + stand;
+    const fx = foe.pos.x + foe.fwdX * foe.speed * look, fz = foe.pos.z + foe.fwdZ * foe.speed * look;
+    const tx = fx - foe.fwdX * back, tz = fz - foe.fwdZ * back, upwind = G.world.wind.dir + Math.PI, nogo = Math.max(0.2, 0.6 - (me.spec.point || 0)) + 0.12;
+    const swing = Math.min(0.6, (foe.spec.turn || 0.3) * look * 0.5);
+    const threat = (x, z) => {
+      let t = 0;
+      for (const side of foe.sides) {
+        if (!foe.bat[side]) continue;
+        const dx = x - fx, dz = z - fz, d = Math.hypot(dx, dz), off = Math.abs(wrap(Math.atan2(dx, dz) - (foe.heading + foe.bat[side].dir)));
+        const loaded = Math.max(0, 1 - (foe.reload[side] || 0) / (look + 1.5));
+        if (d < foe.range('round', side) * 1.15 && off < foe.bat[side].arc + swing) t += loaded * (1.2 - d / (foe.range('round', side) * 1.15));
+      }
+      return t;
+    };
+    let best = me.heading, bestS = Infinity;
+    for (let k = 0; k < 32; k++) {
+      const h = (k / 32) * Math.PI * 2;
+      if (Math.abs(wrap(h - upwind)) < nogo && !(me.spec.oars && me.oar)) continue;
+      const x = me.pos.x + Math.sin(h) * v * look, z = me.pos.z + Math.cos(h) * v * look;
+      const sc = Math.hypot(tx - x, tz - z) + threat(x, z) * 400 + threat((me.pos.x + x) / 2, (me.pos.z + z) / 2) * 250 + Math.abs(wrap(h - me.heading)) * 8 + (mem.h != null ? Math.abs(wrap(h - mem.h)) * 6 : 0);
+      if (sc < bestS) { bestS = sc; best = h; }
+    }
+    mem.h = best;
+    const near = Math.hypot(tx - me.pos.x, tz - me.pos.z) < 25 && threat(me.pos.x, me.pos.z) === 0;
+    me.sailLevel = near ? (me.speed > foe.speed + 2 ? 1 : 2) : 3;
+    me.input.turn = clamp(wrap(best - me.heading) * 2.5, -1, 1);
+  }
+
   function captain(plan) {
     const ai = G.newAI(), st = { swap: 0, boardMode: plan.board === 'rush' };
     const oddsNow = (me, foe) => G.api.strength(me) / (G.api.strength(foe) || 1);
@@ -193,7 +226,7 @@
   // A route is a list of steps, done in order:
   //   { go: [x, z] | 'zone:name', r }                 sail there (firing at whatever bears on the way)
   //   { kill: id | 'all', move, ammo, board, anchor }  fight that ship until she is out
-  // move: duel | kite | hug | close | bow.  anchor: true drops an anchor on a spring once in range.
+  // move: duel | kite | hug | shadow | close | bow.  anchor: true drops an anchor on a spring once in range.
   // keepOff: true (or a distance) bears away from a stronger boarder inside 75 yd. windward: true beats up to a station
   // upwind of her before fighting, whenever she holds the weather gauge.
   // range: the distance she keeps (yd), or rangeK: that as a share of her round-shot range.
@@ -271,6 +304,13 @@
         me.spec.ai = { range: 1, plan: 'none', manualAmmo: true, boarder: false, battleSail: false };
         G.api.updateAI(ai, me, fake(foe.pos.x - wx * R, foe.pos.z - wz * R), G.world, dt, G.api.aiApi);
         for (const s of me.sides) if (foes.some((o) => G.api.inArc(me, s, o, 1))) G.api.fire(me, s);
+        return;
+      }
+      if (move === 'shadow') { // keep out of her loaded arcs, work round to her stern, fire whatever bears
+        const sk2 = me.stock, next = (a === 'chain' || a === 'combo') && sk2.chain > 0 && foe.sailR > 0.45 ? 'chain' : (a === 'grape' || a === 'combo' || boardMode) && sk2.grape > 0 && foe.exposed > 2 ? 'grape' : a === 'fire' && sk2.fire > 0 ? 'fire' : 'round';
+        shadow(me, foe, next, dt, st);
+        for (const s of me.sides) if (G.api.inArc(me, s, foe, 1) || foes.some((o) => o !== foe && G.api.inArc(me, s, o, 1))) G.api.fire(me, s);
+        if (!own) ai.wantBoard = boardMode;
         return;
       }
       if (move === 'hug') { // sit astern out of her arcs; board when the odds come

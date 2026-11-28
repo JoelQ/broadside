@@ -14,6 +14,8 @@ export const CAPTAINS = {
   hug: { k: 'h', play: 'under her stern', route: step({ move: 'hug', ammo: 'round' }) },
   hugWary: { k: 's', play: 'under her stern', route: step({ move: 'hug', ammo: 'round', keepOff: true }) },
   hugWeather: { k: 'u', play: 'under her stern', route: step({ move: 'hug', ammo: 'round', windward: true }) },
+  shadow: { k: 'S', play: 'under her stern', route: step({ move: 'shadow', ammo: 'round' }) }, // out of her loaded arcs, as a person sails a small ship
+  shadowFire: { k: 'F', play: 'fire', route: step({ move: 'shadow', ammo: 'fire' }) },
   burn: { k: 'f', play: 'fire', route: step({ move: 'duel', ammo: 'fire' }) },
   prep: { k: 'p', board: true, play: 'cripple and board', route: step({ move: 'duel', ammo: 'combo', board: 'odds' }) },
   prepWary: { k: 'q', board: true, play: 'cripple and board', route: step({ move: 'duel', ammo: 'combo', board: 'odds', keepOff: true }) },
