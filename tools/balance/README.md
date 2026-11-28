@@ -265,6 +265,12 @@ node tools/balance/search.mjs duel galley flagship
 node tools/balance/search.mjs leg 'm1O' sloop --budget 64
 ```
 
+Candidates can also open with a first phase (chain until her sails are down, grape until her crew is, fire for 40
+seconds...) before the main fight, keep off boarders, win the wind first, or sail `shadow`, and a duel is played half
+from each start. `--foe chainOpen,weather` gives the defender those scripted captains (`captains.mjs`) instead of the
+game's AI, and scores a candidate by its worst result over them: the search then looks for a plan that holds up
+against a captain who answers it, which is the question after `counter.mjs` has found a matchup lost to a counter.
+
 It plays every candidate on 2 seeds, the best quarter on 6, then the best three and every stock plan on 20
 (`--seeds 2,6,20`), so most fights go to the promising plans: about 370 fights, a minute and a half, for the
 default 48 candidates. Candidates are drawn from `SEED`, so a search repeats exactly. It prints the finalists, the
